@@ -202,3 +202,26 @@
   - 동적 `import()`, 이름을 계산하는 `import()`, `globalThis`
   - 이 호출들은 `adapters/`에서만 쓴다.
 - **이유**: 외부 호출이 한도 확인을 건너뛰는 길을 코드 구조와 lint로 없애기 위함이다. 비용 사고는 알림이 아니라 앱 자체 상한으로 막는다(D-012).
+
+## D-021 YouTube 쓰기 어댑터 (T05, 2026-11-21)
+
+- **공개 함수 두 개**: `createPlaylist(ctx, uid, title, items)`, `addItems(ctx, uid, ytExportId, items)`.
+  - `ctx`는 `db`와 `getAccessToken(uid)`(T26이 `secrets_oauth`에서 복호화해 넘김)다. 테스트에서는 가짜 `fetch`를 넣는다.
+  - 오류·상수는 `youtube-write-types.ts`로 뺐다. 그래야 "실행 시점에 내보내는 것이 두 함수뿐"을 테스트로 확인할 수 있다.
+- **기존 재생목록 보호**: `addItems`는 호출자가 준 YouTube 재생목록 ID를 받지 않는다. `ytExports/{id}`를 읽어 `ownerUid`가 같을 때만 그 문서의 `youtubePlaylistId`에 쓴다. 없는 문서와 남의 문서는 같은 오류다(존재 여부를 드러내지 않음).
+- **할당량**: insert 1회 = 50단위를 미리 예약한다. YouTube는 실패한 요청에도 할당량을 쓰므로, 보낸 요청 수만큼 정산한다.
+  - `createPlaylist`는 서비스·사용자 `exports`도 1씩 예약한다. 재생목록이 안 만들어지면 돌려준다.
+  - 둘 다 긴급 정지 `create`를 확인한다. "YouTube 비용이 늘면 create를 끈다"(OPERATIONS 4)에 내보내기도 포함하기 위함이다.
+- **재생목록 상태**: 새 재생목록은 비공개(`private`)로 만든다. 공개 여부는 사용자가 YouTube에서 바꾼다.
+- **곡 수**: 재생목록당 30곡(SPEC 6.3). `ytExports.itemCount`를 트랜잭션으로 먼저 잡고, 실패한 곡만큼 돌려준다.
+- **실패 처리**: 영상 하나의 문제(404 `videoNotFound` 등)는 건너뛴다. 남은 곡을 보내지 않는 경우:
+  - 401·403·429·5xx·연결 실패
+  - 재생목록 단위 오류(`playlistNotFound`, `playlistContainsMaximumNumberOfVideos`, `playlistOperationUnsupported`). 이름은 YouTube 문서 기준이고, T26 실제 확인 때 다시 본다.
+  - 재생목록이 만들어진 뒤 곡이 실패해도 `ytExports` 기록은 남긴다(addItems로 이어 넣기 위함).
+- **마무리 순서**: 정산을 먼저 하고 곡 수 자리를 돌려준다. 둘 다 실패해도 오류를 삼키고 기록만 남긴다. 그래야 이미 들어간 곡의 결과가 오류로 바뀌어 다시 시도하다 중복으로 들어가는 일이 없다. 실패하면 할당량·자리가 남는 쪽(막는 쪽)이다.
+- **ytExports 쓰기 제한**: 여기에 아무 ID나 적히면 addItems가 기존 재생목록에 쓰게 된다. 그래서 functions에서 `ytExports` 문자열은 `youtube-write.ts`만 쓸 수 있다(lint). 정리(T11)·계정 삭제(T24)는 그 파일만 예외로 추가한다. 화면(apps/web)은 읽기 전용 규칙이라 제외했다.
+- **addItems 사용자 한도**: 지금은 서비스 YouTube 단위 한도만 건다. 화면에서 부르게 할 때(T26 이후) 사용자 한도를 먼저 붙인다.
+- **lint**: 어댑터 밖(functions 전체, apps/web)에서 `youtube/v3/playlist…` 주소 문자열과 `googleapis`·`@googleapis/youtube`를 막는다. adapters 안에서는 `${API}/playlists`처럼 기본 주소를 따로 둔 경로 조각(`/playlists`, `/playlistItems`)도 막는다. core·api에서는 Firestore 경로 `playlists/{id}`와 부딪혀서 걸지 않는다(그곳은 네트워크 자체가 막혀 있다). 앞으로 만들 `youtube-read.ts`는 `playlistItems` 주소를 쓸 수 있지만 `method`는 `GET`만 된다. 문자열을 쪼개 붙이는 우회는 lint로 못 막는다. 토큰을 받는 곳이 이 어댑터뿐이라는 점이 2차 방어다.
+- **테스트 종류 변경**: TASKS는 unit 테스트였지만, 소유 확인·예약이 Firestore 트랜잭션이라 가짜 DB로는 동시성·정산을 제대로 확인할 수 없다. 그래서 소유 확인·기록·할당량은 에뮬레이터 통합 테스트로, 함수 목록·입력 검사는 unit으로 나눴다. 통합 테스트 파일이 둘이 되어 `vitest.int.config.ts`에 `fileParallelism: false`를 넣었다(같은 에뮬레이터를 지우며 쓰므로).
+- **남은 것**: `ytExports.youtubePlaylistId`도 YouTube 데이터라 30일 규칙(D-004) 대상인지 T11(재확인·정리)에서 정한다(TASKS T11에 적어 둠).
+- **이유**: 좁은 YouTube 권한이 없어서(youtube-policy 스킬) 기존 재생목록 보호를 코드 구조로 강제해야 한다. 쓸 대상 ID를 서버 기록에서만 가져오면 호출자 실수나 조작으로 남의·기존 재생목록에 쓸 길이 없다.

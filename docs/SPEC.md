@@ -269,7 +269,7 @@ PC 웹만 지원한다(최소 너비 1024px 기준). 모바일 화면은 고려�
 | `playlists/{id}/private/request`          | 검색 문장 원문, 해석 결과                                                                  | 소유자만                                  |
 | `users/{uid}`                             | createdAt, consentAt, blocked, exportTester                                                | 본인                                      |
 | `users/{uid}/usage/{yyyy-mm-dd}`          | playlists, searches, exports                                                               | 본인                                      |
-| `ytExports/{id}`                          | ownerUid, youtubePlaylistId, createdAt (이 앱이 만든 YouTube 재생목록 목록)                | 본인                                      |
+| `ytExports/{id}`                          | ownerUid, youtubePlaylistId, itemCount, createdAt (이 앱이 만든 YouTube 재생목록 목록)     | 본인                                      |
 | `secrets_oauth/{uid}`                     | 암호화한 YouTube 연결 정보                                                                 | **없음** (서버만)                         |
 | `usage/{yyyy-mm-dd}`                      | ytUnits, ytSearchUser, ytSearchJob, aiCostMicroUsd, exports, autoIssues, autoFixes (D-020) | 관리자                                    |
 | `usage/{yyyy-mm-dd}/reservations/{id}`    | 예약 기록(uid는 정산 후 지움), service, user, settled                                      | 없음 (서버만)                             |

@@ -104,16 +104,16 @@
     - integration 같은 파일 — `killSwitches.create=false`면 다음 호출부터 즉시 거부
     - lint 테스트 — 어댑터 밖 `fetch`가 lint 오류
 
-- [ ] **T05 기존 재생목록 보호 (YouTube 쓰기 어댑터)** — SPEC 4.6, 6.2
+- [x] **T05 기존 재생목록 보호 (YouTube 쓰기 어댑터)** — SPEC 4.6, 6.2
   - 의존: T04
   - 산출물:
-    - `functions/src/adapters/youtube-write.ts`: `createPlaylist(uid, title, items)`, `addItems(uid, ytExportId, items)`만 공개. 수정·삭제 없음
+    - `functions/src/adapters/youtube-write.ts`: `createPlaylist(ctx, uid, title, items)`, `addItems(ctx, uid, ytExportId, items)`만 공개. 수정·삭제 없음 (`ctx` = db, 토큰 함수; D-021)
     - 호출 전 `ytExports` 소유 확인, budget 예약(50단위/호출)
-    - ESLint: 이 파일 밖에서 YouTube 쓰기 엔드포인트(`playlists`, `playlistItems` POST/PUT/DELETE) 문자열·`googleapis` youtube 사용 금지
+    - ESLint: 이 파일 밖에서 YouTube 쓰기 엔드포인트(`playlists`, `playlistItems` 주소) 문자열·`googleapis` youtube 사용 금지. `youtube-read.ts`는 `playlistItems` GET만
   - 완료 기준:
-    - unit `functions/src/adapters/youtube-write.test.ts`
+    - unit `functions/src/adapters/youtube-write.test.ts` — 어댑터가 내보내는 함수 목록이 정확히 두 개, 입력 검사
+    - integration `functions/src/adapters/youtube-write.int.test.ts` (가짜 YouTube, D-021)
       - `ytExports`에 없는 재생목록 ID, 다른 사용자 소유 ID에 `addItems`하면 거부되고 HTTP 호출이 0건
-      - 어댑터가 내보내는 함수 목록이 정확히 두 개
       - 만든 재생목록이 `ytExports`에 기록됨
     - lint 테스트 — 어댑터 밖 YouTube 쓰기 호출이 lint 오류
 
@@ -186,6 +186,7 @@
   - 산출물:
     - `jobs/refresh.ts`: 25일 넘은 연결 재확인. 없어지거나 비공개·퍼가기 불가면 `gone` + YouTube 필드 삭제
     - `jobs/purge.ts`: 30일 넘은 YouTube 데이터 무조건 삭제
+    - `ytExports.youtubePlaylistId`가 30일 규칙 대상인지 정하고 처리한다(D-021). `ytExports`를 쓰는 파일은 `eslint.config.js`에 예외로 추가한다
   - 완료 기준:
     - integration `functions/src/jobs/refresh.int.test.ts`
       - 26일 된 연결은 재확인, 응답에 없는 영상은 `gone`이 되고 ytTitle 등이 지워짐
@@ -374,6 +375,7 @@
   - 산출물:
     - 추가 권한 요청(`youtube.force-ssl`, 처음 쓸 때만), 서버 측 토큰 교환·암호화 저장(T02)
     - callable `export.toYouTube`(T05 어댑터만 사용), 연결 해제, 7일 만료 안내
+    - `addItems`를 화면에서 부르게 하려면 사용자별 한도를 먼저 붙인다(D-021). 계정 삭제 때 `ytExports`를 지우는 파일도 lint 예외로 추가한다
   - 완료 기준:
     - integration `functions/src/api/export.int.test.ts` (가짜 YouTube)
       - 테스트 사용자가 아니면 거부

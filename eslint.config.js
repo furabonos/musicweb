@@ -38,11 +38,59 @@ const NETWORK_SOURCE_REGEX =
   NETWORK_PACKAGES.join('|') +
   ')(\\/|$)|^@(anthropic-ai|googleapis|octokit)\\//';
 
+const YOUTUBE_WRITE_MESSAGE =
+  'YouTube 재생목록 쓰기는 functions/src/adapters/youtube-write.ts의 createPlaylist·addItems로만 합니다(사용자의 기존 재생목록 보호, SPEC 6.2). 그 두 함수를 쓰세요.';
+const YOUTUBE_READ_METHOD_MESSAGE =
+  'youtube-read.ts는 읽기(GET)만 합니다. 쓰기는 functions/src/adapters/youtube-write.ts의 createPlaylist·addItems를 쓰세요.';
+// YouTube 재생목록 쓰기 주소(playlists, playlistItems). 읽기 어댑터는 playlistItems.list(GET)만 쓸 수 있다.
+const YT_PLAYLIST_PATH = '/youtube\\/v3\\/playlist/i';
+const YT_PLAYLISTS_PATH = '/youtube\\/v3\\/playlists/i';
+// `${API}/playlists?…`처럼 기본 주소를 따로 둔 경우의 경로 조각. Firestore 경로(`playlists/${id}`)와 부딪히므로 adapters에만 건다.
+const YT_PLAYLIST_FRAGMENT = '/(^|\\/)playlist(s|Items)(\\?|\\/|$)/i';
+const YT_PLAYLISTS_FRAGMENT = '/(^|\\/)playlists(\\?|\\/|$)/i';
+const YT_EXPORTS_MESSAGE =
+  'ytExports(이 앱이 만든 YouTube 재생목록 기록)는 functions/src/adapters/youtube-write.ts만 씁니다. 여기에 아무 ID나 적으면 addItems가 사용자의 기존 재생목록에 쓰게 됩니다. 정리·계정 삭제처럼 꼭 필요하면 eslint.config.js에 그 파일만 예외로 추가하고 이유를 적으세요.';
+
+/** YouTube 쓰기 주소·패키지 금지. mode: 'ban'(전부 금지) | 'readOnly'(youtube-read.ts: playlistItems GET만). */
+function youtubeWriteBan(mode, { fragments = false } = {}) {
+  const readOnly = mode === 'readOnly';
+  const pathRegexes = [readOnly ? YT_PLAYLISTS_PATH : YT_PLAYLIST_PATH];
+  if (fragments) pathRegexes.push(readOnly ? YT_PLAYLISTS_FRAGMENT : YT_PLAYLIST_FRAGMENT);
+  const syntax = [];
+  for (const re of pathRegexes) {
+    syntax.push(
+      { selector: `Literal[value=${re}]`, message: YOUTUBE_WRITE_MESSAGE },
+      { selector: `TemplateElement[value.raw=${re}]`, message: YOUTUBE_WRITE_MESSAGE },
+    );
+  }
+  syntax.push({
+    selector: 'ImportExpression[source.value=/^(googleapis|@googleapis\\/youtube)(\\/|$)/]',
+    message: YOUTUBE_WRITE_MESSAGE,
+  });
+  if (readOnly) {
+    syntax.push({
+      selector:
+        "Property[key.name='method']:not([value.value='GET']), Property[key.value='method']:not([value.value='GET']), AssignmentExpression[left.property.name='method']:not([right.value='GET'])",
+      message: YOUTUBE_READ_METHOD_MESSAGE,
+    });
+  }
+  return {
+    syntax,
+    paths: [{ name: 'googleapis', message: YOUTUBE_WRITE_MESSAGE }],
+    patterns: [
+      {
+        group: ['googleapis/*', '@googleapis/youtube', '@googleapis/youtube/*'],
+        message: YOUTUBE_WRITE_MESSAGE,
+      },
+    ],
+  };
+}
+
 const GLOBAL_OBJECT_MESSAGE =
   '전역 객체(globalThis·global)를 직접 쓰지 않습니다. 비밀값·설정은 functions/src/config/secrets.ts 등 config/에서 읽고, 외부 호출은 functions/src/adapters/의 함수를 쓰세요.';
 
 /** functions 묶음별 제한 규칙을 만든다. 같은 규칙을 두 블록에 나눠 쓰면 덮어쓰므로 한 번에 만든다. */
-function functionsRules({ process: banProcess, network: banNetwork }) {
+function functionsRules({ process: banProcess, network: banNetwork, youtubeWrite = 'ban' }) {
   // globalThis·global을 통째로 막는다: const g = globalThis; g.process / g.fetch 같은 우회 방지.
   const globalsBan = [
     {
@@ -94,6 +142,19 @@ function functionsRules({ process: banProcess, network: banNetwork }) {
       },
     );
   }
+  if (youtubeWrite !== 'allow') {
+    // 네트워크가 열린 곳(adapters)은 기본 주소를 따로 둔 경로 조각까지 막는다.
+    const yt = youtubeWriteBan(youtubeWrite, { fragments: !banNetwork });
+    syntaxBan.push(...yt.syntax, {
+      selector: 'Literal[value=/ytExports/], TemplateElement[value.raw=/ytExports/]',
+      message: YT_EXPORTS_MESSAGE,
+    });
+    // 네트워크 금지 묶음은 googleapis를 이미 막으므로 같은 이름을 두 번 넣지 않는다.
+    if (!banNetwork) {
+      importPaths.push(...yt.paths);
+      importPatterns.push(...yt.patterns);
+    }
+  }
   const rules = { 'no-restricted-globals': ['error', ...globalsBan] };
   if (syntaxBan.length) rules['no-restricted-syntax'] = ['error', ...syntaxBan];
   if (importPaths.length || importPatterns.length) {
@@ -127,6 +188,8 @@ export default tseslint.config(
     plugins: { 'react-hooks': reactHooks },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      // 화면 코드는 YouTube 재생목록 쓰기 주소를 쓰지 않는다 (SPEC 6.2).
+      'no-restricted-syntax': ['error', ...youtubeWriteBan('ban').syntax],
       // 화면 코드는 서버 코드·서버 전용 패키지를 가져오지 않는다 (SPEC 6.2).
       'no-restricted-imports': [
         'error',
@@ -162,6 +225,7 @@ export default tseslint.config(
   //   core·api·jobs 등: process 금지 + 네트워크 금지
   //   config/:          네트워크 금지 (process 허용)
   //   adapters/:        process 금지 (네트워크 허용)
+  // YouTube 재생목록 쓰기는 adapters/youtube-write.ts에서만, youtube-read.ts는 GET 읽기만.
   {
     files: ['functions/src/**/*.ts'],
     ignores: ['functions/src/config/**', 'functions/src/adapters/**', ...FUNCTIONS_TEST_FILES],
@@ -174,8 +238,20 @@ export default tseslint.config(
   },
   {
     files: ['functions/src/adapters/**/*.ts'],
-    ignores: FUNCTIONS_TEST_FILES,
+    ignores: [
+      'functions/src/adapters/youtube-write.ts',
+      'functions/src/adapters/youtube-read.ts',
+      ...FUNCTIONS_TEST_FILES,
+    ],
     rules: functionsRules({ process: true, network: false }),
+  },
+  {
+    files: ['functions/src/adapters/youtube-write.ts'],
+    rules: functionsRules({ process: true, network: false, youtubeWrite: 'allow' }),
+  },
+  {
+    files: ['functions/src/adapters/youtube-read.ts'],
+    rules: functionsRules({ process: true, network: false, youtubeWrite: 'readOnly' }),
   },
   {
     files: ['apps/web/vite.config.ts'],
