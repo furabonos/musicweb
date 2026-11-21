@@ -1,3 +1,5 @@
+import type { EventSink } from '../core/events.js';
+
 /**
  * youtube-write.ts의 오류·상수·타입. 실행 시점에 내보내는 함수를 youtube-write.ts에 두 개만 두기 위해 분리했다.
  */
@@ -16,6 +18,8 @@ export interface YouTubeWriteContext {
    * 어댑터는 토큰을 저장하거나 오류·로그에 넣지 않는다.
    */
   getAccessToken: (uid: string) => Promise<string>;
+  /** 외부 호출 기록(external_call). 운영에서는 firestoreEventSink. */
+  events: EventSink;
   /** 테스트용. 없으면 전역 fetch. */
   fetch?: typeof fetch;
   now?: Date;

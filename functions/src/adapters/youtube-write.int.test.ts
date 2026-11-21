@@ -3,6 +3,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BudgetExceededError } from '../core/budget.js';
 import { pacificDay } from '../core/day.js';
+import { buildEvent, type EventInput, type EventRecord } from '../core/events.js';
 import { KillSwitchError } from '../core/runtimeConfig.js';
 import { addItems, createPlaylist } from './youtube-write.js';
 import {
@@ -18,6 +19,7 @@ const db = getFirestore();
 const now = new Date('2026-11-21T20:00:00Z');
 const day = pacificDay(now);
 const TOKEN = 'ya29.fake-token-for-test';
+const HASH_KEY = 'test-actor-hash-key-0123456789abcdef';
 const V: [string, string, string] = ['aaaaaaaaaa1', 'bbbbbbbbbb2', 'ccccccccc_3'];
 
 async function clearFirestore() {
@@ -46,6 +48,8 @@ function fakeYouTube(
     playlistStatus?: number;
     failVideo?: Record<string, Fail>;
     onItem?: (videoId: string) => Promise<void>;
+    /** 기록기가 항상 실패하는 경우(키 오류 등) */
+    brokenEvents?: boolean;
   } = {},
 ) {
   const calls: Call[] = [];
@@ -74,13 +78,21 @@ function fakeYouTube(
       typeof fail === 'number' ? { status: fail, reason: 'videoNotFound' } : fail;
     return Response.json({ error: { errors: [{ reason }] } }, { status });
   });
+  const events: EventRecord[] = [];
   const ctx = {
     db,
+    // 실제 기록기와 같은 검사(buildEvent)를 거쳐 메모리에 쌓는다
+    events: {
+      record: async (e: EventInput) => {
+        if (opts.brokenEvents) throw new Error('기록 실패');
+        events.push(buildEvent(e, HASH_KEY));
+      },
+    },
     fetch: fetchFn as unknown as typeof fetch,
     getAccessToken: vi.fn(async () => TOKEN),
     now,
   };
-  return { ctx, calls };
+  return { ctx, calls, events };
 }
 
 const counter = async (path: string, field: string) =>
@@ -322,5 +334,66 @@ describe('실패 경로: 정산과 자리 돌려주기', () => {
     expect(await counter(`usage/${day}`, 'ytUnits')).toBe(150);
     const reservations = await db.collection(`usage/${day}/reservations`).get();
     expect(reservations.docs.every((d) => d.get('settled') === true)).toBe(true);
+  });
+});
+
+describe('외부 호출 기록 (T07)', () => {
+  it('YouTube 요청마다 external_call 이벤트가 남고, 실패한 요청도 단위·상태와 함께 남는다', async () => {
+    const { ctx, events } = fakeYouTube({ failVideo: { [V[1]]: 404 } });
+    await createPlaylist(ctx, 'alice', 'x', V);
+    expect(events.map((e) => [e.attrs.op, e.outcome, e.attrs.units, e.attrs.status])).toEqual([
+      ['playlists.insert', 'ok', 50, 200],
+      ['playlistItems.insert', 'ok', 50, 200],
+      ['playlistItems.insert', 'error', 50, 404],
+      ['playlistItems.insert', 'ok', 50, 200],
+    ]);
+    expect(
+      events.every((e) => e.type === 'external_call' && e.attrs.target === 'youtube_write'),
+    ).toBe(true);
+    // uid 원문 대신 해시. 같은 사용자는 같은 해시
+    expect(new Set(events.map((e) => e.actorHash)).size).toBe(1);
+    expect(JSON.stringify(events)).not.toContain('alice');
+    expect(JSON.stringify(events)).not.toContain(TOKEN);
+    expect(events.every((e) => typeof e.durationMs === 'number')).toBe(true);
+  });
+
+  it('연결 실패는 상태 없이 error로 남는다', async () => {
+    await seedExport('ea', 'alice');
+    const { ctx, events } = fakeYouTube({ failVideo: { [V[0]]: 'network' } });
+    await addItems(ctx, 'alice', 'ea', [V[0]]);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({ outcome: 'error', attrs: { units: 50 } });
+    expect(events[0]?.attrs.status).toBeUndefined();
+  });
+
+  it('거부돼서 요청을 보내지 않으면 기록도 없다', async () => {
+    const { ctx, events } = fakeYouTube();
+    await expect(addItems(ctx, 'alice', 'missing', [V[0]])).rejects.toBeInstanceOf(
+      NotOwnedPlaylistError,
+    );
+    expect(events).toHaveLength(0);
+  });
+});
+
+describe('기록이 실패해도 YouTube 쓰기 결과는 그대로 (리뷰 반영)', () => {
+  it('createPlaylist: 결과·ytExports·곡 수·정산이 기록 성공 때와 같다', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const { ctx, calls } = fakeYouTube({ brokenEvents: true, failVideo: { [V[1]]: 404 } });
+    const r = await createPlaylist(ctx, 'alice', 'x', V);
+    expect(r).toMatchObject({ youtubePlaylistId: 'PLnew123', added: 2, failed: [V[1]] });
+    expect(calls).toHaveLength(4); // 404 하나로 멈추지 않는다
+    expect(await counter(`ytExports/${r.exportId}`, 'itemCount')).toBe(2);
+    expect(await counter(`usage/${day}`, 'ytUnits')).toBe(200);
+    expect(await counter(`users/alice/usage/${day}`, 'exports')).toBe(1);
+    errSpy.mockRestore();
+  });
+
+  it('addItems: 들어간 곡이 실패로 바뀌지 않는다', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    await seedExport('ea', 'alice');
+    const { ctx } = fakeYouTube({ brokenEvents: true });
+    expect(await addItems(ctx, 'alice', 'ea', V)).toMatchObject({ added: 3, failed: [] });
+    expect(await counter('ytExports/ea', 'itemCount')).toBe(3);
+    errSpy.mockRestore();
   });
 });

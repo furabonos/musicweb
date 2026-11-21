@@ -239,7 +239,7 @@
   - 목록에서 빠진 계정은 클레임을 지우고 로그인 토큰을 끊는다. 다른 클레임은 그대로 둔다.
   - 전 관리자가 `account-syncClaims`를 부르지 않으면 클레임이 무기한 남으므로, 다른 관리자가 `admin-syncUserClaims({uid})`로 지운다(OPERATIONS 4). 이것도 `adminAudit`(targetUid 포함)·운영 일지에 남는다.
 - **로그인 차단 함수(beforeUserSignedIn)를 쓰지 않은 이유**: Firebase Auth를 Identity Platform으로 올려야 한다. 요금·설정이 바뀌는 프로젝트 단위 결정이라, 1단계는 callable로 한다. 대신 뺀 관리자의 규칙 읽기 권한은 위 정리를 할 때까지 남는다(OPERATIONS 4).
-- **변경 기록**: 설정 변경, `adminAudit`(adminUid·시각·action·전후 값), 운영 일지를 한 트랜잭션에서 쓴다. 운영 일지는 누구나 읽으므로 uid·이메일 없이 영어 고정 문장만 쓴다(D-013 기본 영어). T07에서 `core/opsLog.ts`로 옮긴다.
+- **변경 기록**: 설정 변경, `adminAudit`(adminUid·시각·action·전후 값), 운영 일지를 한 트랜잭션에서 쓴다. 운영 일지는 누구나 읽으므로 uid·이메일 없이 영어 고정 문장만 쓴다(D-013 기본 영어). `core/opsLog.ts`로 쓴다(T07).
 - **저장 방식**: 저장된 문서에 바뀐 필드만 합친다. 기본값을 문서에 굳히지 않아서, 나중에 코드의 기본값(SPEC 6.3)을 바꾸면 문서에 없는 값은 새 기본값을 따른다.
 - **입력 검사**: 바꾼 결과도 `parseRuntimeConfig` 검사(YouTube 할당·검색 합계 상한)를 통과해야 저장한다. 틀리면 `invalid-argument`다. 지금 문서가 깨져 있으면 `failed-precondition`이고 콘솔에서 고친다.
 - **callable 이름**: `admin-setKillSwitch`처럼 묶음 이름을 쓴다(`export const admin = { setKillSwitch }`). 화면은 `httpsCallable(functions, 'admin-setKillSwitch')`로 부른다.
@@ -247,3 +247,22 @@
 - **에뮬레이터 매개변수**: Functions 에뮬레이터는 `defineList`·`defineString` 값을 `functions/.env*` 파일에서만 읽고, 없으면 함수 로딩이 실패한다. `.env*`는 커밋하지 않으므로 `tools/emulator-env.sh`가 `functions/.env.demo-musicweb`(가짜 프로젝트 전용, 비밀값 없음)를 실행할 때마다 만든다. `defineList` 값은 실행 중에 JSON 배열로 읽힌다. 배포 때 CLI는 쉼표 목록도 받아 JSON으로 바꾼다. 그래서 SPEC 8장 표기를 고쳤다. `firebase.json` functions `ignore`에 `.env.demo-*`를 넣어 배포 묶음에 섞이지 않게 한다.
 - **Auth·Firestore 관리 SDK는 외부 호출 규칙(D-020)의 예외**다. 같은 프로젝트 안의 서비스이고 호출당 비용이 없어서 `api/`·`core/`에서 쓴다. App Check(T23)로 호출을 줄인다.
 - **이유**: 관리자 권한은 사고 영향이 가장 큰 권한이라, 판단 기준을 하나(목록)로 두고 클레임은 규칙 읽기 보조로만 쓴다.
+
+## D-023 이벤트 로그와 운영 일지 (T07, 2026-11-21)
+
+- **이벤트 종류는 코드에 고정**한다(`EVENT_SCHEMAS`). 종류마다 attrs가 `strictObject`라 모르는 필드는 저장 전에 거부한다. 최상위 필드도 `type, attrs, outcome, durationMs, actorUid`만 받는다.
+- **글자 값은 짧은 식별자만**: 영문·숫자·`_ . : -`, 64자 이하. 검색 문장·재생목록 이름·이메일·주소는 형식상 들어갈 수 없다.
+  - 값이 정해진 필드는 목록(enum)으로만 받는다: `op`(`EXTERNAL_OPS`, 어댑터를 추가할 때 늘림), `counter`(한도 카운터), `feature`(긴급 정지 기능) 등. 자유 식별자는 `reason`·`code`·`where`·`action`만 남는다.
+  - 저장 직전에 모든 값을 한 번 더 훑어 이메일 형식·64자 초과·공백 든 글·uid/토큰처럼 보이는 긴 영숫자 덩어리(구분자 없이 20자 이상)를 거부한다(`assertNoFreeText`).
+  - attrs에 `actorUid`와 같은 값이나 그 값을 포함한 값이 있으면 거부한다.
+  - 숫자: 점수는 소수 둘째 자리까지, 소요 시간은 15분까지, 개수는 10억까지. 스키마를 넓게 고치는 실수가 있어도 두 번째 검사가 막는다. 두 겹 각각을 테스트로 확인한다.
+- **사용자 식별**: `actorHash = HMAC-SHA256(ACTOR_HASH_KEY, "actor:" + uid)`(base64url). 키는 32바이트 이상이어야 하고, 없거나 짧으면 기록을 거부한다. 원문 uid는 저장하지 않는다. 계정을 지워도 해시는 남는다(SPEC 4.7, 개인 식별 불가).
+- **실패 처리**:
+  - `firestoreEventSink`는 만들 때 해시 키를 검사한다. 키가 없거나 짧으면 함수가 외부 호출을 하기 전에 바로 실패한다.
+  - `record`는 스키마 위반이면 던지고(코드 버그), Firestore 저장 실패는 삼키고 서버 로그에 종류·오류 이름만 남긴다.
+  - `recordCall`은 기록이 어떤 이유로 실패해도 호출 결과와 원래 오류를 바꾸지 않는다. 외부 요청이 이미 끝난 뒤라, 여기서 던지면 youtube-write가 성공한 쓰기를 실패로 보고 `ytExports`·곡 수·정산이 틀어진다(리뷰 지적). 스키마 위반은 같은 `buildEvent`를 쓰는 테스트용 메모리 기록기로 잡는다.
+- **외부 호출 기록** `recordCall(sink, {target, op, actorUid}, fn, onError)`: 성공·실패 모두 `external_call` 이벤트(대상, 단위·비용, 상태, 소요 시간)를 남긴다. 어댑터는 `EventSink`를 받아 쓰고, 운영에서는 `firestoreEventSink(db, ACTOR_HASH_KEY)`를 넣는다. 첫 적용은 `youtube-write`(요청마다 50단위 기록, 실패한 요청 포함).
+  - 함수에서 `firestoreEventSink`를 쓰려면 그 함수 옵션에 `secrets: [secrets.ACTOR_HASH_KEY]`를 붙여야 한다(T14·T26에서 연결).
+- **운영 일지** `opsLogEntry`: 종류 6가지(job, job_failed, issue, pr, limit, admin_change). message는 코드가 만든 영어 고정 문장만 넣고, 이메일·200자 초과·줄바꿈·uid/토큰처럼 보이는 긴 영숫자 덩어리를 거부한다. 링크는 이 저장소의 이슈·PR·Actions 실행 주소만 받는다(저장소 주소를 코드에 고정했다. 저장소를 옮기면 같이 고친다). T06의 관리자 기록도 이 함수로 바꿨다.
+- **아직 이벤트로 남기지 않는 것**: 관리자 변경은 지금 `adminAudit`·운영 일지에만 남는다. 관리자 함수에 해시 키를 연결하는 일은 관리자 화면(T22)에서 한다.
+- **이유**: 기록은 처음부터 남기되(SPEC 4.1), 현황판·자동 이슈로 밖에 보일 수 있으므로 개인정보가 들어갈 길을 형식으로 막는다.

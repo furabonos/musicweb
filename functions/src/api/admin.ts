@@ -4,6 +4,7 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { z } from 'zod';
 import { ADMIN_EMAILS } from '../config/secrets.js';
 import { syncAdminClaim, verifyAdmin, type CallerAuth } from '../core/auth.js';
+import { addOpsLogInTx, opsLogEntry } from '../core/opsLog.js';
 import {
   FEATURES,
   limitsPatchSchema,
@@ -111,13 +112,7 @@ async function changeRuntime<T>(
       before: change.before,
       after: change.after,
     });
-    // TODO(T07): core/opsLog.ts로 옮긴다.
-    tx.create(db.collection('opsLog').doc(), {
-      at: FieldValue.serverTimestamp(),
-      kind: 'admin_change',
-      message,
-      links: [],
-    });
+    addOpsLogInTx(db, tx, { kind: 'admin_change', message });
     return change;
   });
 }
@@ -179,14 +174,15 @@ export async function syncUserClaims(db: Firestore, adminUid: string, targetUid:
     before,
     after,
   });
-  batch.create(db.collection('opsLog').doc(), {
-    at: FieldValue.serverTimestamp(),
-    kind: 'admin_change',
-    message: result.changed
-      ? `Admin re-synced a user's admin access (now ${result.admin ? 'admin' : 'not admin'}).`
-      : "Admin re-synced a user's admin access (no change).",
-    links: [],
-  });
+  batch.create(
+    db.collection('opsLog').doc(),
+    opsLogEntry({
+      kind: 'admin_change',
+      message: result.changed
+        ? `Admin re-synced a user's admin access (now ${result.admin ? 'admin' : 'not admin'}).`
+        : "Admin re-synced a user's admin access (no change).",
+    }),
+  );
   await batch.commit();
   return result;
 }

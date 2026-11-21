@@ -133,12 +133,13 @@
 
 ## B. 기록
 
-- [ ] **T07 이벤트 로그와 운영 일지 기록기** — SPEC 4.1, 4.10
+- [x] **T07 이벤트 로그와 운영 일지 기록기** — SPEC 4.1, 4.10
   - 의존: T00, T03
   - 산출물:
     - `functions/src/core/events.ts`: 이벤트 종류별 zod 스키마, 정의되지 않은 필드 거부, `actorHash`(HMAC)
     - `functions/src/core/opsLog.ts`
-    - 외부 호출 공통 기록 래퍼(대상, 단위·비용, 소요 시간, 결과) — 어댑터가 사용
+    - 외부 호출 공통 기록 래퍼 `recordCall`(대상, 단위·비용, 소요 시간, 결과) — 어댑터가 사용(첫 적용: `youtube-write`)
+    - unit `functions/src/core/opsLog.test.ts` — 이메일·긴 문장·줄바꿈·다른 사이트 링크 거부
   - 완료 기준:
     - unit `functions/src/core/events.test.ts`
       - 스키마에 없는 필드·검색 문장으로 보이는 긴 자유 텍스트 필드·이메일 형식 값은 거부
@@ -334,7 +335,7 @@
     - 화면: 긴급 정지 3종, 한도 설정, 사용량, 수집 대상 관리·수동 재실행, 연결 고치기·막기(→ 시험 문제 추가 PR), 사용자 차단, 테스트 사용자 관리(최대 100)
     - 해당 관리자 callable들
   - 완료 기준:
-    - integration `functions/src/api/admin.int.test.ts`(확장) — 모든 관리자 callable이 비관리자에게 거부되고, 성공 시 `adminAudit`·운영 일지 기록
+    - integration `functions/src/api/admin.int.test.ts`(확장) — 모든 관리자 callable이 비관리자에게 거부되고, 성공 시 `adminAudit`·운영 일지·`admin_change` 이벤트 기록(D-023: 관리자 함수에 `ACTOR_HASH_KEY` 연결)
     - integration — 차단된 계정은 만들기 거부, 테스트 사용자 101번째 등록 거부
     - e2e `apps/web/e2e/admin.spec.ts` — 비관리자는 /admin에서 접근 거부 화면, 관리자가 긴급 정지를 켜면 다른 사용자의 만들기가 즉시 실패, 검색 문장 기본 미노출
 
