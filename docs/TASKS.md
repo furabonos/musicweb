@@ -162,11 +162,11 @@
     - integration `functions/src/adapters/music-data.int.test.ts` — Last.fm 캐시 크기 합계·오래된 것부터 삭제, 호출 한도 `musicDataCalls`
     - unit `lastfm.test.ts` — 캐시 TTL 만료 후 재요청, 저장 용량 상한 초과 시 오래된 항목 삭제
 
-- [ ] **T09 곡 연결 규칙 (제목 해석·종류 판별)** — SPEC 3.1 / 스킬 `song-matching`
+- [x] **T09 곡 연결 규칙 (제목 해석·종류 판별)** — SPEC 3.1 / 스킬 `song-matching`
   - 의존: T00
   - 산출물:
     - `packages/shared/src/matching/`: 제목 정규화(괄호 꼬리말·feat.·언어 혼용), 종류 판별(official_audio/mv/live/cover/remix), 후보 점수, 애매함 판정
-    - 애매한 것만 AI 판정(어댑터 `llm`, 구조화 출력)
+    - 애매한 것만 AI 판정: `decideLink(song, videos, include, judge)`가 판정 함수 `Judge`를 받는다. 실제 모델 연결(어댑터 `llm`, 구조화 출력)은 T12, 수집 작업에서 쓰는 것은 T10 (D-026)
   - 완료 기준:
     - unit `packages/shared/src/matching/*.test.ts` — 스킬의 예시 표 전 항목(최소 40개: 한·영·일 제목, Topic 채널, "Provided to YouTube by" 설명)이 기대 종류와 곡으로 판정
     - unit — 애매함 기준에 걸린 경우만 AI 호출 함수가 불림(호출 횟수 검증)
@@ -204,7 +204,7 @@
 - [ ] **T12 요청 해석** — SPEC 4.2
   - 의존: T04, T07
   - 산출물:
-    - `adapters/llm.ts`: Haiku 5.5, 구조화 출력, 비용 기록·budget
+    - `adapters/llm.ts`: Haiku 5.5, 구조화 출력, 비용 기록·budget. 곡 연결 판정용 `Judge`(T09, 후보 ID 또는 null만)도 여기서 만든다
     - `core/parseRequest.ts`
   - 완료 기준:
     - unit `functions/src/core/parseRequest.test.ts` (가짜 LLM)

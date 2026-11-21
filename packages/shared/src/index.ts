@@ -7,3 +7,5 @@ export const DEFAULT_LOCALE: Locale = 'en';
 export function resolveLocale(value: string | null | undefined): Locale {
   return SUPPORTED_LOCALES.find((l) => l === value) ?? DEFAULT_LOCALE;
 }
+
+export * from './matching/index.js';

@@ -32,6 +32,14 @@ description: 곡(MusicBrainz 녹음) ↔ YouTube 영상 연결 규칙 — 제목
 | 그 외 공식 채널 영상 (티저·인터뷰·비하인드 등)                                   | `other` (연결 안 함) |
 
 - `sped up`·`slowed`·`nightcore`·`8d` 같은 변형은 공식 채널이라도 `remix`로 본다.
+- 변형(리믹스·라이브·커버) 표시는 Topic·Provided보다 **먼저** 본다. Topic 채널의 `(Live)` 트랙은 `live`다(D-026).
+- Topic은 **그 곡 아티스트의 Topic**일 때만 `official_audio`다. 다른 가수의 Topic은 `cover`다.
+- `Provided to YouTube by` 설명은 **공식 채널 ID와 함께일 때만** 인정한다(재업로드가 설명을 복사함).
+- 변형 순서: 리믹스 → 커버 → 라이브. 남이 라이브로 부른 커버는 커버다.
+- 원곡과 다른 판(`Inst.`, `Instrumental`, `MR`, `Karaoke`, `Acoustic`, `Demo`, `Japanese ver.` 등)은 연결하지 않는다.
+- 제목이 그 곡과 맞지 않으면(완전 일치도 비율 ≥ 0.9도 아님) 후보가 아니다.
+- 곡 제목·아티스트 이름에 든 단어는 신호로 보지 않는다(`Live Forever`, `Cover Me`, 밴드 `Live`). 단어 단위로만 지운다(`Up (Sped Up)`은 리믹스).
+- 공식 채널이지만 표시(`official audio`/`mv` 등)가 없는 영상은 `other`(연결 안 함)다. 놓치는 경우가 있으면 시험 문제(T17) 점수로 판단해 바꾼다.
 - `teaser`, `trailer`, `behind`, `making`, `interview`, `reaction`, `shorts`는 연결하지 않는다.
 - 길이 60초 미만은 연결하지 않는다(Shorts·티저).
 
@@ -48,8 +56,9 @@ description: 곡(MusicBrainz 녹음) ↔ YouTube 영상 연결 규칙 — 제목
 
 **애매함 판정**: 다음 중 하나면 AI에게 넘긴다(구조화 출력, 후보 ID 중 하나 또는 "없음"만 받는다).
 
+- 구현: `packages/shared/src/matching/` (`decideLink`, 판정 함수 `Judge`는 후보 ID 또는 null만, 후보는 최대 5개)
 - 1등 점수 < 70
-- 1등과 2등의 차이 < 10
+- 1등과 2등의 차이 < 10 (같은 우선순위 종류끼리만. 공식 음원 vs 공식 MV는 우선순위로 정함)
 - 제목 분리 실패
 
 ## 4. 시험 문제와 예시
