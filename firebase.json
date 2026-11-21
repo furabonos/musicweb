@@ -4,7 +4,7 @@
       "source": "functions",
       "codebase": "default",
       "predeploy": ["pnpm --filter functions build"],
-      "ignore": ["node_modules", ".git", "src", "**/*.test.ts", "*.log"]
+      "ignore": ["node_modules", ".git", "src", "**/*.test.ts", "*.log", ".env.demo-*"]
     }
   ],
   "firestore": {

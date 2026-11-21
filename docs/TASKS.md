@@ -117,17 +117,19 @@
       - 만든 재생목록이 `ytExports`에 기록됨
     - lint 테스트 — 어댑터 밖 YouTube 쓰기 호출이 lint 오류
 
-- [ ] **T06 관리자 권한과 긴급 정지 함수** — SPEC 4.11
+- [x] **T06 관리자 권한과 긴급 정지 함수** — SPEC 4.11
   - 의존: T03, T04
   - 산출물:
-    - `ADMIN_EMAILS` → `admin` 클레임 동기화(로그인 시 + 관리자 함수)
-    - `assertAdmin()`, callable `admin.setKillSwitch`, `admin.setLimits`
-    - `adminAudit` 기록 + 운영 일지 항목
+    - `ADMIN_EMAILS` → `admin` 클레임 동기화(로그인 직후 callable `account-syncClaims` + 관리자 함수, D-022)
+    - `core/auth.ts`의 `assertAdmin()`·`verifyAdmin()`, callable `admin-setKillSwitch`, `admin-setLimits`, `admin-syncUserClaims`(뺀 관리자 클레임 정리)
+    - `adminAudit` 기록 + 운영 일지 항목(같은 트랜잭션)
+    - callable 오류 코드 변환 `api/errors.ts`, 재생목록 만들기 스텁 `playlists-create`(T14가 교체)
   - 완료 기준:
     - integration `functions/src/api/admin.int.test.ts`
       - 관리자 아닌 계정·로그인 안 한 호출은 `permission-denied`
       - 관리자 호출은 성공하고 `adminAudit`에 누가·언제·전후 값이 남음
     - integration 같은 파일 — 긴급 정지를 켠 직후 재생목록 만들기 callable(스텁)이 거부됨
+    - unit `functions/src/core/auth.test.ts`, `functions/src/api/errors.test.ts`
 
 ## B. 기록
 

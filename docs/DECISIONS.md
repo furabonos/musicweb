@@ -211,7 +211,7 @@
 - **기존 재생목록 보호**: `addItems`는 호출자가 준 YouTube 재생목록 ID를 받지 않는다. `ytExports/{id}`를 읽어 `ownerUid`가 같을 때만 그 문서의 `youtubePlaylistId`에 쓴다. 없는 문서와 남의 문서는 같은 오류다(존재 여부를 드러내지 않음).
 - **할당량**: insert 1회 = 50단위를 미리 예약한다. YouTube는 실패한 요청에도 할당량을 쓰므로, 보낸 요청 수만큼 정산한다.
   - `createPlaylist`는 서비스·사용자 `exports`도 1씩 예약한다. 재생목록이 안 만들어지면 돌려준다.
-  - 둘 다 긴급 정지 `create`를 확인한다. "YouTube 비용이 늘면 create를 끈다"(OPERATIONS 4)에 내보내기도 포함하기 위함이다.
+  - 둘 다 긴급 정지 `create`를 확인한다. "YouTube 비용이 늘면 create를 끈다"(OPERATIONS 5)에 내보내기도 포함하기 위함이다.
 - **재생목록 상태**: 새 재생목록은 비공개(`private`)로 만든다. 공개 여부는 사용자가 YouTube에서 바꾼다.
 - **곡 수**: 재생목록당 30곡(SPEC 6.3). `ytExports.itemCount`를 트랜잭션으로 먼저 잡고, 실패한 곡만큼 돌려준다.
 - **실패 처리**: 영상 하나의 문제(404 `videoNotFound` 등)는 건너뛴다. 남은 곡을 보내지 않는 경우:
@@ -225,3 +225,25 @@
 - **테스트 종류 변경**: TASKS는 unit 테스트였지만, 소유 확인·예약이 Firestore 트랜잭션이라 가짜 DB로는 동시성·정산을 제대로 확인할 수 없다. 그래서 소유 확인·기록·할당량은 에뮬레이터 통합 테스트로, 함수 목록·입력 검사는 unit으로 나눴다. 통합 테스트 파일이 둘이 되어 `vitest.int.config.ts`에 `fileParallelism: false`를 넣었다(같은 에뮬레이터를 지우며 쓰므로).
 - **남은 것**: `ytExports.youtubePlaylistId`도 YouTube 데이터라 30일 규칙(D-004) 대상인지 T11(재확인·정리)에서 정한다(TASKS T11에 적어 둠).
 - **이유**: 좁은 YouTube 권한이 없어서(youtube-policy 스킬) 기존 재생목록 보호를 코드 구조로 강제해야 한다. 쓸 대상 ID를 서버 기록에서만 가져오면 호출자 실수나 조작으로 남의·기존 재생목록에 쓸 길이 없다.
+
+## D-022 관리자 판별과 클레임 동기화 (T06, 2026-11-21)
+
+- **서버 함수는 목록을 본다**: 클레임이 아니라 `ADMIN_EMAILS`를 직접 확인한다. 대소문자·앞뒤 공백은 무시한다. 관리자 함수(`verifyAdmin`)는 세 겹으로 본다:
+  1. 토큰: Google 로그인(`sign_in_provider == google.com`), 확인된 이메일(`email_verified`), 목록에 있음
+  2. 끊긴 토큰·사용 중지 계정: `verifyIdToken(rawToken, true)`. 가장 큰 권한이라 매번 확인한다(Auth 호출 1회 추가).
+  3. 계정 기록: 사용 중지 아님, 연결된 Google 계정 이메일이 계정 이메일과 같고 목록에 있음. 비밀번호 계정에 다른 Google 계정을 연결한 경우를 막는다.
+  - 목록에서 빼고 다시 배포하면 다음 호출부터 바로 거부된다. 남아 있는 클레임만으로는 관리자 함수를 못 쓴다(테스트로 확인).
+- **보안 규칙용 클레임**: 규칙은 목록을 읽을 수 없어서 `admin: true` 클레임을 본다. 서버가 맞춘다:
+  - 로그인 직후 화면이 callable `account-syncClaims`를 부른다. 바뀌었으면 화면이 토큰을 새로 받는다.
+  - 관리자 함수를 부를 때 클레임이 없으면 붙인다. 붙이기가 실패해도 관리자 작업(긴급 정지 등)은 계속한다(클레임은 보조).
+  - 목록에서 빠진 계정은 클레임을 지우고 로그인 토큰을 끊는다. 다른 클레임은 그대로 둔다.
+  - 전 관리자가 `account-syncClaims`를 부르지 않으면 클레임이 무기한 남으므로, 다른 관리자가 `admin-syncUserClaims({uid})`로 지운다(OPERATIONS 4). 이것도 `adminAudit`(targetUid 포함)·운영 일지에 남는다.
+- **로그인 차단 함수(beforeUserSignedIn)를 쓰지 않은 이유**: Firebase Auth를 Identity Platform으로 올려야 한다. 요금·설정이 바뀌는 프로젝트 단위 결정이라, 1단계는 callable로 한다. 대신 뺀 관리자의 규칙 읽기 권한은 위 정리를 할 때까지 남는다(OPERATIONS 4).
+- **변경 기록**: 설정 변경, `adminAudit`(adminUid·시각·action·전후 값), 운영 일지를 한 트랜잭션에서 쓴다. 운영 일지는 누구나 읽으므로 uid·이메일 없이 영어 고정 문장만 쓴다(D-013 기본 영어). T07에서 `core/opsLog.ts`로 옮긴다.
+- **저장 방식**: 저장된 문서에 바뀐 필드만 합친다. 기본값을 문서에 굳히지 않아서, 나중에 코드의 기본값(SPEC 6.3)을 바꾸면 문서에 없는 값은 새 기본값을 따른다.
+- **입력 검사**: 바꾼 결과도 `parseRuntimeConfig` 검사(YouTube 할당·검색 합계 상한)를 통과해야 저장한다. 틀리면 `invalid-argument`다. 지금 문서가 깨져 있으면 `failed-precondition`이고 콘솔에서 고친다.
+- **callable 이름**: `admin-setKillSwitch`처럼 묶음 이름을 쓴다(`export const admin = { setKillSwitch }`). 화면은 `httpsCallable(functions, 'admin-setKillSwitch')`로 부른다.
+- **오류 코드**: `api/errors.ts`가 관리자 아님→`permission-denied`, 긴급 정지→`unavailable`(`details.reason=killSwitch`, `feature`), 한도→`resource-exhausted`(`resetAt`), 설정 깨짐→`failed-precondition`으로 바꾼다. 모르는 오류는 `internal`이고 내부 메시지를 화면에 보내지 않는다.
+- **에뮬레이터 매개변수**: Functions 에뮬레이터는 `defineList`·`defineString` 값을 `functions/.env*` 파일에서만 읽고, 없으면 함수 로딩이 실패한다. `.env*`는 커밋하지 않으므로 `tools/emulator-env.sh`가 `functions/.env.demo-musicweb`(가짜 프로젝트 전용, 비밀값 없음)를 실행할 때마다 만든다. `defineList` 값은 실행 중에 JSON 배열로 읽힌다. 배포 때 CLI는 쉼표 목록도 받아 JSON으로 바꾼다. 그래서 SPEC 8장 표기를 고쳤다. `firebase.json` functions `ignore`에 `.env.demo-*`를 넣어 배포 묶음에 섞이지 않게 한다.
+- **Auth·Firestore 관리 SDK는 외부 호출 규칙(D-020)의 예외**다. 같은 프로젝트 안의 서비스이고 호출당 비용이 없어서 `api/`·`core/`에서 쓴다. App Check(T23)로 호출을 줄인다.
+- **이유**: 관리자 권한은 사고 영향이 가장 큰 권한이라, 판단 기준을 하나(목록)로 두고 클레임은 규칙 읽기 보조로만 쓴다.

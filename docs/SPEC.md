@@ -280,7 +280,7 @@ PC 웹만 지원한다(최소 너비 1024px 기준). 모바일 화면은 고려�
 | `adminAudit/{id}`                         | adminUid, at, action, before, after                                                        | 관리자                                    |
 | `issueFingerprints/{fp}`                  | issueNumber, firstSeen, lastSeen, count                                                    | 없음                                      |
 
-- 관리자 판별: `ADMIN_EMAILS`에 있는 계정에 서버가 사용자 정의 클레임 `admin: true`를 붙인다. 규칙은 `request.auth.token.admin == true`를 확인한다.
+- 관리자 판별: 서버 함수는 `ADMIN_EMAILS`(확인된 Google 이메일)를 직접 확인한다. 보안 규칙용으로 서버가 사용자 정의 클레임 `admin: true`를 붙이고(로그인 직후 `account-syncClaims`, 관리자 함수 호출 때), 규칙은 `request.auth.token.admin == true`를 확인한다(D-022).
 - 시험 문제·기준 점수는 저장소 `evals/`에 둔다 (Firestore 아님).
 
 ## 6. 아키텍처
@@ -342,22 +342,22 @@ firestore.rules, firebase.json
 
 ## 8. 환경 변수
 
-| 이름                                     | 위치                                                            | 용도                                                                                |
-| ---------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `ANTHROPIC_API_KEY`                      | Secret Manager (`defineSecret`), GitHub Secrets(자동 수정·시험) | AI                                                                                  |
-| `YOUTUBE_API_KEY`                        | Secret Manager                                                  | YouTube 읽기                                                                        |
-| `LASTFM_API_KEY`                         | Secret Manager                                                  | Last.fm                                                                             |
-| `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET` | Secret Manager                                                  | 내 계정에 넣기 권한                                                                 |
-| `TOKEN_ENC_KEY`                          | Secret Manager                                                  | 연결 정보 암호화 키 목록 `"v2:<base64 32바이트>,v1:<…>"` (첫 항목이 현재 키, D-018) |
-| `ACTOR_HASH_KEY`                         | Secret Manager                                                  | 이벤트 로그 사용자 해시                                                             |
-| `GITHUB_ISSUE_TOKEN`                     | Secret Manager                                                  | 자동 이슈·GitHub 수치 (권한: 해당 저장소 issues/PR 읽기·이슈 쓰기만)                |
-| `ADMIN_EMAILS`                           | Functions 매개변수(`defineList`, 쉼표 구분)                     | 관리자 목록                                                                         |
-| `MB_CONTACT`                             | Functions 매개변수                                              | MusicBrainz User-Agent 연락처                                                       |
-| `VITE_FIREBASE_*`                        | `apps/web/.env.local` (공개 설정값, 비밀 아님)                  | Firebase 웹 설정                                                                    |
-| `VITE_RECAPTCHA_SITE_KEY`                | `apps/web/.env.local`                                           | App Check                                                                           |
-| `FIREBASE_SERVICE_ACCOUNT`               | GitHub Secrets                                                  | 배포                                                                                |
+| 이름                                     | 위치                                                                            | 용도                                                                                |
+| ---------------------------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY`                      | Secret Manager (`defineSecret`), GitHub Secrets(자동 수정·시험)                 | AI                                                                                  |
+| `YOUTUBE_API_KEY`                        | Secret Manager                                                                  | YouTube 읽기                                                                        |
+| `LASTFM_API_KEY`                         | Secret Manager                                                                  | Last.fm                                                                             |
+| `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET` | Secret Manager                                                                  | 내 계정에 넣기 권한                                                                 |
+| `TOKEN_ENC_KEY`                          | Secret Manager                                                                  | 연결 정보 암호화 키 목록 `"v2:<base64 32바이트>,v1:<…>"` (첫 항목이 현재 키, D-018) |
+| `ACTOR_HASH_KEY`                         | Secret Manager                                                                  | 이벤트 로그 사용자 해시                                                             |
+| `GITHUB_ISSUE_TOKEN`                     | Secret Manager                                                                  | 자동 이슈·GitHub 수치 (권한: 해당 저장소 issues/PR 읽기·이슈 쓰기만)                |
+| `ADMIN_EMAILS`                           | Functions 매개변수(`defineList`, `.env`에는 JSON 배열, 배포 질문에는 쉼표 목록) | 관리자 목록 (D-022)                                                                 |
+| `MB_CONTACT`                             | Functions 매개변수                                                              | MusicBrainz User-Agent 연락처                                                       |
+| `VITE_FIREBASE_*`                        | `apps/web/.env.local` (공개 설정값, 비밀 아님)                                  | Firebase 웹 설정                                                                    |
+| `VITE_RECAPTCHA_SITE_KEY`                | `apps/web/.env.local`                                                           | App Check                                                                           |
+| `FIREBASE_SERVICE_ACCOUNT`               | GitHub Secrets                                                                  | 배포                                                                                |
 
-비밀값은 저장소에 두지 않는다. 로컬 에뮬레이터용 값은 `functions/.secret.local`에 둔다(gitignore).
+비밀값은 저장소에 두지 않는다. 로컬 에뮬레이터용 값은 `functions/.secret.local`에 둔다(gitignore). 에뮬레이터용 매개변수(`ADMIN_EMAILS`, `MB_CONTACT`)는 `tools/emulator-env.sh`가 `functions/.env.demo-musicweb`(gitignore)에 만든다.
 
 ## 9. 나중에 할 기능
 

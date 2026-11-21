@@ -57,14 +57,19 @@ const partialRecord = <K extends string>(keys: readonly K[], value: z.ZodType) =
     >,
   );
 
+/** 한도 일부 (문서의 limits, 관리자 setLimits 입력). 모르는 카운터는 거부. */
+export const limitsPatchSchema = z.strictObject({
+  service: partialRecord(SERVICE_COUNTERS, count).optional(),
+  user: partialRecord(USER_COUNTERS, count).optional(),
+});
+export type LimitsPatch = {
+  service?: Partial<Record<ServiceCounter, number>>;
+  user?: Partial<Record<UserCounter, number>>;
+};
+
 const docSchema = z.strictObject({
   killSwitches: partialRecord(FEATURES, z.boolean()).optional(),
-  limits: z
-    .strictObject({
-      service: partialRecord(SERVICE_COUNTERS, count).optional(),
-      user: partialRecord(USER_COUNTERS, count).optional(),
-    })
-    .optional(),
+  limits: limitsPatchSchema.optional(),
 });
 
 export class RuntimeConfigError extends Error {
