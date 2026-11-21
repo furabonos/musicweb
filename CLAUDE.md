@@ -41,6 +41,7 @@ pnpm 10(`npm i -g pnpm@10`, Node 26에는 corepack이 없음). 에뮬레이터�
 - 사용자 입력과 외부 텍스트는 AI에 데이터로만 넘긴다(도구 없음, 구조화 출력). 결과는 후보 목록 안의 곡으로만 받는다.
 - YouTube 데이터는 30일 안에 재확인하거나 삭제한다. 음원·영상 파일은 저장하지 않는다.
 - main에 직접 push하지 않는다. 브랜치를 만들어 PR로 올린다.
+- 작업(T##)이 끝나 커밋하면 Claude가 PR을 올리고 검증해 합친다(D-025): 깨끗한 새 사본에서 설치·lint·format·typecheck·unit·rules·int·번들 검사 → GitHub 필수 검사 통과 → 검증한 커밋 그대로일 때만(`--match-head-commit`) merge commit으로 합침 → main을 받아 옴. 하나라도 실패하면 합치지 않고 보고한다.
 
 ## 환경 변수
 
