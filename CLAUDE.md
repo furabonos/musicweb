@@ -16,16 +16,19 @@
 
 ## 명령
 
-T00 전에는 아무 명령도 없다. T00에서 아래를 만들고, 실제 명령과 다르면 이 절을 고친다.
+pnpm 10(`npm i -g pnpm@10`, Node 26에는 corepack이 없음). 에뮬레이터는 Java 21(`brew install openjdk@21`) 필요하며 `tools/with-java.sh`가 경로를 찾아 준다.
 
 - lint: `pnpm lint`
-- format 검사: `pnpm format:check`
+- format 검사 / 고치기: `pnpm format:check` / `pnpm format`
 - typecheck: `pnpm typecheck`
-- unit test: `pnpm test`
+- unit test: `pnpm test` (`*.int.test.ts` 제외)
 - 단일 테스트: `pnpm vitest run <파일>`
-- 보안 규칙·통합: `pnpm test:rules`, `pnpm test:int` (Firebase 에뮬레이터, Java 필요)
-- e2e: `pnpm test:e2e` (에뮬레이터 + 개발 서버)
-- 시험 문제: `pnpm eval` (추천은 `ANTHROPIC_API_KEY` 필요)
+- 통합: `pnpm test:int` (functions 빌드 → 에뮬레이터 띄움 → `*.int.test.ts` 실행 → 종료)
+- 에뮬레이터만 띄우기: `pnpm emulators` (프로젝트 `demo-musicweb`, 실제 Firebase에 연결 안 됨)
+- 화면 개발 서버: `pnpm --filter web dev`, 빌드: `pnpm --filter web build`
+- 화면 빌드에 서버 비밀값이 섞였는지 검사: `pnpm scan:bundle` (빌드 포함, Firebase 웹 키는 `VITE_FIREBASE_API_KEY` 값만 허용)
+- 보안 규칙: `pnpm test:rules` (Firestore·Storage 에뮬레이터 띄움 → `tests/rules/*.test.ts` 실행 → 종료)
+- 아직 없음: `pnpm test:e2e`(T14), `pnpm eval`(T17). 생기면 이 절을 고친다.
 
 ## 아키텍처 규칙 (SPEC 6.2 요약, 위반은 lint·테스트·규칙이 막는다)
 

@@ -94,3 +94,80 @@
 ## D-015 로그인 전 배포 기간에는 만들기를 관리자에게만 (2026-11-21)
 
 - **이유**: 작업 순서상 배포(T23)가 로그인(T24)보다 앞선다. 그 사이 공개 주소에서 누구나 AI·YouTube 비용을 쓰지 못하게 하기 위함이다.
+
+## D-016 개발 도구 버전: pnpm 전역 설치, TypeScript 6, Java 21 (T00, 2026-11-21)
+
+- pnpm은 `npm i -g pnpm@10`으로 설치한다. 루트 `packageManager`에 버전을 적는다.
+- TypeScript는 `^6`으로 고정한다. TS 7로 올리는 조건은 typescript-eslint가 TS 7을 공식 지원하는 것이다.
+- Firebase 에뮬레이터용 Java 21은 Homebrew `openjdk@21`로 설치한다. `tools/with-java.sh`가 시스템 경로를 바꾸지 않고, 실행할 때만 21 이상인 Java를 찾아 붙인다.
+- 로컬 Node는 26, Functions 런타임은 22(`functions/package.json` engines)다. 에뮬레이터는 "버전 불일치" 경고만 내고 동작한다(T00에서 확인).
+- `firebase-tools`는 루트 devDependency로 두어 버전을 고정한다(전역 설치 안 함).
+- **이유**:
+  - Node 26에는 corepack이 포함되어 있지 않다.
+  - typescript-eslint 8.73은 TS 7에서 "does not support TS 7.0" 오류로 시작하지 않는다.
+- **나중에 할 일**: functions가 `@musicweb/shared`(workspace 의존)를 쓰기 시작하면 Cloud Functions 원격 설치가 이를 풀지 못한다. 그 작업에서 번들링(esbuild 등)을 정한다.
+
+## D-017 비밀값·main 보호를 여러 겹으로 (T01, 2026-11-21)
+
+- **로컬 커밋 전 검사** (`tools/git-hooks/pre-commit.sh`, simple-git-hooks로 설치):
+  - 스테이징된 내용을 꺼내 secretlint로 검사한다.
+  - 같은 커밋의 `.gitignore`·`.secretlintignore`가 검사를 줄이지 못하게 gitignore 따르기를 끄고, 꺼낸 폴더의 ignore 파일을 지운다.
+  - 비밀 파일 이름(`.env*`, `.secret.local`, `*.pem`, `*.key`, 서비스 계정 JSON)은 내용과 상관없이 막는다.
+- **로컬 push 전 검사** (`tools/git-hooks/pre-push.sh`): `refs/heads/main`으로 가는 push를 거부한다.
+- **Claude PreToolUse 훅** (`.claude/hooks/guard-git.mjs`): 다음을 막는다.
+  - main push, 강제 push(`--force`·`+refspec`·`--mirror`·`--all`·`--prune`)
+  - `--no-verify`·`-n`(줄여 쓴 형태 포함)
+  - 훅 경로 변경, 훅을 끄는 환경 변수 대입
+  - `env`/`sudo`/`bash -c`/`eval`로 감싼 형태
+- **CI** (`secret-scan.yml`, job `gitleaks`): gitleaks 8.30.1 바이너리를 체크섬으로 고정해 전체 git 기록을 검사한다. PR·main push·매주·수동으로 실행한다.
+- **GitHub**: main 보호(PR 필수, 필수 검사 `gitleaks`, 최신 상태 필수, 관리자 포함, 강제 push·삭제 금지, 대화 해결 필수). 비밀값 스캔·push 보호를 켠다.
+  - 혼자 개발하므로 PR 승인 인원은 0명이다. 자기 PR은 승인할 수 없기 때문이다.
+- **이유**:
+  - 공개 저장소라 한 번 올라간 비밀값은 되돌릴 수 없다.
+  - 로컬 훅은 `--no-verify` 등으로 건너뛸 수 있고, Claude 훅은 셸을 완벽히 해석할 수 없다.
+  - 그래서 우회 가능한 앞 단계는 실수를 줄이는 용도로 두고, 최종 방어선은 서버 쪽(GitHub 보호 + CI)에 둔다.
+- **gitleaks-action 대신 바이너리를 쓰는 이유**: 버전·체크섬을 고정할 수 있다. 액션의 Node 런타임 폐기 일정과 PR 댓글 권한 문제에 묶이지 않는다. 이벤트 범위가 아니라 항상 전체 기록을 검사한다.
+- **알려진 한계**:
+  - Claude 훅은 Bash만 본다. 파일 쓰기 도구로 `.git/hooks`를 고치는 것은 막지 않는다.
+  - secretlint 규칙 패키지 최신이 13.1.0이라 본체 14와 버전이 섞인다(테스트로 동작 확인).
+- **작업 흐름 변화**: 이제 main에 직접 push할 수 없다. 작업은 브랜치에서 커밋하고 PR로 합친다.
+
+## D-018 서버 비밀값 관리와 연결 정보 암호화 (T02, 2026-11-21)
+
+- **비밀값 정의**:
+  - 서버 비밀값 이름은 `functions/src/config/secret-names.ts` 한 곳에 둔다.
+  - `secrets.ts`가 이 목록으로 `defineSecret`을 만들고, 번들 검사기도 같은 목록을 쓴다.
+  - `ADMIN_EMAILS`는 쉼표로 구분한 목록이라 `defineList`로 받는다(SPEC 8장 수정).
+- **process 사용 제한**:
+  - functions 코드에서 `process`는 `functions/src/config/`와 테스트에서만 쓴다.
+  - ESLint는 전역 `process`, `globalThis.process`·`global.process`, `process`·`node:process` import를 막는다.
+- **암호화**: 사용자 연결 정보는 AES-256-GCM으로 암호화한다.
+  - IV 12바이트를 매번 무작위로 만들고, 인증 태그 16바이트를 검증한다.
+  - 암호문 형식은 `<키 버전>.<iv>.<tag>.<암호문>`(base64url)이다.
+  - 문맥(AAD, 예: `secrets_oauth:<uid>`)에 묶는다. 다른 사용자 문서로 옮긴 암호문은 열리지 않는다.
+  - `TOKEN_ENC_KEY`는 `"v2:<b64>,v1:<b64>"` 형식이고 첫 항목이 현재 키다. 키를 교체해도 예전 암호문을 열 수 있다.
+- **화면 빌드 검사** (`pnpm scan:bundle`): 다음을 찾는다.
+  - 키 모양(커밋 전 검사와 같은 패턴, 테스트로 일치 확인)
+  - 서버 비밀값 이름(`VITE_` 접두어 포함)
+  - `functions/.secret.local`의 실제 값
+- Firebase 웹 API 키는 공개값이지만 YouTube 키와 모양(`AIza…`)이 같다. 그래서 화면 `.env*`와 환경 변수의 `VITE_FIREBASE_API_KEY` 값만 허용한다.
+- **이유**:
+  - 비밀값을 읽는 길을 하나로 모아야 "서버에만 둔다"를 lint로 강제할 수 있다.
+  - 사용자별로 묶지 않은 암호문은 DB 안에서 다른 계정 문서로 옮겨 쓰일 수 있다.
+  - YouTube 키를 모양만으로 구분할 수 없어서, 허용 목록을 정확한 값으로 둔다.
+- **알려진 한계**: 동적 `import('firebase-admin')`가 lint에 걸리는지는 확인하지 않았다. 번들 검사가 2차 방어다.
+
+## D-019 보안 규칙: 쓰기 없음, 공유 재생목록은 한 건 읽기만 (T03, 2026-11-21)
+
+- `firestore.rules`는 기본 전부 거부이고, SPEC 5장 표의 읽기만 연다. 클라이언트 쓰기 허용은 한 줄도 없다.
+  - 에뮬레이터 테스트(모든 컬렉션 쓰기 시도)와 정적 검사(`tools/firestore-rules-static.test.ts`, allow 문장 단위)로 고정한다.
+- 서버 전용(`secrets_oauth`, `events`, `issueFingerprints`)은 match 자체를 두지 않는다. 관리자도 클라이언트로는 읽지 못한다.
+- 관리자 판별은 사용자 정의 클레임 `admin == true`(불리언)만 인정한다. 관리자도 남의 draft·비공개 문서·ytExports는 읽지 못한다(SPEC 4.11).
+- **재생목록 읽기를 get/list로 나눈다**:
+  - 공유(`saved`) 재생목록은 공유 주소로 한 건 읽기(get)만 누구나 할 수 있다.
+  - 목록 조회(list)는 소유자 자기 것만 된다.
+  - **이유**: `saved` 전체나 특정 사용자의 공유 목록을 한 번에 긁어 가는 것을 막는다. `/p/:id`(T16)는 한 건 읽기, `/me`(T14·T24)는 소유자 목록만 쓰므로 기능에는 영향이 없다.
+- `playlists/{id}/private`는 SPEC대로 `request` 문서 하나만 연다. 부모 문서가 없으면 거부된다(`get()` 실패).
+- Storage는 쓰지 않으므로 전부 거부한다. `firebase.json`에 storage 블록이 있어, T23에서 대상 없이 `firebase deploy`를 하면 기본 버킷이 필요하다. 배포 때 `--only`로 대상을 지정하거나 버킷을 만든다.
+- 루트 Node 하한을 `>=24.12`로 올린다. `@firebase/rules-unit-testing` 6과 firebase 13이 요구한다. Functions 런타임(22)과는 별개다.
+- **화면 작업 메모(T16)**: draft나 없는 재생목록을 열면 not-found가 아니라 권한 거부가 온다. 화면은 둘 다 "찾을 수 없음"으로 보여 준다.

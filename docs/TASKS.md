@@ -19,13 +19,13 @@
 
 ## 테스트 종류
 
-| 종류 | 위치·패턴 | 실행 | 조건 |
-| ---- | --------- | ---- | ---- |
-| unit | `**/*.test.ts(x)` | `pnpm test` | 외부 의존 없음, 외부 API는 녹화 데이터 |
-| rules | `tests/rules/*.test.ts` | `pnpm test:rules` | Firebase 에뮬레이터(Java 필요) |
-| integration | `functions/**/*.int.test.ts` | `pnpm test:int` | 에뮬레이터 |
-| e2e | `apps/web/e2e/*.spec.ts` | `pnpm test:e2e` | 에뮬레이터 + 개발 서버, Playwright |
-| eval | `evals/` | `pnpm eval` | 녹화 데이터. 추천은 AI 키 필요 |
+| 종류        | 위치·패턴                    | 실행              | 조건                                   |
+| ----------- | ---------------------------- | ----------------- | -------------------------------------- |
+| unit        | `**/*.test.ts(x)`            | `pnpm test`       | 외부 의존 없음, 외부 API는 녹화 데이터 |
+| rules       | `tests/rules/*.test.ts`      | `pnpm test:rules` | Firebase 에뮬레이터(Java 필요)         |
+| integration | `functions/**/*.int.test.ts` | `pnpm test:int`   | 에뮬레이터                             |
+| e2e         | `apps/web/e2e/*.spec.ts`     | `pnpm test:e2e`   | 에뮬레이터 + 개발 서버, Playwright     |
+| eval        | `evals/`                     | `pnpm eval`       | 녹화 데이터. 추천은 AI 키 필요         |
 
 ## 작업 항목 형식
 
@@ -39,10 +39,10 @@
 
 ## A. 기반과 원칙 강제 (PLAN 13번)
 
-- [ ] **T00 개발 환경과 모노레포 뼈대** — SPEC 6.1, 7
+- [x] **T00 개발 환경과 모노레포 뼈대** — SPEC 6.1, 7
   - 의존: 없음
   - 산출물:
-    - corepack으로 pnpm 활성화, `pnpm-workspace.yaml`
+    - pnpm 10 설치(`npm i -g pnpm@10`, D-016), `pnpm-workspace.yaml`
     - `apps/web`(Vite+React 빈 화면), `functions`(빈 callable 1개), `packages/shared`
     - `tsconfig` strict, ESLint, Prettier, Vitest
     - `firebase.json`(Hosting·Functions·Firestore·Auth 에뮬레이터), `.gitignore`
@@ -52,7 +52,7 @@
     - `pnpm emulators`가 뜨고 빈 callable을 호출하는 integration 테스트 1개 통과 (Java 설치 여부 확인 포함)
     - Stop 훅(`.claude/hooks/stop-check.sh`)이 실제 명령으로 exit 0
 
-- [ ] **T01 비밀값 커밋 차단과 main 직접 push 차단** — SPEC 6.2
+- [x] **T01 비밀값 커밋 차단과 main 직접 push 차단** — SPEC 6.2
   - 의존: T00
   - 산출물:
     - `simple-git-hooks`: pre-commit에서 secretlint(스테이징 파일), pre-push에서 main 대상 push 거부
@@ -65,7 +65,7 @@
     - unit `tools/guard-git.test.ts` — PreToolUse 훅이 `git push origin main`, `git push --no-verify`, `git commit --no-verify` 입력에 exit 2
     - 수동 확인 기록: `gh api repos/:owner/musicweb/branches/main/protection` 결과를 PR 본문에 첨부
 
-- [ ] **T02 비밀값과 연결 정보는 서버에만** — SPEC 6.2, 8
+- [x] **T02 비밀값과 연결 정보는 서버에만** — SPEC 6.2, 8
   - 의존: T00
   - 산출물:
     - `functions/src/config/secrets.ts`(`defineSecret` 모음, 다른 곳에서 `process.env` 비밀값 읽기 금지 ESLint)
@@ -77,7 +77,7 @@
     - unit `tools/scan-bundle.test.ts` — 키 패턴이 든 가짜 번들은 실패, 정상 번들은 통과
     - lint 테스트 `tools/eslint-rules.test.ts` — web에서 서버 패키지 import 시 lint 오류
 
-- [ ] **T03 보안 규칙: 사용자는 자기 데이터만** — SPEC 5
+- [x] **T03 보안 규칙: 사용자는 자기 데이터만** — SPEC 5
   - 의존: T00
   - 산출물: `firestore.rules`(기본 전부 거부 + SPEC 5장 읽기 허용표), `storage.rules`(전부 거부)
   - 완료 기준:

@@ -6,18 +6,19 @@ description: YouTube Data API·IFrame 플레이어 약관과 할당량 규칙. Y
 # YouTube 약관과 할당량 (musicweb)
 
 확인일 2026-11-21. 약관이 바뀌었을 수 있으니, 새 정책을 판단해야 하면 원문을 다시 연다.
+
 - 개발자 정책: https://developers.google.com/youtube/terms/developer-policies
 - 최소 기능 요건: https://developers.google.com/youtube/terms/required-minimum-functionality
 - 할당량: https://developers.google.com/youtube/v3/determine_quota_cost
 
 ## 할당량
 
-| 호출 | 비용 | 메모 |
-|---|---|---|
-| search.list | **하루 100회 별도 한도** | 단위가 아니라 횟수. 사용자 80 + 야간 20 (D-007) |
-| channels.list, playlistItems.list, videos.list | 1단위 | playlistItems·videos는 50개씩 |
-| playlists.insert, playlistItems.insert | 50단위 | 재생목록 10곡 = 550단위 |
-| 기본 할당 | 하루 10,000단위 | 태평양 시간 자정 초기화. 앱 상한 9,000 |
+| 호출                                           | 비용                     | 메모                                            |
+| ---------------------------------------------- | ------------------------ | ----------------------------------------------- |
+| search.list                                    | **하루 100회 별도 한도** | 단위가 아니라 횟수. 사용자 80 + 야간 20 (D-007) |
+| channels.list, playlistItems.list, videos.list | 1단위                    | playlistItems·videos는 50개씩                   |
+| playlists.insert, playlistItems.insert         | 50단위                   | 재생목록 10곡 = 550단위                         |
+| 기본 할당                                      | 하루 10,000단위          | 태평양 시간 자정 초기화. 앱 상한 9,000          |
 
 - 채널 영상은 `channels.list(part=contentDetails)`의 `relatedPlaylists.uploads`에서 `playlistItems.list`로 받는다. search로 받지 않는다.
 - 할당량은 사지 못한다. 증가는 준수 심사로만 받는다. 프로젝트는 1개뿐이다. 프로젝트를 여러 개 쓰거나 비공식 수집 도구를 쓰는 것은 금지다.

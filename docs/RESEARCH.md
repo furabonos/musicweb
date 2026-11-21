@@ -67,14 +67,14 @@
 
 ## 6. 공개 음악 데이터
 
-| 출처 | 데이터 | 조건 | 출처 |
-|---|---|---|---|
-| ListenBrainz Labs | 비슷한 곡·아티스트, 태그 조회 | 공개 데이터 CC0 계열(원문 직접 확인 못 함), 초당 1회, 실험 서비스(SLA 없음) | https://labs.api.listenbrainz.org/ , https://listenbrainz.readthedocs.io/en/latest/users/api/index.html |
-| MusicBrainz | 아티스트·녹음·발매일·URL 관계(YouTube 링크 포함) | 핵심 데이터 CC0. 태그·장르 연결은 CC BY-NC-SA 3.0. 초당 1회, 연락처 든 User-Agent 필수 | https://musicbrainz.org/doc/About/Data_License , https://musicbrainz.org/doc/MusicBrainz_API/Rate_Limiting |
-| Wikidata | YouTube 영상 ID(P1651), 장르(P136), 발매일(P577) | CC0. 인기곡 위주 | https://www.wikidata.org/wiki/Wikidata:Licensing |
-| Last.fm | 비슷한 곡(유사도 점수), 태그 | **비상업 전용**, Last.fm 표시와 링크 의무, HTTP 헤더에 맞춘 캐시, 저장 상한 100MB, 이용 종료 시 삭제 | https://www.last.fm/api/tos |
-| Discogs | 장르·스타일 | 공식 페이지 403으로 원문 미확인. Restricted Data 상업 금지 | — |
-| Spotify | — | 2024-11-27부터 신규 앱 추천·관련 아티스트 차단, 데이터베이스 구축 금지 → **사용 안 함** | https://developer.spotify.com/blog/2024-11-27-changes-to-the-web-api |
+| 출처              | 데이터                                           | 조건                                                                                                 | 출처                                                                                                       |
+| ----------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| ListenBrainz Labs | 비슷한 곡·아티스트, 태그 조회                    | 공개 데이터 CC0 계열(원문 직접 확인 못 함), 초당 1회, 실험 서비스(SLA 없음)                          | https://labs.api.listenbrainz.org/ , https://listenbrainz.readthedocs.io/en/latest/users/api/index.html    |
+| MusicBrainz       | 아티스트·녹음·발매일·URL 관계(YouTube 링크 포함) | 핵심 데이터 CC0. 태그·장르 연결은 CC BY-NC-SA 3.0. 초당 1회, 연락처 든 User-Agent 필수               | https://musicbrainz.org/doc/About/Data_License , https://musicbrainz.org/doc/MusicBrainz_API/Rate_Limiting |
+| Wikidata          | YouTube 영상 ID(P1651), 장르(P136), 발매일(P577) | CC0. 인기곡 위주                                                                                     | https://www.wikidata.org/wiki/Wikidata:Licensing                                                           |
+| Last.fm           | 비슷한 곡(유사도 점수), 태그                     | **비상업 전용**, Last.fm 표시와 링크 의무, HTTP 헤더에 맞춘 캐시, 저장 상한 100MB, 이용 종료 시 삭제 | https://www.last.fm/api/tos                                                                                |
+| Discogs           | 장르·스타일                                      | 공식 페이지 403으로 원문 미확인. Restricted Data 상업 금지                                           | —                                                                                                          |
+| Spotify           | —                                                | 2024-11-27부터 신규 앱 추천·관련 아티스트 차단, 데이터베이스 구축 금지 → **사용 안 함**              | https://developer.spotify.com/blog/2024-11-27-changes-to-the-web-api                                       |
 
 ## 7. Firebase 요금제
 
