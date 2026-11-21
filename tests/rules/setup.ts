@@ -68,6 +68,8 @@ async function seed() {
       put('secrets_oauth/alice', { sealed: 'v1.x.y.z' }),
       put('events/e1', { type: 'x' }),
       put('lastfmCache/k1', { bytes: 1 }),
+      put('ingestQueue/q1', { name: 'x' }),
+      put('ingestQueueDays/2026-11-21', { count: 1 }),
       put('issueFingerprints/f1', { issueNumber: 1 }),
       put('misc/x', { a: 1 }),
     ]);
@@ -114,5 +116,7 @@ export const WRITE_TARGETS = [
   'adminAudit/x1',
   'issueFingerprints/f1',
   'lastfmCache/k1',
+  'ingestQueue/q1',
+  'ingestQueueDays/2026-11-21',
   'misc/x',
 ];

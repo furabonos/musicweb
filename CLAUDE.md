@@ -23,6 +23,7 @@ pnpm 10(`npm i -g pnpm@10`, Node 26에는 corepack이 없음). 에뮬레이터�
 - typecheck: `pnpm typecheck`
 - unit test: `pnpm test` (`*.int.test.ts` 제외)
 - 단일 테스트: `pnpm vitest run <파일>`
+- functions 빌드: `pnpm --filter functions build` (tsc 타입 검사 + esbuild로 `lib/index.js` 한 파일, `@musicweb/shared` 포함, D-027)
 - 통합: `pnpm test:int` (functions 빌드 → `tools/emulator-env.sh`로 에뮬레이터 매개변수 파일 생성 → 에뮬레이터 띄움 → `*.int.test.ts` 실행 → 종료)
 - 에뮬레이터만 띄우기: `pnpm emulators` (프로젝트 `demo-musicweb`, 실제 Firebase에 연결 안 됨)
 - 화면 개발 서버: `pnpm --filter web dev`, 빌드: `pnpm --filter web build`

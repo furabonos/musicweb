@@ -1,0 +1,29 @@
+{
+  "_note": "손으로 만든 응답 (YouTube API 키 없음, D-027). 형식: https://developers.google.com/youtube/v3/docs — 실제 키로 녹화본으로 바꾼다(T23 전).",
+  "kind": "youtube#playlistItemListResponse",
+  "etag": "e3",
+  "pageInfo": {
+    "totalResults": 2,
+    "resultsPerPage": 50
+  },
+  "items": [
+    {
+      "kind": "youtube#playlistItem",
+      "etag": "e",
+      "id": "PLIrhTeaser001",
+      "contentDetails": {
+        "videoId": "rhTeaser001",
+        "videoPublishedAt": "2024-01-20T12:00:00Z"
+      }
+    },
+    {
+      "kind": "youtube#playlistItem",
+      "etag": "e",
+      "id": "PLIrhPrivate01",
+      "contentDetails": {
+        "videoId": "rhPrivate01",
+        "videoPublishedAt": "2024-01-10T12:00:00Z"
+      }
+    }
+  ]
+}

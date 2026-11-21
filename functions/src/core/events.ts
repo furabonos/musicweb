@@ -43,6 +43,10 @@ export const EXTERNAL_OPS = [
   'listenbrainz.similarArtists',
   'wikidata.sparql',
   'lastfm.track.getSimilar',
+  'channels.list',
+  'playlistItems.list',
+  'videos.list',
+  'search.list',
 ] as const;
 export type ExternalOp = (typeof EXTERNAL_OPS)[number];
 
@@ -90,6 +94,12 @@ export const EVENT_SCHEMAS = {
   job_started: z.strictObject({ job: z.enum(JOBS) }),
   job_finished: z.strictObject({ job: z.enum(JOBS), processed: count, failed: count }),
   admin_change: z.strictObject({ action: id }),
+  // 수집 대상 아티스트가 연속으로 실패함 (3회면 failed). MBID는 공개 음악 데이터 ID라 개인정보가 아니다.
+  artist_ingest_failed: z.strictObject({
+    artistMbid: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/),
+    failCount: count,
+    status: z.enum(['active', 'failed']),
+  }),
   // 재시도해도 응답이 없을 때(429·503·연결 실패). 추천은 다른 출처로 대신한다(스킬 music-data-terms).
   source_unavailable: z.strictObject({
     source: z.enum(['musicbrainz', 'listenbrainz', 'wikidata', 'lastfm']),

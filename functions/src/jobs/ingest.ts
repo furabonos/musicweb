@@ -1,0 +1,510 @@
+import { FieldValue, type Firestore } from 'firebase-admin/firestore';
+import {
+  compareKey,
+  decideLink,
+  splitArtistTitle,
+  type Include,
+  type Judge,
+  type VideoCandidate,
+} from '@musicweb/shared';
+import type { createMusicBrainz, RecordingCandidate } from '../adapters/musicbrainz.js';
+import type { createWikidata } from '../adapters/wikidata.js';
+import { SourceUnavailableError } from '../adapters/music-http.js';
+import { YouTubeReadError, type VideoDetail, type YouTubeRead } from '../adapters/youtube-read.js';
+import { BudgetExceededError } from '../core/budget.js';
+import type { EventSink } from '../core/events.js';
+import { addOpsLog } from '../core/opsLog.js';
+import { assertEnabled, KillSwitchError, type ServiceCounter } from '../core/runtimeConfig.js';
+
+/**
+ * 야간 곡 목록 수집 (SPEC 4.4, T10, D-027).
+ *
+ * 아티스트마다: 공식 채널 찾기(MusicBrainz → Wikidata) → uploads 재생목록 → 지난번 이후 새 업로드만 →
+ * 영상 상세(50개씩) → MusicBrainz에서 그 곡 찾기 → 곡 연결 규칙(T09) → songs·links 저장.
+ *
+ * - 시작 전에 긴급 정지 `ingest`를 확인한다. 꺼져 있으면 외부 호출을 하나도 하지 않는다.
+ *   YouTube 호출마다 쓰는 한도(firestoreYtBudget(db, 'ingest'))도 매번 스위치를 다시 확인한다.
+ * - 한도에 닿으면 그 자리에서 멈추고 운영 일지에 "한도 도달"을 남긴다. 처리한 것까지는 저장돼 있다.
+ * - 곡 정보(아티스트·제목·연도)는 MusicBrainz에서 온다. YouTube 제목은 곡을 찾는 데만 쓰고 곡 정보로 저장하지 않는다.
+ * - 연결에는 YouTube 데이터(영상 제목·채널·퍼가기·아동용)와 확인 시각이 들어간다. 30일 규칙은 T11.
+ * - 연속 3번 실패한 아티스트는 failed로 바꾸고 이벤트·운영 일지를 남긴다.
+ */
+
+export const MAX_FAILS = 3;
+export const DEFAULT_LIMITS = {
+  /** 한 번에 도는 아티스트 수 */
+  maxArtists: 20,
+  /** 아티스트당 업로드 목록 쪽 수(쪽당 50개) */
+  maxPages: 4,
+  /** 아티스트당 곡을 찾아볼 새 영상 수(MusicBrainz 검색 1회씩, 초당 1회) */
+  maxVideos: 60,
+  /** 하루에 대기열에서 수집 대상으로 옮길 아티스트 수 */
+  maxQueuePerRun: 50,
+};
+/** 수집할 때 함께 저장하는 종류. 라이브·리믹스도 저장해 두고, 추천에서 요청 조건으로 거른다(SPEC 3.1). */
+const INGEST_INCLUDE: Include = { live: true, remix: true, cover: false };
+
+export interface IngestDeps {
+  db: Firestore;
+  yt: YouTubeRead;
+  mb: ReturnType<typeof createMusicBrainz>;
+  wd: ReturnType<typeof createWikidata>;
+  events: EventSink;
+  /** 애매한 연결 판정(T12). 없으면 pending_ai로 저장한다. */
+  judge?: Judge;
+  now?: () => Date;
+  limits?: Partial<typeof DEFAULT_LIMITS>;
+  /** 이 시각(ms)이 지나면 다음 아티스트·다음 영상 묶음으로 넘어가지 않고 정상 종료한다. 예약 함수의 제한 시간보다 앞에 둔다. */
+  deadlineMs?: number;
+  /** 마감 비교용 시계(ms). 테스트에서 바꾼다. */
+  clock?: () => number;
+}
+
+export interface IngestSummary {
+  /** limit: 한도, killSwitch: 긴급 정지, outage: YouTube 할당량 소진·출처 장애, deadline: 실행 시간 마감 */
+  stoppedBy: 'limit' | 'killSwitch' | 'outage' | 'deadline' | null;
+  artists: number;
+  videosSeen: number;
+  linksActive: number;
+  linksPending: number;
+  failedArtists: number;
+}
+
+export interface ArtistDoc {
+  name: string;
+  mbid: string;
+  status: 'active' | 'paused' | 'failed';
+  channelId: string | null;
+  uploadsPlaylistId: string | null;
+  /** 가장 최근에 본 업로드 시각(ISO). 이보다 새로운 것만 처리한다. */
+  lastSeenPublishedAt: string | null;
+  lastScannedAt: unknown;
+  failCount: number;
+}
+
+/** 실패·성공에 따른 아티스트 상태 변화. 연속 3번 실패면 failed. */
+export function nextArtistState(
+  artist: Pick<ArtistDoc, 'failCount' | 'status'>,
+  outcome: 'ok' | 'failed',
+): { failCount: number; status: ArtistDoc['status']; becameFailed: boolean } {
+  if (outcome === 'ok') return { failCount: 0, status: artist.status, becameFailed: false };
+  const failCount = artist.failCount + 1;
+  const status = failCount >= MAX_FAILS ? 'failed' : artist.status;
+  return { failCount, status, becameFailed: status === 'failed' && artist.status !== 'failed' };
+}
+
+class NoChannelError extends Error {
+  override name = 'NoChannelError';
+}
+
+const YT_OUTAGE_REASONS = new Set([
+  'quotaExceeded',
+  'dailyLimitExceeded',
+  'rateLimitExceeded',
+  'userRateLimitExceeded',
+]);
+
+/**
+ * 아티스트 탓이 아니라 서비스 전체 문제인가: YouTube 할당량 소진·연결 실패·5xx, 음악 데이터 출처 장애.
+ * 이런 오류로 아티스트 실패 횟수를 올리면 장애 며칠 만에 전원이 failed가 된다 → 작업을 멈추고 다음 밤에 다시 한다.
+ */
+export function isOutage(err: unknown): boolean {
+  if (err instanceof SourceUnavailableError) return true;
+  if (err instanceof YouTubeReadError) {
+    return (
+      err.status === null ||
+      err.status >= 500 ||
+      (err.reason !== null && YT_OUTAGE_REASONS.has(err.reason))
+    );
+  }
+  return false;
+}
+
+const ms = (iso: string) => Date.parse(iso);
+
+export async function runIngest(deps: IngestDeps): Promise<IngestSummary> {
+  const { db } = deps;
+  const limits = { ...DEFAULT_LIMITS, ...deps.limits };
+  const summary: IngestSummary = {
+    stoppedBy: null,
+    artists: 0,
+    videosSeen: 0,
+    linksActive: 0,
+    linksPending: 0,
+    failedArtists: 0,
+  };
+
+  try {
+    await assertEnabled(db, 'ingest');
+  } catch (err) {
+    if (!(err instanceof KillSwitchError)) throw err;
+    await deps.events.record({
+      type: 'kill_switch_blocked',
+      attrs: { feature: 'ingest' },
+      outcome: 'rejected',
+    });
+    return { ...summary, stoppedBy: 'killSwitch' };
+  }
+
+  await deps.events.record({ type: 'job_started', attrs: { job: 'ingest' }, outcome: 'ok' });
+  const clock = deps.clock ?? Date.now;
+  const pastDeadline = () => deps.deadlineMs !== undefined && clock() >= deps.deadlineMs;
+  try {
+    await promoteQueue(db, limits.maxQueuePerRun);
+  } catch (err) {
+    // 대기열 옮기기가 실패해도 기존 대상 수집은 계속한다.
+    await deps.events.record({
+      type: 'error',
+      attrs: { code: errName(err), where: 'ingest.queue' },
+      outcome: 'error',
+    });
+    await addOpsLog(db, {
+      kind: 'job_failed',
+      message: 'Ingest: moving queued artists failed; continuing with existing artists.',
+    });
+  }
+
+  const snap = await db
+    .collection('artists')
+    .where('status', '==', 'active')
+    .orderBy('lastScannedAt')
+    .limit(limits.maxArtists)
+    .get();
+
+  for (const doc of snap.docs) {
+    if (pastDeadline()) {
+      summary.stoppedBy = 'deadline';
+      break;
+    }
+    const artist = doc.data() as ArtistDoc;
+    summary.artists++;
+    try {
+      const r = await ingestArtist(deps, doc.ref, artist, limits, pastDeadline);
+      summary.videosSeen += r.videosSeen;
+      summary.linksActive += r.linksActive;
+      summary.linksPending += r.linksPending;
+      await doc.ref.update({ failCount: nextArtistState(artist, 'ok').failCount });
+      if (r.gap) {
+        await addOpsLog(db, {
+          kind: 'job',
+          message: `Ingest: an artist had more than ${limits.maxPages * 50} new uploads since the last run; older ones were skipped.`,
+        });
+      }
+      if (r.deadlineHit) {
+        summary.stoppedBy = 'deadline';
+        break;
+      }
+    } catch (err) {
+      if (err instanceof BudgetExceededError) {
+        summary.stoppedBy = 'limit';
+        await deps.events.record({
+          type: 'limit_reached',
+          attrs: { scope: err.scope, counter: err.counter as ServiceCounter },
+          outcome: 'rejected',
+        });
+        await addOpsLog(db, {
+          kind: 'limit',
+          message: `Ingest stopped: daily limit reached (${err.counter}). Resumes after the next reset.`,
+        });
+        break;
+      }
+      if (err instanceof KillSwitchError) {
+        summary.stoppedBy = 'killSwitch';
+        await deps.events.record({
+          type: 'kill_switch_blocked',
+          attrs: { feature: 'ingest' },
+          outcome: 'rejected',
+        });
+        await addOpsLog(db, {
+          kind: 'job',
+          message: 'Ingest stopped: the ingest kill switch was turned off during the run.',
+        });
+        break;
+      }
+      if (isOutage(err)) {
+        summary.stoppedBy = 'outage';
+        const source = err instanceof SourceUnavailableError ? err.source : 'youtube';
+        await deps.events.record({
+          type: 'error',
+          attrs: { code: errName(err), where: `ingest.${source}` },
+          outcome: 'error',
+        });
+        await addOpsLog(db, {
+          kind: 'job_failed',
+          message: `Ingest stopped: ${source} is unavailable or out of quota. Artists were not marked as failed; will retry next run.`,
+        });
+        break;
+      }
+      const next = nextArtistState(artist, 'failed');
+      await doc.ref.update({ failCount: next.failCount, status: next.status });
+      await deps.events.record({
+        type: 'artist_ingest_failed',
+        attrs: {
+          artistMbid: artist.mbid,
+          failCount: next.failCount,
+          status: next.status === 'failed' ? 'failed' : 'active',
+        },
+        outcome: 'error',
+      });
+      if (next.becameFailed) {
+        summary.failedArtists++;
+        await addOpsLog(db, {
+          kind: 'job_failed',
+          message: `Ingest: an artist failed ${MAX_FAILS} times in a row and was paused (status failed).`,
+        });
+      }
+    }
+  }
+
+  await deps.events.record({
+    type: 'job_finished',
+    attrs: { job: 'ingest', processed: summary.videosSeen, failed: summary.failedArtists },
+    outcome: summary.stoppedBy ? 'rejected' : 'ok',
+  });
+  await addOpsLog(db, {
+    kind: 'job',
+    message: `Ingest finished: ${summary.artists} artists, ${summary.videosSeen} new videos, ${summary.linksActive} links${summary.stoppedBy ? ` (stopped: ${summary.stoppedBy})` : ''}.`,
+  });
+  return summary;
+}
+
+async function ingestArtist(
+  deps: IngestDeps,
+  ref: FirebaseFirestore.DocumentReference,
+  artist: ArtistDoc,
+  limits: typeof DEFAULT_LIMITS,
+  pastDeadline: () => boolean,
+) {
+  const now = deps.now ?? (() => new Date());
+
+  // 1. 공식 채널: MusicBrainz URL 관계 → Wikidata P2397
+  let channelId = artist.channelId;
+  if (!channelId) {
+    const mbArtist = await deps.mb.getArtist(artist.mbid);
+    channelId = mbArtist?.youtubeChannelIds[0] ?? null;
+    if (!channelId) {
+      const wd = await deps.wd.artistChannels([artist.mbid]);
+      channelId = wd.get(artist.mbid)?.youtubeChannelIds[0] ?? null;
+    }
+    if (!channelId) throw new NoChannelError('공식 채널을 찾지 못했습니다.');
+    await ref.update({ channelId });
+  }
+
+  // 2. uploads 재생목록
+  let uploads = artist.uploadsPlaylistId;
+  if (!uploads) {
+    uploads = await deps.yt.uploadsPlaylist(channelId);
+    if (!uploads) throw new NoChannelError('업로드 목록이 없습니다.');
+    await ref.update({ uploadsPlaylistId: uploads });
+  }
+
+  // 3. 지난번 이후 새 업로드만 (최신 것부터 오므로, 이미 본 시각에 닿으면 멈춘다).
+  //    게시 시각이 없는 항목(비공개 등)은 건너뛴다. 처음 보는 아티스트는 최근 maxPages쪽(최대 200개)까지만 본다.
+  //    시각은 Date.parse로 비교한다(밀리초 표기가 섞여도 맞게).
+  const watermark = artist.lastSeenPublishedAt;
+  const wm = watermark ? ms(watermark) : null;
+  const fresh: { videoId: string; publishedAt: string; t: number }[] = [];
+  let pageToken: string | undefined;
+  let reachedSeen = false;
+  for (let page = 0; page < limits.maxPages && !reachedSeen; page++) {
+    const r = await deps.yt.uploadsPage(uploads, pageToken);
+    for (const it of r.items) {
+      const t = it.publishedAt ? ms(it.publishedAt) : NaN;
+      if (!it.publishedAt || !Number.isFinite(t)) continue;
+      if (wm !== null && t <= wm) {
+        reachedSeen = true;
+        break;
+      }
+      fresh.push({ videoId: it.videoId, publishedAt: it.publishedAt, t });
+    }
+    if (!r.nextPageToken) {
+      reachedSeen = true; // 목록 끝
+      break;
+    }
+    pageToken = r.nextPageToken;
+  }
+  // 지난번 이후 새 업로드가 쪽 수 상한보다 많았다(그 사이 것은 건너뜀) — 운영 일지에 남긴다.
+  const gap = wm !== null && !reachedSeen;
+
+  // 오래된 것부터 maxVideos개만 이번에 처리하고, 기준 시각은 처리한 것까지만 옮긴다(나머지는 다음 실행).
+  // 자른 자리와 같은 시각인 영상은 함께 넣는다: 다음 실행의 "기준 시각 이하는 이미 봄"에 걸려 잃지 않게.
+  fresh.sort((a, b) => a.t - b.t);
+  let cut = Math.min(limits.maxVideos, fresh.length);
+  while (cut > 0 && cut < fresh.length && fresh[cut]?.t === fresh[cut - 1]?.t) cut++;
+  const toCheck = fresh.slice(0, cut);
+
+  // 4. 영상 상세 (공개·퍼가기 가능한 것만)
+  const details = new Map(
+    (await deps.yt.videos(toCheck.map((v) => v.videoId)))
+      .filter((v) => v.privacyStatus === 'public' && v.embeddable)
+      .map((v) => [v.videoId, v]),
+  );
+
+  // 5. 곡 찾기 → 연결. 같은 시각 묶음이 끝날 때마다 마감을 확인하고, 마감이면 처리한 데까지만 기준 시각을 옮긴다.
+  let linksActive = 0;
+  let linksPending = 0;
+  let lastSeen = watermark;
+  let deadlineHit = false;
+  for (let k = 0; k < toCheck.length; k++) {
+    const item = toCheck[k];
+    if (!item) continue;
+    const video = details.get(item.videoId);
+    if (video) {
+      const r = await linkVideo(deps, artist, channelId, video, now());
+      if (r === 'active') linksActive++;
+      if (r === 'pending_ai') linksPending++;
+    }
+    const groupEnds = toCheck[k + 1]?.t !== item.t;
+    if (groupEnds) {
+      lastSeen = item.publishedAt;
+      if (k + 1 < toCheck.length && pastDeadline()) {
+        deadlineHit = true;
+        break;
+      }
+    }
+  }
+
+  await ref.update({
+    lastSeenPublishedAt: lastSeen ?? null,
+    lastScannedAt: FieldValue.serverTimestamp(),
+  });
+  const processed = lastSeen ? toCheck.filter((v) => v.t <= ms(lastSeen)).length : 0;
+  return { videosSeen: processed, linksActive, linksPending, gap, deadlineHit };
+}
+
+/** 영상 하나를 그 아티스트의 곡(MusicBrainz 녹음)에 연결한다. */
+async function linkVideo(
+  deps: IngestDeps,
+  artist: ArtistDoc,
+  channelId: string,
+  video: VideoDetail,
+  now: Date,
+): Promise<'active' | 'pending_ai' | 'skipped'> {
+  // 이미 어느 곡에든 연결된 영상은 다시 다루지 않는다. 재확인(T11)·AI 판정(T12)·관리자가 바꾼 상태를 덮지 않고,
+  // 같은 영상이 다른 곡에 겹쳐 연결되지 않게 한다.
+  const existing = await deps.db
+    .collectionGroup('links')
+    .where('videoId', '==', video.videoId)
+    .limit(1)
+    .get();
+  if (!existing.empty) return 'skipped';
+  const split = splitArtistTitle(video.title, video.channelTitle, [artist.name]);
+  const titleGuess = split.titles[0];
+  if (!titleGuess) return 'skipped';
+  const recording = pickRecording(
+    await deps.mb.searchRecordings(artist.name, titleGuess, 5),
+    artist,
+    split.titles,
+  );
+  if (!recording) return 'skipped';
+
+  const candidate: VideoCandidate = {
+    videoId: video.videoId,
+    title: video.title,
+    channelId: video.channelId,
+    channelTitle: video.channelTitle,
+    description: video.description,
+    durationSec: video.durationSec,
+  };
+  const decision = await decideLink(
+    {
+      title: recording.title,
+      artist: artist.name,
+      lengthMs: recording.lengthMs,
+      officialChannelIds: [channelId],
+    },
+    [candidate],
+    INGEST_INCLUDE,
+    deps.judge,
+  );
+  if (decision.status !== 'active' && decision.status !== 'pending_ai') return 'skipped';
+
+  const songRef = deps.db.doc(`songs/${recording.mbid}`);
+  const kind =
+    decision.status === 'active' ? decision.kind : (decision.candidates[0]?.kind ?? 'other');
+  const batch = deps.db.batch();
+  // 곡 정보는 MusicBrainz에서 온 값만 (YouTube 제목을 곡 정보로 저장하지 않는다).
+  batch.set(
+    songRef,
+    {
+      mbid: recording.mbid,
+      artist: recording.artist,
+      artistMbid: artist.mbid,
+      title: recording.title,
+      releaseYear: recording.firstReleaseYear,
+      source: 'musicbrainz',
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
+  batch.set(songRef.collection('links').doc(video.videoId), {
+    videoId: video.videoId,
+    kind,
+    status: decision.status,
+    linkedBy: decision.status === 'active' && decision.byAi ? 'ai' : 'rule',
+    ytTitle: video.title,
+    channelId: video.channelId,
+    embeddable: video.embeddable,
+    madeForKids: video.madeForKids,
+    durationSec: video.durationSec,
+    verifiedAt: now,
+  });
+  await batch.commit();
+  return decision.status;
+}
+
+/** MusicBrainz 후보 중 그 아티스트의, 제목이 맞는 녹음. 구분 설명(라이브 등)이 없는 것, 그다음 이른 연도를 고른다. */
+export function pickRecording(
+  candidates: RecordingCandidate[],
+  artist: Pick<ArtistDoc, 'mbid'>,
+  titles: string[],
+): RecordingCandidate | null {
+  const keys = new Set(titles.map(compareKey));
+  const ok = candidates.filter(
+    (c) => c.artistMbid === artist.mbid && keys.has(compareKey(c.title)),
+  );
+  ok.sort(
+    (a, b) =>
+      Number(a.disambiguation !== null) - Number(b.disambiguation !== null) ||
+      (a.firstReleaseYear ?? 9999) - (b.firstReleaseYear ?? 9999) ||
+      b.score - a.score,
+  );
+  return ok[0] ?? null;
+}
+
+/**
+ * 이벤트용 오류 코드: 오류 이름을 snake_case로(SourceUnavailableError → source_unavailable_error).
+ * 이벤트 검사가 구분자 없는 긴 영숫자(uid·토큰 모양)를 거부하므로 그대로 쓰면 기록이 실패한다.
+ */
+export const errName = (err: unknown) =>
+  (err instanceof Error ? err.name : 'unknown')
+    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+    .toLowerCase()
+    .replace(/[^a-z0-9_.:-]/g, '')
+    .slice(0, 64) || 'unknown';
+
+/** 대기열(사용자가 찾은 아티스트)을 수집 대상으로 옮긴다. 이미 있으면 건너뛴다. */
+async function promoteQueue(db: Firestore, max: number) {
+  const queued = await db.collection('ingestQueue').orderBy('queuedAt').limit(max).get();
+  for (const q of queued.docs) {
+    const { mbid, name } = q.data() as { mbid: string; name: string };
+    const ref = db.doc(`artists/${mbid}`);
+    await db.runTransaction(async (tx) => {
+      const existing = await tx.get(ref);
+      if (!existing.exists) {
+        const doc: ArtistDoc = {
+          name,
+          mbid,
+          status: 'active',
+          channelId: null,
+          uploadsPlaylistId: null,
+          lastSeenPublishedAt: null,
+          lastScannedAt: null,
+          failCount: 0,
+        };
+        tx.set(ref, { ...doc, addedBy: 'queue' });
+      }
+      tx.delete(q.ref);
+    });
+  }
+}
