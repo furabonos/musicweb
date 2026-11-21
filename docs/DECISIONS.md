@@ -171,3 +171,34 @@
 - Storage는 쓰지 않으므로 전부 거부한다. `firebase.json`에 storage 블록이 있어, T23에서 대상 없이 `firebase deploy`를 하면 기본 버킷이 필요하다. 배포 때 `--only`로 대상을 지정하거나 버킷을 만든다.
 - 루트 Node 하한을 `>=24.12`로 올린다. `@firebase/rules-unit-testing` 6과 firebase 13이 요구한다. Functions 런타임(22)과는 별개다.
 - **화면 작업 메모(T16)**: draft나 없는 재생목록을 열면 not-found가 아니라 권한 거부가 온다. 화면은 둘 다 "찾을 수 없음"으로 보여 준다.
+
+## D-020 비용·호출 상한 API와 데이터 (T04, 2026-11-21)
+
+- **API**: TASKS의 `reserve(kind, amount, {uid})` 대신 `reserve(db, { service: {...}, user: { uid, counters: {...} }, feature? })`를 쓴다.
+  - 여러 카운터를 한 트랜잭션에서 한 번에 예약한다. 예: 검색 1회 = 서비스 `ytSearchUser` + 사용자 `searches`.
+  - `feature`를 주면 같은 트랜잭션에서 긴급 정지 스위치도 확인한다.
+  - 보통은 `withBudget(db, req, fn)`으로 감싼다. fn이 실제 사용량을 돌려주면 정산하고, 실패하면 0으로 정산한 뒤 오류를 다시 던진다.
+- **카운터**:
+  - 서비스(`usage/{day}`): `ytUnits`, `ytSearchUser`, `ytSearchJob`, `aiCostMicroUsd`, `exports`, `autoIssues`, `autoFixes`
+    - 검색은 사용자 80회와 야간 작업 20회로 나눈다(SPEC 6.3). 서로 다 써 버리지 못하게 하기 위함이다.
+    - `autoFixes`(하루 3회)는 지금 한도만 정의하고, 실제 차감은 T20에서 연결한다.
+    - 설정 형식이 엄격해서 나중에 필드를 추가하면 이전 배포본이 거부한다. 그래서 미리 넣었다.
+  - 사용자(`users/{uid}/usage/{day}`): `playlists`, `searches`, `exports`
+- **예약 기록**: `usage/{day}/reservations/{id}`에 둔다. 보안 규칙에 match가 없어 서버 전용이다(규칙 테스트로 확인).
+  - 정산하면 uid를 지운다. 정산 안 된 예약의 uid는 계정 삭제(T24) 때 지운다.
+  - 정산 안 된 예약은 예약한 양을 계속 차지한다(막는 쪽).
+- **막는 쪽으로 실패**: `config/runtime`이 깨졌거나 모르는 필드가 있으면 모든 예약과 스위치 확인이 거부된다. 저장된 카운터 값이 숫자가 아니어도 거부된다.
+- **정산 규칙**:
+  - 실제가 예약보다 많아도 기록한다(이미 쓴 비용).
+  - 돌려줄 때는 0 아래로 내리지 않고, 지워진 카운터 문서를 다시 만들지 않는다.
+  - 사용자 경로는 예약 문서에 저장된 uid로 정한다.
+  - 같은 예약을 두 번 정산하면 `AlreadySettledError`다. 응답이 유실돼 재시도한 경우 호출자는 이 오류를 성공으로 봐도 된다.
+- **긴급 정지 스위치**: `killSwitches.<기능>`이 true면 동작, false면 정지다. 문서가 없으면 전부 동작(SPEC 기본값)한다.
+- **오류**: `BudgetExceededError`에 `scope`·`counter`·`limit`·`used`·`resetAt`(다음 태평양 자정)을 담는다. 메시지는 서버 로그용이다. 화면 문구는 api 계층이 언어에 맞게 만든다(SPEC 4.7 "남은 시간 안내", D-013).
+- **트랜잭션 재시도**: 30회로 둔다. 서비스 카운터 문서 하나에 요청이 몰리기 때문이다. 동시 20개 시험에서 정확히 상한만큼 성공하는 것을 확인했다.
+- **lint**: functions의 core·api·jobs·config에서 외부 호출을 막는다.
+  - `fetch` 등 전역, `http`·`https`·`net`·`child_process` 등 내장 모듈
+  - 네트워크·외부 API SDK
+  - 동적 `import()`, 이름을 계산하는 `import()`, `globalThis`
+  - 이 호출들은 `adapters/`에서만 쓴다.
+- **이유**: 외부 호출이 한도 확인을 건너뛰는 길을 코드 구조와 lint로 없애기 위함이다. 비용 사고는 알림이 아니라 앱 자체 상한으로 막는다(D-012).

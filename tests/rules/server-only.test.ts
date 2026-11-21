@@ -6,7 +6,13 @@ import { as, db, testEnv, useRulesTestEnv } from './setup';
 
 useRulesTestEnv();
 
-const SERVER_ONLY = ['secrets_oauth/alice', 'events/e1', 'issueFingerprints/f1'];
+const SERVER_ONLY = [
+  'secrets_oauth/alice',
+  'events/e1',
+  'issueFingerprints/f1',
+  'usage/2026-11-21/reservations/r1',
+];
+const collectionOf = (path: string) => path.split('/').slice(0, -1).join('/');
 const WHO = { alice: as.alice, admin: as.admin, anon: as.anon };
 
 describe('서버 전용 컬렉션은 누구도(관리자 포함) 읽거나 쓰지 못한다', () => {
@@ -14,7 +20,7 @@ describe('서버 전용 컬렉션은 누구도(관리자 포함) 읽거나 쓰�
     it.each(SERVER_ONLY)(`${who}: %s 읽기·목록·쓰기·지우기 거부`, async (path) => {
       const f = db(ctx());
       await assertFails(getDoc(doc(f, path)));
-      await assertFails(getDocs(collection(f, path.split('/')[0] ?? '')));
+      await assertFails(getDocs(collection(f, collectionOf(path))));
       await assertFails(setDoc(doc(f, path), { a: 1 }));
       await assertFails(deleteDoc(doc(f, path)));
     });

@@ -88,10 +88,10 @@
     - rules `tests/rules/server-only.test.ts` — `secrets_oauth`, `events`, `issueFingerprints`는 누구도(관리자 포함) 읽기·쓰기 불가
     - rules `tests/rules/admin.test.ts` — `admin` 클레임 없는 계정은 `artists`, `usage`, `adminAudit` 읽기 불가
 
-- [ ] **T04 비용·호출 상한 장치와 긴급 정지 스위치** — SPEC 6.2, 6.3
+- [x] **T04 비용·호출 상한 장치와 긴급 정지 스위치** — SPEC 6.2, 6.3
   - 의존: T00, T03
   - 산출물:
-    - `functions/src/core/budget.ts`: `reserve(kind, amount, {uid})` / `settle()`. Firestore 트랜잭션으로 서비스 카운터와 사용자 카운터를 분리하고, 날짜는 태평양 시간 기준
+    - `functions/src/core/budget.ts`: `reserve(db, {service, user: {uid, counters}, feature})` / `settle()` / `withBudget()` (D-020). Firestore 트랜잭션으로 서비스 카운터와 사용자 카운터를 분리하고, 날짜는 태평양 시간 기준
     - `config/runtime` 읽기 모듈: 한도·긴급 정지. 매 요청마다 읽음, 캐시 없음
     - ESLint: `functions/src/adapters/` 밖에서 `fetch`·`http` 사용 금지
     - Functions 예산 정지와 월 예산 알림 설정 방법을 `docs/OPERATIONS.md`에 기록
@@ -359,7 +359,7 @@
     - integration `functions/src/api/playlists.int.test.ts`(확장)
       - 사용자 A 11번째 만들기 거부, 같은 시각 B는 성공
       - 10초 안 두 번째 요청 거부
-    - integration `functions/src/api/account.int.test.ts` — 계정 삭제 후 그 사용자의 재생목록·비공개 문서·사용량·`secrets_oauth`가 0건
+    - integration `functions/src/api/account.int.test.ts` — 계정 삭제 후 그 사용자의 재생목록·비공개 문서·사용량·`secrets_oauth`·정산 안 된 예약(`usage/*/reservations`의 uid)이 0건
     - e2e `apps/web/e2e/auth.spec.ts`(Auth 에뮬레이터) — 로그아웃 상태에서 만들기 누르면 로그인 안내, 로그인 후 만들기, 한도 도달 안내 문구
 
 - [ ] **T25 약관과 동의** — SPEC 4.12 / 스킬 `youtube-policy`, `music-data-terms`
