@@ -106,3 +106,28 @@
   - Node 26에는 corepack이 포함되어 있지 않다.
   - typescript-eslint 8.73은 TS 7에서 "does not support TS 7.0" 오류로 시작하지 않는다.
 - **나중에 할 일**: functions가 `@musicweb/shared`(workspace 의존)를 쓰기 시작하면 Cloud Functions 원격 설치가 이를 풀지 못한다. 그 작업에서 번들링(esbuild 등)을 정한다.
+
+## D-017 비밀값·main 보호를 여러 겹으로 (T01, 2026-11-21)
+
+- **로컬 커밋 전 검사** (`tools/git-hooks/pre-commit.sh`, simple-git-hooks로 설치):
+  - 스테이징된 내용을 꺼내 secretlint로 검사한다.
+  - 같은 커밋의 `.gitignore`·`.secretlintignore`가 검사를 줄이지 못하게 gitignore 따르기를 끄고, 꺼낸 폴더의 ignore 파일을 지운다.
+  - 비밀 파일 이름(`.env*`, `.secret.local`, `*.pem`, `*.key`, 서비스 계정 JSON)은 내용과 상관없이 막는다.
+- **로컬 push 전 검사** (`tools/git-hooks/pre-push.sh`): `refs/heads/main`으로 가는 push를 거부한다.
+- **Claude PreToolUse 훅** (`.claude/hooks/guard-git.mjs`): 다음을 막는다.
+  - main push, 강제 push(`--force`·`+refspec`·`--mirror`·`--all`·`--prune`)
+  - `--no-verify`·`-n`(줄여 쓴 형태 포함)
+  - 훅 경로 변경, 훅을 끄는 환경 변수 대입
+  - `env`/`sudo`/`bash -c`/`eval`로 감싼 형태
+- **CI** (`secret-scan.yml`, job `gitleaks`): gitleaks 8.30.1 바이너리를 체크섬으로 고정해 전체 git 기록을 검사한다. PR·main push·매주·수동으로 실행한다.
+- **GitHub**: main 보호(PR 필수, 필수 검사 `gitleaks`, 최신 상태 필수, 관리자 포함, 강제 push·삭제 금지, 대화 해결 필수). 비밀값 스캔·push 보호를 켠다.
+  - 혼자 개발하므로 PR 승인 인원은 0명이다. 자기 PR은 승인할 수 없기 때문이다.
+- **이유**:
+  - 공개 저장소라 한 번 올라간 비밀값은 되돌릴 수 없다.
+  - 로컬 훅은 `--no-verify` 등으로 건너뛸 수 있고, Claude 훅은 셸을 완벽히 해석할 수 없다.
+  - 그래서 우회 가능한 앞 단계는 실수를 줄이는 용도로 두고, 최종 방어선은 서버 쪽(GitHub 보호 + CI)에 둔다.
+- **gitleaks-action 대신 바이너리를 쓰는 이유**: 버전·체크섬을 고정할 수 있다. 액션의 Node 런타임 폐기 일정과 PR 댓글 권한 문제에 묶이지 않는다. 이벤트 범위가 아니라 항상 전체 기록을 검사한다.
+- **알려진 한계**:
+  - Claude 훅은 Bash만 본다. 파일 쓰기 도구로 `.git/hooks`를 고치는 것은 막지 않는다.
+  - secretlint 규칙 패키지 최신이 13.1.0이라 본체 14와 버전이 섞인다(테스트로 동작 확인).
+- **작업 흐름 변화**: 이제 main에 직접 push할 수 없다. 작업은 브랜치에서 커밋하고 PR로 합친다.

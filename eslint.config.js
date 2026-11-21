@@ -12,7 +12,13 @@ export default tseslint.config(
   ...tseslint.configs.strict,
   {
     // Node 전역(process, Buffer 등)은 서버·도구·설정 파일에만 허용한다.
-    files: ['functions/**/*.ts', 'tools/**/*.ts', 'packages/**/*.ts', '*.{js,ts}'],
+    files: [
+      'functions/**/*.ts',
+      'tools/**/*.ts',
+      'packages/**/*.ts',
+      '*.{js,ts}',
+      '.claude/hooks/**/*.mjs',
+    ],
     languageOptions: { globals: { ...globals.node } },
   },
   {

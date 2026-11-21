@@ -52,7 +52,7 @@
     - `pnpm emulators`가 뜨고 빈 callable을 호출하는 integration 테스트 1개 통과 (Java 설치 여부 확인 포함)
     - Stop 훅(`.claude/hooks/stop-check.sh`)이 실제 명령으로 exit 0
 
-- [ ] **T01 비밀값 커밋 차단과 main 직접 push 차단** — SPEC 6.2
+- [x] **T01 비밀값 커밋 차단과 main 직접 push 차단** — SPEC 6.2
   - 의존: T00
   - 산출물:
     - `simple-git-hooks`: pre-commit에서 secretlint(스테이징 파일), pre-push에서 main 대상 push 거부
