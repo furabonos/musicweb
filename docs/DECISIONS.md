@@ -171,3 +171,79 @@
 - Storage는 쓰지 않으므로 전부 거부한다. `firebase.json`에 storage 블록이 있어, T23에서 대상 없이 `firebase deploy`를 하면 기본 버킷이 필요하다. 배포 때 `--only`로 대상을 지정하거나 버킷을 만든다.
 - 루트 Node 하한을 `>=24.12`로 올린다. `@firebase/rules-unit-testing` 6과 firebase 13이 요구한다. Functions 런타임(22)과는 별개다.
 - **화면 작업 메모(T16)**: draft나 없는 재생목록을 열면 not-found가 아니라 권한 거부가 온다. 화면은 둘 다 "찾을 수 없음"으로 보여 준다.
+
+## D-020 비용·호출 상한 API와 데이터 (T04, 2026-11-21)
+
+- **API**: TASKS의 `reserve(kind, amount, {uid})` 대신 `reserve(db, { service: {...}, user: { uid, counters: {...} }, feature? })`를 쓴다.
+  - 여러 카운터를 한 트랜잭션에서 한 번에 예약한다. 예: 검색 1회 = 서비스 `ytSearchUser` + 사용자 `searches`.
+  - `feature`를 주면 같은 트랜잭션에서 긴급 정지 스위치도 확인한다.
+  - 보통은 `withBudget(db, req, fn)`으로 감싼다. fn이 실제 사용량을 돌려주면 정산하고, 실패하면 0으로 정산한 뒤 오류를 다시 던진다.
+- **카운터**:
+  - 서비스(`usage/{day}`): `ytUnits`, `ytSearchUser`, `ytSearchJob`, `aiCostMicroUsd`, `exports`, `autoIssues`, `autoFixes`
+    - 검색은 사용자 80회와 야간 작업 20회로 나눈다(SPEC 6.3). 서로 다 써 버리지 못하게 하기 위함이다.
+    - `autoFixes`(하루 3회)는 지금 한도만 정의하고, 실제 차감은 T20에서 연결한다.
+    - 설정 형식이 엄격해서 나중에 필드를 추가하면 이전 배포본이 거부한다. 그래서 미리 넣었다.
+  - 사용자(`users/{uid}/usage/{day}`): `playlists`, `searches`, `exports`
+- **예약 기록**: `usage/{day}/reservations/{id}`에 둔다. 보안 규칙에 match가 없어 서버 전용이다(규칙 테스트로 확인).
+  - 정산하면 uid를 지운다. 정산 안 된 예약의 uid는 계정 삭제(T24) 때 지운다.
+  - 정산 안 된 예약은 예약한 양을 계속 차지한다(막는 쪽).
+- **막는 쪽으로 실패**: `config/runtime`이 깨졌거나 모르는 필드가 있으면 모든 예약과 스위치 확인이 거부된다. 저장된 카운터 값이 숫자가 아니어도 거부된다.
+- **정산 규칙**:
+  - 실제가 예약보다 많아도 기록한다(이미 쓴 비용).
+  - 돌려줄 때는 0 아래로 내리지 않고, 지워진 카운터 문서를 다시 만들지 않는다.
+  - 사용자 경로는 예약 문서에 저장된 uid로 정한다.
+  - 같은 예약을 두 번 정산하면 `AlreadySettledError`다. 응답이 유실돼 재시도한 경우 호출자는 이 오류를 성공으로 봐도 된다.
+- **긴급 정지 스위치**: `killSwitches.<기능>`이 true면 동작, false면 정지다. 문서가 없으면 전부 동작(SPEC 기본값)한다.
+- **오류**: `BudgetExceededError`에 `scope`·`counter`·`limit`·`used`·`resetAt`(다음 태평양 자정)을 담는다. 메시지는 서버 로그용이다. 화면 문구는 api 계층이 언어에 맞게 만든다(SPEC 4.7 "남은 시간 안내", D-013).
+- **트랜잭션 재시도**: 30회로 둔다. 서비스 카운터 문서 하나에 요청이 몰리기 때문이다. 동시 20개 시험에서 정확히 상한만큼 성공하는 것을 확인했다.
+- **lint**: functions의 core·api·jobs·config에서 외부 호출을 막는다.
+  - `fetch` 등 전역, `http`·`https`·`net`·`child_process` 등 내장 모듈
+  - 네트워크·외부 API SDK
+  - 동적 `import()`, 이름을 계산하는 `import()`, `globalThis`
+  - 이 호출들은 `adapters/`에서만 쓴다.
+- **이유**: 외부 호출이 한도 확인을 건너뛰는 길을 코드 구조와 lint로 없애기 위함이다. 비용 사고는 알림이 아니라 앱 자체 상한으로 막는다(D-012).
+
+## D-021 YouTube 쓰기 어댑터 (T05, 2026-11-21)
+
+- **공개 함수 두 개**: `createPlaylist(ctx, uid, title, items)`, `addItems(ctx, uid, ytExportId, items)`.
+  - `ctx`는 `db`와 `getAccessToken(uid)`(T26이 `secrets_oauth`에서 복호화해 넘김)다. 테스트에서는 가짜 `fetch`를 넣는다.
+  - 오류·상수는 `youtube-write-types.ts`로 뺐다. 그래야 "실행 시점에 내보내는 것이 두 함수뿐"을 테스트로 확인할 수 있다.
+- **기존 재생목록 보호**: `addItems`는 호출자가 준 YouTube 재생목록 ID를 받지 않는다. `ytExports/{id}`를 읽어 `ownerUid`가 같을 때만 그 문서의 `youtubePlaylistId`에 쓴다. 없는 문서와 남의 문서는 같은 오류다(존재 여부를 드러내지 않음).
+- **할당량**: insert 1회 = 50단위를 미리 예약한다. YouTube는 실패한 요청에도 할당량을 쓰므로, 보낸 요청 수만큼 정산한다.
+  - `createPlaylist`는 서비스·사용자 `exports`도 1씩 예약한다. 재생목록이 안 만들어지면 돌려준다.
+  - 둘 다 긴급 정지 `create`를 확인한다. "YouTube 비용이 늘면 create를 끈다"(OPERATIONS 5)에 내보내기도 포함하기 위함이다.
+- **재생목록 상태**: 새 재생목록은 비공개(`private`)로 만든다. 공개 여부는 사용자가 YouTube에서 바꾼다.
+- **곡 수**: 재생목록당 30곡(SPEC 6.3). `ytExports.itemCount`를 트랜잭션으로 먼저 잡고, 실패한 곡만큼 돌려준다.
+- **실패 처리**: 영상 하나의 문제(404 `videoNotFound` 등)는 건너뛴다. 남은 곡을 보내지 않는 경우:
+  - 401·403·429·5xx·연결 실패
+  - 재생목록 단위 오류(`playlistNotFound`, `playlistContainsMaximumNumberOfVideos`, `playlistOperationUnsupported`). 이름은 YouTube 문서 기준이고, T26 실제 확인 때 다시 본다.
+  - 재생목록이 만들어진 뒤 곡이 실패해도 `ytExports` 기록은 남긴다(addItems로 이어 넣기 위함).
+- **마무리 순서**: 정산을 먼저 하고 곡 수 자리를 돌려준다. 둘 다 실패해도 오류를 삼키고 기록만 남긴다. 그래야 이미 들어간 곡의 결과가 오류로 바뀌어 다시 시도하다 중복으로 들어가는 일이 없다. 실패하면 할당량·자리가 남는 쪽(막는 쪽)이다.
+- **ytExports 쓰기 제한**: 여기에 아무 ID나 적히면 addItems가 기존 재생목록에 쓰게 된다. 그래서 functions에서 `ytExports` 문자열은 `youtube-write.ts`만 쓸 수 있다(lint). 정리(T11)·계정 삭제(T24)는 그 파일만 예외로 추가한다. 화면(apps/web)은 읽기 전용 규칙이라 제외했다.
+- **addItems 사용자 한도**: 지금은 서비스 YouTube 단위 한도만 건다. 화면에서 부르게 할 때(T26 이후) 사용자 한도를 먼저 붙인다.
+- **lint**: 어댑터 밖(functions 전체, apps/web)에서 `youtube/v3/playlist…` 주소 문자열과 `googleapis`·`@googleapis/youtube`를 막는다. adapters 안에서는 `${API}/playlists`처럼 기본 주소를 따로 둔 경로 조각(`/playlists`, `/playlistItems`)도 막는다. core·api에서는 Firestore 경로 `playlists/{id}`와 부딪혀서 걸지 않는다(그곳은 네트워크 자체가 막혀 있다). 앞으로 만들 `youtube-read.ts`는 `playlistItems` 주소를 쓸 수 있지만 `method`는 `GET`만 된다. 문자열을 쪼개 붙이는 우회는 lint로 못 막는다. 토큰을 받는 곳이 이 어댑터뿐이라는 점이 2차 방어다.
+- **테스트 종류 변경**: TASKS는 unit 테스트였지만, 소유 확인·예약이 Firestore 트랜잭션이라 가짜 DB로는 동시성·정산을 제대로 확인할 수 없다. 그래서 소유 확인·기록·할당량은 에뮬레이터 통합 테스트로, 함수 목록·입력 검사는 unit으로 나눴다. 통합 테스트 파일이 둘이 되어 `vitest.int.config.ts`에 `fileParallelism: false`를 넣었다(같은 에뮬레이터를 지우며 쓰므로).
+- **남은 것**: `ytExports.youtubePlaylistId`도 YouTube 데이터라 30일 규칙(D-004) 대상인지 T11(재확인·정리)에서 정한다(TASKS T11에 적어 둠).
+- **이유**: 좁은 YouTube 권한이 없어서(youtube-policy 스킬) 기존 재생목록 보호를 코드 구조로 강제해야 한다. 쓸 대상 ID를 서버 기록에서만 가져오면 호출자 실수나 조작으로 남의·기존 재생목록에 쓸 길이 없다.
+
+## D-022 관리자 판별과 클레임 동기화 (T06, 2026-11-21)
+
+- **서버 함수는 목록을 본다**: 클레임이 아니라 `ADMIN_EMAILS`를 직접 확인한다. 대소문자·앞뒤 공백은 무시한다. 관리자 함수(`verifyAdmin`)는 세 겹으로 본다:
+  1. 토큰: Google 로그인(`sign_in_provider == google.com`), 확인된 이메일(`email_verified`), 목록에 있음
+  2. 끊긴 토큰·사용 중지 계정: `verifyIdToken(rawToken, true)`. 가장 큰 권한이라 매번 확인한다(Auth 호출 1회 추가).
+  3. 계정 기록: 사용 중지 아님, 연결된 Google 계정 이메일이 계정 이메일과 같고 목록에 있음. 비밀번호 계정에 다른 Google 계정을 연결한 경우를 막는다.
+  - 목록에서 빼고 다시 배포하면 다음 호출부터 바로 거부된다. 남아 있는 클레임만으로는 관리자 함수를 못 쓴다(테스트로 확인).
+- **보안 규칙용 클레임**: 규칙은 목록을 읽을 수 없어서 `admin: true` 클레임을 본다. 서버가 맞춘다:
+  - 로그인 직후 화면이 callable `account-syncClaims`를 부른다. 바뀌었으면 화면이 토큰을 새로 받는다.
+  - 관리자 함수를 부를 때 클레임이 없으면 붙인다. 붙이기가 실패해도 관리자 작업(긴급 정지 등)은 계속한다(클레임은 보조).
+  - 목록에서 빠진 계정은 클레임을 지우고 로그인 토큰을 끊는다. 다른 클레임은 그대로 둔다.
+  - 전 관리자가 `account-syncClaims`를 부르지 않으면 클레임이 무기한 남으므로, 다른 관리자가 `admin-syncUserClaims({uid})`로 지운다(OPERATIONS 4). 이것도 `adminAudit`(targetUid 포함)·운영 일지에 남는다.
+- **로그인 차단 함수(beforeUserSignedIn)를 쓰지 않은 이유**: Firebase Auth를 Identity Platform으로 올려야 한다. 요금·설정이 바뀌는 프로젝트 단위 결정이라, 1단계는 callable로 한다. 대신 뺀 관리자의 규칙 읽기 권한은 위 정리를 할 때까지 남는다(OPERATIONS 4).
+- **변경 기록**: 설정 변경, `adminAudit`(adminUid·시각·action·전후 값), 운영 일지를 한 트랜잭션에서 쓴다. 운영 일지는 누구나 읽으므로 uid·이메일 없이 영어 고정 문장만 쓴다(D-013 기본 영어). T07에서 `core/opsLog.ts`로 옮긴다.
+- **저장 방식**: 저장된 문서에 바뀐 필드만 합친다. 기본값을 문서에 굳히지 않아서, 나중에 코드의 기본값(SPEC 6.3)을 바꾸면 문서에 없는 값은 새 기본값을 따른다.
+- **입력 검사**: 바꾼 결과도 `parseRuntimeConfig` 검사(YouTube 할당·검색 합계 상한)를 통과해야 저장한다. 틀리면 `invalid-argument`다. 지금 문서가 깨져 있으면 `failed-precondition`이고 콘솔에서 고친다.
+- **callable 이름**: `admin-setKillSwitch`처럼 묶음 이름을 쓴다(`export const admin = { setKillSwitch }`). 화면은 `httpsCallable(functions, 'admin-setKillSwitch')`로 부른다.
+- **오류 코드**: `api/errors.ts`가 관리자 아님→`permission-denied`, 긴급 정지→`unavailable`(`details.reason=killSwitch`, `feature`), 한도→`resource-exhausted`(`resetAt`), 설정 깨짐→`failed-precondition`으로 바꾼다. 모르는 오류는 `internal`이고 내부 메시지를 화면에 보내지 않는다.
+- **에뮬레이터 매개변수**: Functions 에뮬레이터는 `defineList`·`defineString` 값을 `functions/.env*` 파일에서만 읽고, 없으면 함수 로딩이 실패한다. `.env*`는 커밋하지 않으므로 `tools/emulator-env.sh`가 `functions/.env.demo-musicweb`(가짜 프로젝트 전용, 비밀값 없음)를 실행할 때마다 만든다. `defineList` 값은 실행 중에 JSON 배열로 읽힌다. 배포 때 CLI는 쉼표 목록도 받아 JSON으로 바꾼다. 그래서 SPEC 8장 표기를 고쳤다. `firebase.json` functions `ignore`에 `.env.demo-*`를 넣어 배포 묶음에 섞이지 않게 한다.
+- **Auth·Firestore 관리 SDK는 외부 호출 규칙(D-020)의 예외**다. 같은 프로젝트 안의 서비스이고 호출당 비용이 없어서 `api/`·`core/`에서 쓴다. App Check(T23)로 호출을 줄인다.
+- **이유**: 관리자 권한은 사고 영향이 가장 큰 권한이라, 판단 기준을 하나(목록)로 두고 클레임은 규칙 읽기 보조로만 쓴다.

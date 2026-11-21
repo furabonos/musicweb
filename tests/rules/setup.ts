@@ -59,6 +59,7 @@ async function seed() {
       put('songs/s1/links/vBlocked', { status: 'blocked', kind: 'official_mv' }),
       put('artists/a1', { name: 'A' }),
       put(`usage/${DAY}`, { ytUnits: 10 }),
+      put(`usage/${DAY}/reservations/r1`, { uid: 'alice', settled: false }),
       put('adminAudit/x1', { adminUid: 'admin1', action: 'setKillSwitch' }),
       put('config/runtime', { killSwitches: { create: true } }),
       put('config/internal', { note: 'not public' }),

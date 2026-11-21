@@ -88,10 +88,10 @@
     - rules `tests/rules/server-only.test.ts` — `secrets_oauth`, `events`, `issueFingerprints`는 누구도(관리자 포함) 읽기·쓰기 불가
     - rules `tests/rules/admin.test.ts` — `admin` 클레임 없는 계정은 `artists`, `usage`, `adminAudit` 읽기 불가
 
-- [ ] **T04 비용·호출 상한 장치와 긴급 정지 스위치** — SPEC 6.2, 6.3
+- [x] **T04 비용·호출 상한 장치와 긴급 정지 스위치** — SPEC 6.2, 6.3
   - 의존: T00, T03
   - 산출물:
-    - `functions/src/core/budget.ts`: `reserve(kind, amount, {uid})` / `settle()`. Firestore 트랜잭션으로 서비스 카운터와 사용자 카운터를 분리하고, 날짜는 태평양 시간 기준
+    - `functions/src/core/budget.ts`: `reserve(db, {service, user: {uid, counters}, feature})` / `settle()` / `withBudget()` (D-020). Firestore 트랜잭션으로 서비스 카운터와 사용자 카운터를 분리하고, 날짜는 태평양 시간 기준
     - `config/runtime` 읽기 모듈: 한도·긴급 정지. 매 요청마다 읽음, 캐시 없음
     - ESLint: `functions/src/adapters/` 밖에서 `fetch`·`http` 사용 금지
     - Functions 예산 정지와 월 예산 알림 설정 방법을 `docs/OPERATIONS.md`에 기록
@@ -104,30 +104,32 @@
     - integration 같은 파일 — `killSwitches.create=false`면 다음 호출부터 즉시 거부
     - lint 테스트 — 어댑터 밖 `fetch`가 lint 오류
 
-- [ ] **T05 기존 재생목록 보호 (YouTube 쓰기 어댑터)** — SPEC 4.6, 6.2
+- [x] **T05 기존 재생목록 보호 (YouTube 쓰기 어댑터)** — SPEC 4.6, 6.2
   - 의존: T04
   - 산출물:
-    - `functions/src/adapters/youtube-write.ts`: `createPlaylist(uid, title, items)`, `addItems(uid, ytExportId, items)`만 공개. 수정·삭제 없음
+    - `functions/src/adapters/youtube-write.ts`: `createPlaylist(ctx, uid, title, items)`, `addItems(ctx, uid, ytExportId, items)`만 공개. 수정·삭제 없음 (`ctx` = db, 토큰 함수; D-021)
     - 호출 전 `ytExports` 소유 확인, budget 예약(50단위/호출)
-    - ESLint: 이 파일 밖에서 YouTube 쓰기 엔드포인트(`playlists`, `playlistItems` POST/PUT/DELETE) 문자열·`googleapis` youtube 사용 금지
+    - ESLint: 이 파일 밖에서 YouTube 쓰기 엔드포인트(`playlists`, `playlistItems` 주소) 문자열·`googleapis` youtube 사용 금지. `youtube-read.ts`는 `playlistItems` GET만
   - 완료 기준:
-    - unit `functions/src/adapters/youtube-write.test.ts`
+    - unit `functions/src/adapters/youtube-write.test.ts` — 어댑터가 내보내는 함수 목록이 정확히 두 개, 입력 검사
+    - integration `functions/src/adapters/youtube-write.int.test.ts` (가짜 YouTube, D-021)
       - `ytExports`에 없는 재생목록 ID, 다른 사용자 소유 ID에 `addItems`하면 거부되고 HTTP 호출이 0건
-      - 어댑터가 내보내는 함수 목록이 정확히 두 개
       - 만든 재생목록이 `ytExports`에 기록됨
     - lint 테스트 — 어댑터 밖 YouTube 쓰기 호출이 lint 오류
 
-- [ ] **T06 관리자 권한과 긴급 정지 함수** — SPEC 4.11
+- [x] **T06 관리자 권한과 긴급 정지 함수** — SPEC 4.11
   - 의존: T03, T04
   - 산출물:
-    - `ADMIN_EMAILS` → `admin` 클레임 동기화(로그인 시 + 관리자 함수)
-    - `assertAdmin()`, callable `admin.setKillSwitch`, `admin.setLimits`
-    - `adminAudit` 기록 + 운영 일지 항목
+    - `ADMIN_EMAILS` → `admin` 클레임 동기화(로그인 직후 callable `account-syncClaims` + 관리자 함수, D-022)
+    - `core/auth.ts`의 `assertAdmin()`·`verifyAdmin()`, callable `admin-setKillSwitch`, `admin-setLimits`, `admin-syncUserClaims`(뺀 관리자 클레임 정리)
+    - `adminAudit` 기록 + 운영 일지 항목(같은 트랜잭션)
+    - callable 오류 코드 변환 `api/errors.ts`, 재생목록 만들기 스텁 `playlists-create`(T14가 교체)
   - 완료 기준:
     - integration `functions/src/api/admin.int.test.ts`
       - 관리자 아닌 계정·로그인 안 한 호출은 `permission-denied`
       - 관리자 호출은 성공하고 `adminAudit`에 누가·언제·전후 값이 남음
     - integration 같은 파일 — 긴급 정지를 켠 직후 재생목록 만들기 callable(스텁)이 거부됨
+    - unit `functions/src/core/auth.test.ts`, `functions/src/api/errors.test.ts`
 
 ## B. 기록
 
@@ -186,6 +188,7 @@
   - 산출물:
     - `jobs/refresh.ts`: 25일 넘은 연결 재확인. 없어지거나 비공개·퍼가기 불가면 `gone` + YouTube 필드 삭제
     - `jobs/purge.ts`: 30일 넘은 YouTube 데이터 무조건 삭제
+    - `ytExports.youtubePlaylistId`가 30일 규칙 대상인지 정하고 처리한다(D-021). `ytExports`를 쓰는 파일은 `eslint.config.js`에 예외로 추가한다
   - 완료 기준:
     - integration `functions/src/jobs/refresh.int.test.ts`
       - 26일 된 연결은 재확인, 응답에 없는 영상은 `gone`이 되고 ytTitle 등이 지워짐
@@ -359,7 +362,7 @@
     - integration `functions/src/api/playlists.int.test.ts`(확장)
       - 사용자 A 11번째 만들기 거부, 같은 시각 B는 성공
       - 10초 안 두 번째 요청 거부
-    - integration `functions/src/api/account.int.test.ts` — 계정 삭제 후 그 사용자의 재생목록·비공개 문서·사용량·`secrets_oauth`가 0건
+    - integration `functions/src/api/account.int.test.ts` — 계정 삭제 후 그 사용자의 재생목록·비공개 문서·사용량·`secrets_oauth`·정산 안 된 예약(`usage/*/reservations`의 uid)이 0건
     - e2e `apps/web/e2e/auth.spec.ts`(Auth 에뮬레이터) — 로그아웃 상태에서 만들기 누르면 로그인 안내, 로그인 후 만들기, 한도 도달 안내 문구
 
 - [ ] **T25 약관과 동의** — SPEC 4.12 / 스킬 `youtube-policy`, `music-data-terms`
@@ -374,6 +377,7 @@
   - 산출물:
     - 추가 권한 요청(`youtube.force-ssl`, 처음 쓸 때만), 서버 측 토큰 교환·암호화 저장(T02)
     - callable `export.toYouTube`(T05 어댑터만 사용), 연결 해제, 7일 만료 안내
+    - `addItems`를 화면에서 부르게 하려면 사용자별 한도를 먼저 붙인다(D-021). 계정 삭제 때 `ytExports`를 지우는 파일도 lint 예외로 추가한다
   - 완료 기준:
     - integration `functions/src/api/export.int.test.ts` (가짜 YouTube)
       - 테스트 사용자가 아니면 거부
