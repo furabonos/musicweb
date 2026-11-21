@@ -1,0 +1,10 @@
+rules_version = '2';
+
+// Storage는 쓰지 않는다: 음원·영상·썸네일 파일을 저장하지 않는다 (SPEC 6.2). 전부 거부.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

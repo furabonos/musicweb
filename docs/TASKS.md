@@ -77,7 +77,7 @@
     - unit `tools/scan-bundle.test.ts` — 키 패턴이 든 가짜 번들은 실패, 정상 번들은 통과
     - lint 테스트 `tools/eslint-rules.test.ts` — web에서 서버 패키지 import 시 lint 오류
 
-- [ ] **T03 보안 규칙: 사용자는 자기 데이터만** — SPEC 5
+- [x] **T03 보안 규칙: 사용자는 자기 데이터만** — SPEC 5
   - 의존: T00
   - 산출물: `firestore.rules`(기본 전부 거부 + SPEC 5장 읽기 허용표), `storage.rules`(전부 거부)
   - 완료 기준:

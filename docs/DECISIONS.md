@@ -156,3 +156,18 @@
   - 사용자별로 묶지 않은 암호문은 DB 안에서 다른 계정 문서로 옮겨 쓰일 수 있다.
   - YouTube 키를 모양만으로 구분할 수 없어서, 허용 목록을 정확한 값으로 둔다.
 - **알려진 한계**: 동적 `import('firebase-admin')`가 lint에 걸리는지는 확인하지 않았다. 번들 검사가 2차 방어다.
+
+## D-019 보안 규칙: 쓰기 없음, 공유 재생목록은 한 건 읽기만 (T03, 2026-11-21)
+
+- `firestore.rules`는 기본 전부 거부이고, SPEC 5장 표의 읽기만 연다. 클라이언트 쓰기 허용은 한 줄도 없다.
+  - 에뮬레이터 테스트(모든 컬렉션 쓰기 시도)와 정적 검사(`tools/firestore-rules-static.test.ts`, allow 문장 단위)로 고정한다.
+- 서버 전용(`secrets_oauth`, `events`, `issueFingerprints`)은 match 자체를 두지 않는다. 관리자도 클라이언트로는 읽지 못한다.
+- 관리자 판별은 사용자 정의 클레임 `admin == true`(불리언)만 인정한다. 관리자도 남의 draft·비공개 문서·ytExports는 읽지 못한다(SPEC 4.11).
+- **재생목록 읽기를 get/list로 나눈다**:
+  - 공유(`saved`) 재생목록은 공유 주소로 한 건 읽기(get)만 누구나 할 수 있다.
+  - 목록 조회(list)는 소유자 자기 것만 된다.
+  - **이유**: `saved` 전체나 특정 사용자의 공유 목록을 한 번에 긁어 가는 것을 막는다. `/p/:id`(T16)는 한 건 읽기, `/me`(T14·T24)는 소유자 목록만 쓰므로 기능에는 영향이 없다.
+- `playlists/{id}/private`는 SPEC대로 `request` 문서 하나만 연다. 부모 문서가 없으면 거부된다(`get()` 실패).
+- Storage는 쓰지 않으므로 전부 거부한다. `firebase.json`에 storage 블록이 있어, T23에서 대상 없이 `firebase deploy`를 하면 기본 버킷이 필요하다. 배포 때 `--only`로 대상을 지정하거나 버킷을 만든다.
+- 루트 Node 하한을 `>=24.12`로 올린다. `@firebase/rules-unit-testing` 6과 firebase 13이 요구한다. Functions 런타임(22)과는 별개다.
+- **화면 작업 메모(T16)**: draft나 없는 재생목록을 열면 not-found가 아니라 권한 거부가 온다. 화면은 둘 다 "찾을 수 없음"으로 보여 준다.
