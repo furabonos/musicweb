@@ -131,3 +131,28 @@
   - Claude 훅은 Bash만 본다. 파일 쓰기 도구로 `.git/hooks`를 고치는 것은 막지 않는다.
   - secretlint 규칙 패키지 최신이 13.1.0이라 본체 14와 버전이 섞인다(테스트로 동작 확인).
 - **작업 흐름 변화**: 이제 main에 직접 push할 수 없다. 작업은 브랜치에서 커밋하고 PR로 합친다.
+
+## D-018 서버 비밀값 관리와 연결 정보 암호화 (T02, 2026-11-21)
+
+- **비밀값 정의**:
+  - 서버 비밀값 이름은 `functions/src/config/secret-names.ts` 한 곳에 둔다.
+  - `secrets.ts`가 이 목록으로 `defineSecret`을 만들고, 번들 검사기도 같은 목록을 쓴다.
+  - `ADMIN_EMAILS`는 쉼표로 구분한 목록이라 `defineList`로 받는다(SPEC 8장 수정).
+- **process 사용 제한**:
+  - functions 코드에서 `process`는 `functions/src/config/`와 테스트에서만 쓴다.
+  - ESLint는 전역 `process`, `globalThis.process`·`global.process`, `process`·`node:process` import를 막는다.
+- **암호화**: 사용자 연결 정보는 AES-256-GCM으로 암호화한다.
+  - IV 12바이트를 매번 무작위로 만들고, 인증 태그 16바이트를 검증한다.
+  - 암호문 형식은 `<키 버전>.<iv>.<tag>.<암호문>`(base64url)이다.
+  - 문맥(AAD, 예: `secrets_oauth:<uid>`)에 묶는다. 다른 사용자 문서로 옮긴 암호문은 열리지 않는다.
+  - `TOKEN_ENC_KEY`는 `"v2:<b64>,v1:<b64>"` 형식이고 첫 항목이 현재 키다. 키를 교체해도 예전 암호문을 열 수 있다.
+- **화면 빌드 검사** (`pnpm scan:bundle`): 다음을 찾는다.
+  - 키 모양(커밋 전 검사와 같은 패턴, 테스트로 일치 확인)
+  - 서버 비밀값 이름(`VITE_` 접두어 포함)
+  - `functions/.secret.local`의 실제 값
+- Firebase 웹 API 키는 공개값이지만 YouTube 키와 모양(`AIza…`)이 같다. 그래서 화면 `.env*`와 환경 변수의 `VITE_FIREBASE_API_KEY` 값만 허용한다.
+- **이유**:
+  - 비밀값을 읽는 길을 하나로 모아야 "서버에만 둔다"를 lint로 강제할 수 있다.
+  - 사용자별로 묶지 않은 암호문은 DB 안에서 다른 계정 문서로 옮겨 쓰일 수 있다.
+  - YouTube 키를 모양만으로 구분할 수 없어서, 허용 목록을 정확한 값으로 둔다.
+- **알려진 한계**: 동적 `import('firebase-admin')`가 lint에 걸리는지는 확인하지 않았다. 번들 검사가 2차 방어다.

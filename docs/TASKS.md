@@ -65,7 +65,7 @@
     - unit `tools/guard-git.test.ts` — PreToolUse 훅이 `git push origin main`, `git push --no-verify`, `git commit --no-verify` 입력에 exit 2
     - 수동 확인 기록: `gh api repos/:owner/musicweb/branches/main/protection` 결과를 PR 본문에 첨부
 
-- [ ] **T02 비밀값과 연결 정보는 서버에만** — SPEC 6.2, 8
+- [x] **T02 비밀값과 연결 정보는 서버에만** — SPEC 6.2, 8
   - 의존: T00
   - 산출물:
     - `functions/src/config/secrets.ts`(`defineSecret` 모음, 다른 곳에서 `process.env` 비밀값 읽기 금지 ESLint)

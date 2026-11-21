@@ -26,6 +26,7 @@ pnpm 10(`npm i -g pnpm@10`, Node 26에는 corepack이 없음). 에뮬레이터�
 - 통합: `pnpm test:int` (functions 빌드 → 에뮬레이터 띄움 → `*.int.test.ts` 실행 → 종료)
 - 에뮬레이터만 띄우기: `pnpm emulators` (프로젝트 `demo-musicweb`, 실제 Firebase에 연결 안 됨)
 - 화면 개발 서버: `pnpm --filter web dev`, 빌드: `pnpm --filter web build`
+- 화면 빌드에 서버 비밀값이 섞였는지 검사: `pnpm scan:bundle` (빌드 포함, Firebase 웹 키는 `VITE_FIREBASE_API_KEY` 값만 허용)
 - 아직 없음: `pnpm test:rules`(T03), `pnpm test:e2e`(T14), `pnpm eval`(T17). 생기면 이 절을 고친다.
 
 ## 아키텍처 규칙 (SPEC 6.2 요약, 위반은 lint·테스트·규칙이 막는다)

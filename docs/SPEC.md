@@ -341,20 +341,20 @@ firestore.rules, firebase.json
 
 ## 8. 환경 변수
 
-| 이름                                     | 위치                                                            | 용도                                                                 |
-| ---------------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `ANTHROPIC_API_KEY`                      | Secret Manager (`defineSecret`), GitHub Secrets(자동 수정·시험) | AI                                                                   |
-| `YOUTUBE_API_KEY`                        | Secret Manager                                                  | YouTube 읽기                                                         |
-| `LASTFM_API_KEY`                         | Secret Manager                                                  | Last.fm                                                              |
-| `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET` | Secret Manager                                                  | 내 계정에 넣기 권한                                                  |
-| `TOKEN_ENC_KEY`                          | Secret Manager                                                  | 연결 정보 암호화(32바이트)                                           |
-| `ACTOR_HASH_KEY`                         | Secret Manager                                                  | 이벤트 로그 사용자 해시                                              |
-| `GITHUB_ISSUE_TOKEN`                     | Secret Manager                                                  | 자동 이슈·GitHub 수치 (권한: 해당 저장소 issues/PR 읽기·이슈 쓰기만) |
-| `ADMIN_EMAILS`                           | Functions 매개변수(`defineString`)                              | 관리자 목록                                                          |
-| `MB_CONTACT`                             | Functions 매개변수                                              | MusicBrainz User-Agent 연락처                                        |
-| `VITE_FIREBASE_*`                        | `apps/web/.env.local` (공개 설정값, 비밀 아님)                  | Firebase 웹 설정                                                     |
-| `VITE_RECAPTCHA_SITE_KEY`                | `apps/web/.env.local`                                           | App Check                                                            |
-| `FIREBASE_SERVICE_ACCOUNT`               | GitHub Secrets                                                  | 배포                                                                 |
+| 이름                                     | 위치                                                            | 용도                                                                                |
+| ---------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY`                      | Secret Manager (`defineSecret`), GitHub Secrets(자동 수정·시험) | AI                                                                                  |
+| `YOUTUBE_API_KEY`                        | Secret Manager                                                  | YouTube 읽기                                                                        |
+| `LASTFM_API_KEY`                         | Secret Manager                                                  | Last.fm                                                                             |
+| `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET` | Secret Manager                                                  | 내 계정에 넣기 권한                                                                 |
+| `TOKEN_ENC_KEY`                          | Secret Manager                                                  | 연결 정보 암호화 키 목록 `"v2:<base64 32바이트>,v1:<…>"` (첫 항목이 현재 키, D-018) |
+| `ACTOR_HASH_KEY`                         | Secret Manager                                                  | 이벤트 로그 사용자 해시                                                             |
+| `GITHUB_ISSUE_TOKEN`                     | Secret Manager                                                  | 자동 이슈·GitHub 수치 (권한: 해당 저장소 issues/PR 읽기·이슈 쓰기만)                |
+| `ADMIN_EMAILS`                           | Functions 매개변수(`defineList`, 쉼표 구분)                     | 관리자 목록                                                                         |
+| `MB_CONTACT`                             | Functions 매개변수                                              | MusicBrainz User-Agent 연락처                                                       |
+| `VITE_FIREBASE_*`                        | `apps/web/.env.local` (공개 설정값, 비밀 아님)                  | Firebase 웹 설정                                                                    |
+| `VITE_RECAPTCHA_SITE_KEY`                | `apps/web/.env.local`                                           | App Check                                                                           |
+| `FIREBASE_SERVICE_ACCOUNT`               | GitHub Secrets                                                  | 배포                                                                                |
 
 비밀값은 저장소에 두지 않는다. 로컬 에뮬레이터용 값은 `functions/.secret.local`에 둔다(gitignore).
 
