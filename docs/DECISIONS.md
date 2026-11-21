@@ -94,3 +94,15 @@
 ## D-015 로그인 전 배포 기간에는 만들기를 관리자에게만 (2026-11-21)
 
 - **이유**: 작업 순서상 배포(T23)가 로그인(T24)보다 앞선다. 그 사이 공개 주소에서 누구나 AI·YouTube 비용을 쓰지 못하게 하기 위함이다.
+
+## D-016 개발 도구 버전: pnpm 전역 설치, TypeScript 6, Java 21 (T00, 2026-11-21)
+
+- pnpm은 `npm i -g pnpm@10`으로 설치한다. 루트 `packageManager`에 버전을 적는다.
+- TypeScript는 `^6`으로 고정한다. TS 7로 올리는 조건은 typescript-eslint가 TS 7을 공식 지원하는 것이다.
+- Firebase 에뮬레이터용 Java 21은 Homebrew `openjdk@21`로 설치한다. `tools/with-java.sh`가 시스템 경로를 바꾸지 않고, 실행할 때만 21 이상인 Java를 찾아 붙인다.
+- 로컬 Node는 26, Functions 런타임은 22(`functions/package.json` engines)다. 에뮬레이터는 "버전 불일치" 경고만 내고 동작한다(T00에서 확인).
+- `firebase-tools`는 루트 devDependency로 두어 버전을 고정한다(전역 설치 안 함).
+- **이유**:
+  - Node 26에는 corepack이 포함되어 있지 않다.
+  - typescript-eslint 8.73은 TS 7에서 "does not support TS 7.0" 오류로 시작하지 않는다.
+- **나중에 할 일**: functions가 `@musicweb/shared`(workspace 의존)를 쓰기 시작하면 Cloud Functions 원격 설치가 이를 풀지 못한다. 그 작업에서 번들링(esbuild 등)을 정한다.

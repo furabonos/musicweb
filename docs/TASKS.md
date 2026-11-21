@@ -19,13 +19,13 @@
 
 ## 테스트 종류
 
-| 종류 | 위치·패턴 | 실행 | 조건 |
-| ---- | --------- | ---- | ---- |
-| unit | `**/*.test.ts(x)` | `pnpm test` | 외부 의존 없음, 외부 API는 녹화 데이터 |
-| rules | `tests/rules/*.test.ts` | `pnpm test:rules` | Firebase 에뮬레이터(Java 필요) |
-| integration | `functions/**/*.int.test.ts` | `pnpm test:int` | 에뮬레이터 |
-| e2e | `apps/web/e2e/*.spec.ts` | `pnpm test:e2e` | 에뮬레이터 + 개발 서버, Playwright |
-| eval | `evals/` | `pnpm eval` | 녹화 데이터. 추천은 AI 키 필요 |
+| 종류        | 위치·패턴                    | 실행              | 조건                                   |
+| ----------- | ---------------------------- | ----------------- | -------------------------------------- |
+| unit        | `**/*.test.ts(x)`            | `pnpm test`       | 외부 의존 없음, 외부 API는 녹화 데이터 |
+| rules       | `tests/rules/*.test.ts`      | `pnpm test:rules` | Firebase 에뮬레이터(Java 필요)         |
+| integration | `functions/**/*.int.test.ts` | `pnpm test:int`   | 에뮬레이터                             |
+| e2e         | `apps/web/e2e/*.spec.ts`     | `pnpm test:e2e`   | 에뮬레이터 + 개발 서버, Playwright     |
+| eval        | `evals/`                     | `pnpm eval`       | 녹화 데이터. 추천은 AI 키 필요         |
 
 ## 작업 항목 형식
 
@@ -39,10 +39,10 @@
 
 ## A. 기반과 원칙 강제 (PLAN 13번)
 
-- [ ] **T00 개발 환경과 모노레포 뼈대** — SPEC 6.1, 7
+- [x] **T00 개발 환경과 모노레포 뼈대** — SPEC 6.1, 7
   - 의존: 없음
   - 산출물:
-    - corepack으로 pnpm 활성화, `pnpm-workspace.yaml`
+    - pnpm 10 설치(`npm i -g pnpm@10`, D-016), `pnpm-workspace.yaml`
     - `apps/web`(Vite+React 빈 화면), `functions`(빈 callable 1개), `packages/shared`
     - `tsconfig` strict, ESLint, Prettier, Vitest
     - `firebase.json`(Hosting·Functions·Firestore·Auth 에뮬레이터), `.gitignore`

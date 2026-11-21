@@ -21,15 +21,15 @@ description: 곡(MusicBrainz 녹음) ↔ YouTube 영상 연결 규칙 — 제목
 
 ## 2. 종류 판별 (먼저 맞는 것)
 
-| 신호 | 종류 |
-|---|---|
-| 채널 이름이 `<아티스트> - Topic` 이거나 설명이 `Provided to YouTube by` 로 시작 | `official_audio` |
-| 공식 채널(MB URL 관계/Wikidata P2397와 일치) + `official audio` | `official_audio` |
-| 공식 채널 + `official (music )?video` / `mv` / `뮤직비디오` | `official_mv` |
-| 제목에 `live`, `concert`, `라이브`, `ライブ`, `session`, `tiny desk`, `@ <장소>` | `live` |
-| 제목에 `cover`, `커버`, `歌ってみた` 또는 채널이 아티스트와 무관 | `cover` |
-| 제목에 `remix`, `rmx`, `edit`, `bootleg`, `sped up`, `slowed`, `nightcore`, `8d` | `remix` |
-| 그 외 공식 채널 영상 (티저·인터뷰·비하인드 등) | `other` (연결 안 함) |
+| 신호                                                                             | 종류                 |
+| -------------------------------------------------------------------------------- | -------------------- |
+| 채널 이름이 `<아티스트> - Topic` 이거나 설명이 `Provided to YouTube by` 로 시작  | `official_audio`     |
+| 공식 채널(MB URL 관계/Wikidata P2397와 일치) + `official audio`                  | `official_audio`     |
+| 공식 채널 + `official (music )?video` / `mv` / `뮤직비디오`                      | `official_mv`        |
+| 제목에 `live`, `concert`, `라이브`, `ライブ`, `session`, `tiny desk`, `@ <장소>` | `live`               |
+| 제목에 `cover`, `커버`, `歌ってみた` 또는 채널이 아티스트와 무관                 | `cover`              |
+| 제목에 `remix`, `rmx`, `edit`, `bootleg`, `sped up`, `slowed`, `nightcore`, `8d` | `remix`              |
+| 그 외 공식 채널 영상 (티저·인터뷰·비하인드 등)                                   | `other` (연결 안 함) |
 
 - `sped up`·`slowed`·`nightcore`·`8d` 같은 변형은 공식 채널이라도 `remix`로 본다.
 - `teaser`, `trailer`, `behind`, `making`, `interview`, `reaction`, `shorts`는 연결하지 않는다.
@@ -37,16 +37,17 @@ description: 곡(MusicBrainz 녹음) ↔ YouTube 영상 연결 규칙 — 제목
 
 ## 3. 후보 점수
 
-| 항목 | 점수 |
-|---|---|
-| 정규화한 제목이 곡 제목(또는 별칭)과 완전 일치 | +50 |
-| 편집 거리 비율 ≥ 0.9 | +30 |
-| 공식 채널·Topic 채널 | +30 |
-| 영상 길이가 MB 녹음 길이 ±10초 안 | +15 |
-| 아티스트명이 제목이나 채널에 있음 | +10 |
-| 종류가 요청과 맞지 않음 | 후보 제외 |
+| 항목                                           | 점수      |
+| ---------------------------------------------- | --------- |
+| 정규화한 제목이 곡 제목(또는 별칭)과 완전 일치 | +50       |
+| 편집 거리 비율 ≥ 0.9                           | +30       |
+| 공식 채널·Topic 채널                           | +30       |
+| 영상 길이가 MB 녹음 길이 ±10초 안              | +15       |
+| 아티스트명이 제목이나 채널에 있음              | +10       |
+| 종류가 요청과 맞지 않음                        | 후보 제외 |
 
 **애매함 판정**: 다음 중 하나면 AI에게 넘긴다(구조화 출력, 후보 ID 중 하나 또는 "없음"만 받는다).
+
 - 1등 점수 < 70
 - 1등과 2등의 차이 < 10
 - 제목 분리 실패

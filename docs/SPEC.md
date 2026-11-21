@@ -16,12 +16,12 @@
 
 ### 1.2 사용자
 
-| 구분 | 할 수 있는 것 |
-|---|---|
-| 로그인 안 한 사람 | 둘러보기, 공유 재생목록 보기·재생·YouTube에서 열기, 현황판(/status) 보기 |
-| 로그인한 사용자 (Google) | 위 + 재생목록 만들기, 곡 빼기·바꾸기, 내 데이터·계정 삭제 |
-| 내보내기 테스트 사용자 | 위 + "내 계정에 바로 넣기" (Google 심사 전, 관리자가 등록한 최대 100명) |
-| 관리자 | 관리자 Google 계정 목록에 있는 사람. /admin |
+| 구분                     | 할 수 있는 것                                                            |
+| ------------------------ | ------------------------------------------------------------------------ |
+| 로그인 안 한 사람        | 둘러보기, 공유 재생목록 보기·재생·YouTube에서 열기, 현황판(/status) 보기 |
+| 로그인한 사용자 (Google) | 위 + 재생목록 만들기, 곡 빼기·바꾸기, 내 데이터·계정 삭제                |
+| 내보내기 테스트 사용자   | 위 + "내 계정에 바로 넣기" (Google 심사 전, 관리자가 등록한 최대 100명)  |
+| 관리자                   | 관리자 Google 계정 목록에 있는 사람. /admin                              |
 
 PC 웹만 지원한다(최소 너비 1024px 기준). 모바일 화면은 고려하지 않는다.
 
@@ -36,22 +36,22 @@ PC 웹만 지원한다(최소 너비 1024px 기준). 모바일 화면은 고려�
 
 ## 2. 결정 사항 요약
 
-| # | 결정 | 근거 |
-|---|---|---|
-| D-002 | Vite + React SPA + Firebase Hosting, 서버는 Cloud Functions(2nd gen, TypeScript) | 질문 답변 |
-| D-003 | pnpm 모노레포 (`apps/web`, `functions`, `packages/shared`), Vitest + Firebase 에뮬레이터 + Playwright | 질문 답변 |
-| D-004 | YouTube 데이터는 30일 안에 재확인하거나 지운다. 곡 목록은 "음악 데이터의 곡 ↔ YouTube 영상 ID 연결"로 만든다 | RESEARCH 2 |
-| D-005 | 비상업. 추천 재료는 ListenBrainz·MusicBrainz·Wikidata가 주, Last.fm은 표시 의무를 지키며 짧게 캐시하는 보조 | RESEARCH 6, 질문 답변 |
-| D-006 | "YouTube에서 열기"는 비공식 `watch_videos` 링크. 매일 동작 확인, 깨지면 이슈 + 곡별 링크 목록으로 대체 | RESEARCH 4 |
-| D-007 | 검색(search.list)은 하루 100회 공용 한도 → 사용자별 하루 3회, 서비스 전체 80회(+야간 작업 20회) | RESEARCH 1 |
-| D-008 | 자동 수정은 Claude Code GitHub Action. 자동 합침 없음 | 질문 답변 |
-| D-009 | 공개 GitHub 저장소 `musicweb`, main 보호 | 질문 답변 |
-| D-010 | 직접 소유 도메인을 구입해 연결 (Google 심사 조건). 그 전까지는 `*.web.app` | 질문 답변 |
-| D-011 | "내 계정에 바로 넣기"는 1단계에 테스트 사용자 전용으로 구현 (심사 시연 영상에 필요) | RESEARCH 5, 질문 답변 |
-| D-012 | 한도 초기값 보수적 (6.3). 예산 초과 시 앱 안에서 멈춤 + Functions 예산 정지. 결제 자동 해제는 하지 않음 | 질문 답변 |
-| D-013 | **[PLAN 변경]** 화면 언어 기본값은 영어. 상단의 언어 버튼으로 한국어/영어 전환, 선택을 기억. 브라우저 언어·접속 국가 판별 안 함 | 질문 답변 |
-| D-014 | AI는 Claude Haiku 5.5 (`claude-haiku-5-5`), 출력은 구조화 출력(JSON 스키마) | PLAN 12 "가벼운 모델" |
-| D-015 | 로그인 기능 전에 배포하는 동안에는 재생목록 만들기를 관리자 계정에만 연다 | TASKS 순서와 비용 보호 |
+| #     | 결정                                                                                                                            | 근거                   |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| D-002 | Vite + React SPA + Firebase Hosting, 서버는 Cloud Functions(2nd gen, TypeScript)                                                | 질문 답변              |
+| D-003 | pnpm 모노레포 (`apps/web`, `functions`, `packages/shared`), Vitest + Firebase 에뮬레이터 + Playwright                           | 질문 답변              |
+| D-004 | YouTube 데이터는 30일 안에 재확인하거나 지운다. 곡 목록은 "음악 데이터의 곡 ↔ YouTube 영상 ID 연결"로 만든다                    | RESEARCH 2             |
+| D-005 | 비상업. 추천 재료는 ListenBrainz·MusicBrainz·Wikidata가 주, Last.fm은 표시 의무를 지키며 짧게 캐시하는 보조                     | RESEARCH 6, 질문 답변  |
+| D-006 | "YouTube에서 열기"는 비공식 `watch_videos` 링크. 매일 동작 확인, 깨지면 이슈 + 곡별 링크 목록으로 대체                          | RESEARCH 4             |
+| D-007 | 검색(search.list)은 하루 100회 공용 한도 → 사용자별 하루 3회, 서비스 전체 80회(+야간 작업 20회)                                 | RESEARCH 1             |
+| D-008 | 자동 수정은 Claude Code GitHub Action. 자동 합침 없음                                                                           | 질문 답변              |
+| D-009 | 공개 GitHub 저장소 `musicweb`, main 보호                                                                                        | 질문 답변              |
+| D-010 | 직접 소유 도메인을 구입해 연결 (Google 심사 조건). 그 전까지는 `*.web.app`                                                      | 질문 답변              |
+| D-011 | "내 계정에 바로 넣기"는 1단계에 테스트 사용자 전용으로 구현 (심사 시연 영상에 필요)                                             | RESEARCH 5, 질문 답변  |
+| D-012 | 한도 초기값 보수적 (6.3). 예산 초과 시 앱 안에서 멈춤 + Functions 예산 정지. 결제 자동 해제는 하지 않음                         | 질문 답변              |
+| D-013 | **[PLAN 변경]** 화면 언어 기본값은 영어. 상단의 언어 버튼으로 한국어/영어 전환, 선택을 기억. 브라우저 언어·접속 국가 판별 안 함 | 질문 답변              |
+| D-014 | AI는 Claude Haiku 5.5 (`claude-haiku-5-5`), 출력은 구조화 출력(JSON 스키마)                                                     | PLAN 12 "가벼운 모델"  |
+| D-015 | 로그인 기능 전에 배포하는 동안에는 재생목록 만들기를 관리자 계정에만 연다                                                       | TASKS 순서와 비용 보호 |
 
 ## 3. 도메인 모델과 상태
 
@@ -61,15 +61,15 @@ PC 웹만 지원한다(최소 너비 1024px 기준). 모바일 화면은 고려�
 - **연결**: 곡 ↔ YouTube 영상 ID. 종류(`official_audio` | `official_mv` | `live` | `cover` | `remix` | `other`)와 마지막 확인 시각을 가진다.
 - 연결 상태 전이:
 
-| 현재 | 사건 | 다음 |
-|---|---|---|
-| (없음) | 수집·조회로 후보 발견, 규칙 통과 | `active` |
-| (없음) | 규칙이 애매함 | `pending_ai` → AI 판정 후 `active` 또는 `rejected` |
-| `active` | 30일 재확인 성공 | `active` (확인 시각 갱신, 제목 등 갱신) |
-| `active` | 영상 삭제·비공개·퍼가기 불가·재생 오류 101/150 반복 | `gone` (추천에서 제외, YouTube 데이터 삭제) |
-| `active` | 관리자가 막음 | `blocked` |
-| `active` | 25일 넘게 확인 못 함(작업 실패 등) | 추천에서 제외. 30일이 되면 YouTube 데이터 삭제 |
-| `blocked` | 관리자가 해제 | `active` |
+| 현재      | 사건                                                | 다음                                               |
+| --------- | --------------------------------------------------- | -------------------------------------------------- |
+| (없음)    | 수집·조회로 후보 발견, 규칙 통과                    | `active`                                           |
+| (없음)    | 규칙이 애매함                                       | `pending_ai` → AI 판정 후 `active` 또는 `rejected` |
+| `active`  | 30일 재확인 성공                                    | `active` (확인 시각 갱신, 제목 등 갱신)            |
+| `active`  | 영상 삭제·비공개·퍼가기 불가·재생 오류 101/150 반복 | `gone` (추천에서 제외, YouTube 데이터 삭제)        |
+| `active`  | 관리자가 막음                                       | `blocked`                                          |
+| `active`  | 25일 넘게 확인 못 함(작업 실패 등)                  | 추천에서 제외. 30일이 되면 YouTube 데이터 삭제     |
+| `blocked` | 관리자가 해제                                       | `active`                                           |
 
 - 곡 하나에 연결이 여러 개면 우선순위는 `official_audio` > `official_mv` > 나머지. 라이브·커버·리믹스는 요청 조건에 있을 때만 쓴다.
 
@@ -240,14 +240,14 @@ PC 웹만 지원한다(최소 너비 1024px 기준). 모바일 화면은 고려�
 
 ### 4.13 화면 목록
 
-| 경로 | 화면 | 로그인 |
-|---|---|---|
-| `/` | 검색창, 결과(곡 목록·이유·빼기/바꾸기), 플레이어, 내보내기 버튼 | 만들기만 필요 |
-| `/p/:id` | 공유 재생목록 보기·재생·YouTube에서 열기 | 불필요 |
-| `/status` | 현황판 + 운영 일지 | 불필요 |
-| `/me` | 내 재생목록 목록(1단계는 단순 목록), 계정·데이터 삭제, YouTube 연결 해제 | 필요 |
-| `/admin` | 관리자 화면 | 관리자 |
-| `/privacy`, `/terms` | 약관 | 불필요 |
+| 경로                 | 화면                                                                     | 로그인        |
+| -------------------- | ------------------------------------------------------------------------ | ------------- |
+| `/`                  | 검색창, 결과(곡 목록·이유·빼기/바꾸기), 플레이어, 내보내기 버튼          | 만들기만 필요 |
+| `/p/:id`             | 공유 재생목록 보기·재생·YouTube에서 열기                                 | 불필요        |
+| `/status`            | 현황판 + 운영 일지                                                       | 불필요        |
+| `/me`                | 내 재생목록 목록(1단계는 단순 목록), 계정·데이터 삭제, YouTube 연결 해제 | 필요          |
+| `/admin`             | 관리자 화면                                                              | 관리자        |
+| `/privacy`, `/terms` | 약관                                                                     | 불필요        |
 
 ### 4.14 1단계에서 제외 (명시)
 
@@ -260,24 +260,24 @@ PC 웹만 지원한다(최소 너비 1024px 기준). 모바일 화면은 고려�
 
 클라이언트가 직접 쓰는 컬렉션은 없다. **모든 쓰기는 Cloud Functions를 거친다.** 보안 규칙은 기본 전부 거부이고, 아래의 읽기만 연다.
 
-| 컬렉션 | 내용 | 클라이언트 읽기 |
-|---|---|---|
-| `songs/{songId}` | mbid, artist, title, releaseYear, genres[], source | 누구나 |
-| `songs/{songId}/links/{videoId}` | kind, status, ytTitle, channelId, embeddable, madeForKids, verifiedAt | 누구나 (`active`만) |
-| `artists/{artistId}` | name, mbid, channelId, uploadsPlaylistId, status, lastScannedAt, failCount | 관리자 |
-| `playlists/{id}` | ownerUid, title, items[{songId, videoId, reason}], locale, createdAt, state | `saved`는 누구나, `draft`는 소유자 |
-| `playlists/{id}/private/request` | 검색 문장 원문, 해석 결과 | 소유자만 |
-| `users/{uid}` | createdAt, consentAt, blocked, exportTester | 본인 |
-| `users/{uid}/usage/{yyyy-mm-dd}` | playlists, searches, exports | 본인 |
-| `ytExports/{id}` | ownerUid, youtubePlaylistId, createdAt (이 앱이 만든 YouTube 재생목록 목록) | 본인 |
-| `secrets_oauth/{uid}` | 암호화한 YouTube 연결 정보 | **없음** (서버만) |
-| `usage/{yyyy-mm-dd}` | ytUnits, searchCalls, aiCostMicroUsd, exports, 예약 단위 | 관리자 |
-| `config/runtime` | killSwitches{create, ingest, autoIssue}, limits{...} | 누구나(안내 문구용), 쓰기는 관리자 함수만 |
-| `events/{id}` | type, at, actorHash, attrs, outcome, durationMs | 없음 (서버만) |
-| `metrics/{yyyy-mm-dd}`, `metrics/current` | 현황판 수치와 계산 방법 | 누구나 |
-| `opsLog/{id}` | at, kind, message(정제됨), links[] | 누구나 |
-| `adminAudit/{id}` | adminUid, at, action, before, after | 관리자 |
-| `issueFingerprints/{fp}` | issueNumber, firstSeen, lastSeen, count | 없음 |
+| 컬렉션                                    | 내용                                                                        | 클라이언트 읽기                           |
+| ----------------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------- |
+| `songs/{songId}`                          | mbid, artist, title, releaseYear, genres[], source                          | 누구나                                    |
+| `songs/{songId}/links/{videoId}`          | kind, status, ytTitle, channelId, embeddable, madeForKids, verifiedAt       | 누구나 (`active`만)                       |
+| `artists/{artistId}`                      | name, mbid, channelId, uploadsPlaylistId, status, lastScannedAt, failCount  | 관리자                                    |
+| `playlists/{id}`                          | ownerUid, title, items[{songId, videoId, reason}], locale, createdAt, state | `saved`는 누구나, `draft`는 소유자        |
+| `playlists/{id}/private/request`          | 검색 문장 원문, 해석 결과                                                   | 소유자만                                  |
+| `users/{uid}`                             | createdAt, consentAt, blocked, exportTester                                 | 본인                                      |
+| `users/{uid}/usage/{yyyy-mm-dd}`          | playlists, searches, exports                                                | 본인                                      |
+| `ytExports/{id}`                          | ownerUid, youtubePlaylistId, createdAt (이 앱이 만든 YouTube 재생목록 목록) | 본인                                      |
+| `secrets_oauth/{uid}`                     | 암호화한 YouTube 연결 정보                                                  | **없음** (서버만)                         |
+| `usage/{yyyy-mm-dd}`                      | ytUnits, searchCalls, aiCostMicroUsd, exports, 예약 단위                    | 관리자                                    |
+| `config/runtime`                          | killSwitches{create, ingest, autoIssue}, limits{...}                        | 누구나(안내 문구용), 쓰기는 관리자 함수만 |
+| `events/{id}`                             | type, at, actorHash, attrs, outcome, durationMs                             | 없음 (서버만)                             |
+| `metrics/{yyyy-mm-dd}`, `metrics/current` | 현황판 수치와 계산 방법                                                     | 누구나                                    |
+| `opsLog/{id}`                             | at, kind, message(정제됨), links[]                                          | 누구나                                    |
+| `adminAudit/{id}`                         | adminUid, at, action, before, after                                         | 관리자                                    |
+| `issueFingerprints/{fp}`                  | issueNumber, firstSeen, lastSeen, count                                     | 없음                                      |
 
 - 관리자 판별: `ADMIN_EMAILS`에 있는 계정에 서버가 사용자 정의 클레임 `admin: true`를 붙인다. 규칙은 `request.auth.token.admin == true`를 확인한다.
 - 시험 문제·기준 점수는 저장소 `evals/`에 둔다 (Firestore 아님).
@@ -301,32 +301,32 @@ firestore.rules, firebase.json
 
 ### 6.2 원칙 (강제 수단과 함께)
 
-| 원칙 | 강제 수단 |
-|---|---|
-| 사용자의 기존 재생목록은 절대 바꾸지 않는다 | `youtube-write` 어댑터는 `createPlaylist`, `addItems`만 공개한다. `addItems`는 `ytExports`에 이 사용자 소유로 기록된 ID만 받는다. 수정·삭제 메서드는 없다. 다른 곳에서 YouTube 쓰기 API를 부르면 ESLint가 막는다. 단위 테스트로 거부를 확인한다. |
-| 사용자는 자기 데이터만 읽고 쓴다 | 보안 규칙(기본 거부) + 함수마다 소유자 검사. 에뮬레이터 규칙 테스트로 "A가 B 데이터를 못 읽고 못 바꾼다"를 확인한다. |
-| 서비스 전체와 사용자별 비용·호출 상한 | 모든 외부 호출은 `budget.reserve()`를 거친다(Firestore 트랜잭션, 서비스·사용자 카운터 분리). 어댑터 밖의 `fetch`는 ESLint가 금지한다. 상한 초과·긴급 정지 테스트를 둔다. Functions 예산 정지와 월 예산 알림을 설정한다. |
-| API 키와 연결 정보는 서버에만 | 비밀값은 `defineSecret`으로 둔다. 연결 정보는 AES-256-GCM으로 암호화해 `secrets_oauth`에 저장하고, 규칙은 접근을 전부 거부한다. web 빌드 결과물에서 비밀값 이름·키 패턴을 찾는 테스트를 둔다. `apps/web`이 `functions`·서버 패키지를 import하면 ESLint가 막는다. |
-| 비밀값 커밋과 main 직접 push 차단 | 커밋 전 훅(secretlint), push 전 훅(main 거부), Claude Code PreToolUse 훅(main push·`--no-verify` 차단), CI 비밀값 검사(gitleaks), GitHub main 보호(PR·CI 필수, 강제 push 금지)와 비밀값 push 보호를 둔다. |
-| 음원·영상 파일을 저장하지 않는다 | 저장 스키마에 파일·바이너리 필드가 없다. Storage를 쓰지 않는다(규칙 전부 거부). |
-| 플레이어를 숨기거나 변형하지 않는다 | 플레이어 컴포넌트 하나만 쓴다. E2E가 크기 ≥200×200, 위에 겹친 요소가 없음을 확인한다. |
-| 할당량은 사지 않는다. 프로젝트 1개, 비공식 수집 도구 금지 | 외부 호출은 허용 목록 어댑터만 쓴다(ESLint). 웹 페이지 긁기는 금지하고, 예외는 D-006 링크 동작 확인 1건뿐이다. |
-| 입력과 외부 글의 지시문을 명령으로 취급하지 않는다 | AI 호출은 도구 없이 구조화 출력만 받는다. 사용자 입력·외부 텍스트는 데이터 필드에 넣는다. 주입 문장 테스트를 둔다. 목록 밖 곡은 코드가 버린다. |
-| YouTube 데이터 30일 규칙 | 재확인·정리 작업을 둔다. "30일 넘은 YouTube 데이터가 남지 않는다" 테스트를 둔다. |
+| 원칙                                                      | 강제 수단                                                                                                                                                                                                                                                        |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 사용자의 기존 재생목록은 절대 바꾸지 않는다               | `youtube-write` 어댑터는 `createPlaylist`, `addItems`만 공개한다. `addItems`는 `ytExports`에 이 사용자 소유로 기록된 ID만 받는다. 수정·삭제 메서드는 없다. 다른 곳에서 YouTube 쓰기 API를 부르면 ESLint가 막는다. 단위 테스트로 거부를 확인한다.                 |
+| 사용자는 자기 데이터만 읽고 쓴다                          | 보안 규칙(기본 거부) + 함수마다 소유자 검사. 에뮬레이터 규칙 테스트로 "A가 B 데이터를 못 읽고 못 바꾼다"를 확인한다.                                                                                                                                             |
+| 서비스 전체와 사용자별 비용·호출 상한                     | 모든 외부 호출은 `budget.reserve()`를 거친다(Firestore 트랜잭션, 서비스·사용자 카운터 분리). 어댑터 밖의 `fetch`는 ESLint가 금지한다. 상한 초과·긴급 정지 테스트를 둔다. Functions 예산 정지와 월 예산 알림을 설정한다.                                          |
+| API 키와 연결 정보는 서버에만                             | 비밀값은 `defineSecret`으로 둔다. 연결 정보는 AES-256-GCM으로 암호화해 `secrets_oauth`에 저장하고, 규칙은 접근을 전부 거부한다. web 빌드 결과물에서 비밀값 이름·키 패턴을 찾는 테스트를 둔다. `apps/web`이 `functions`·서버 패키지를 import하면 ESLint가 막는다. |
+| 비밀값 커밋과 main 직접 push 차단                         | 커밋 전 훅(secretlint), push 전 훅(main 거부), Claude Code PreToolUse 훅(main push·`--no-verify` 차단), CI 비밀값 검사(gitleaks), GitHub main 보호(PR·CI 필수, 강제 push 금지)와 비밀값 push 보호를 둔다.                                                        |
+| 음원·영상 파일을 저장하지 않는다                          | 저장 스키마에 파일·바이너리 필드가 없다. Storage를 쓰지 않는다(규칙 전부 거부).                                                                                                                                                                                  |
+| 플레이어를 숨기거나 변형하지 않는다                       | 플레이어 컴포넌트 하나만 쓴다. E2E가 크기 ≥200×200, 위에 겹친 요소가 없음을 확인한다.                                                                                                                                                                            |
+| 할당량은 사지 않는다. 프로젝트 1개, 비공식 수집 도구 금지 | 외부 호출은 허용 목록 어댑터만 쓴다(ESLint). 웹 페이지 긁기는 금지하고, 예외는 D-006 링크 동작 확인 1건뿐이다.                                                                                                                                                   |
+| 입력과 외부 글의 지시문을 명령으로 취급하지 않는다        | AI 호출은 도구 없이 구조화 출력만 받는다. 사용자 입력·외부 텍스트는 데이터 필드에 넣는다. 주입 문장 테스트를 둔다. 목록 밖 곡은 코드가 버린다.                                                                                                                   |
+| YouTube 데이터 30일 규칙                                  | 재확인·정리 작업을 둔다. "30일 넘은 YouTube 데이터가 남지 않는다" 테스트를 둔다.                                                                                                                                                                                 |
 
 ### 6.3 한도 초기값 (관리자 화면에서 변경)
 
-| 항목 | 값 |
-|---|---|
-| 사용자별 하루 재생목록 만들기 | 10회 |
-| 사용자별 하루 검색 사용 | 3회 |
-| 사용자별 생성 간격 | 10초에 1회 |
-| 서비스 하루 AI 비용 | $1 |
-| 서비스 하루 검색 | 사용자 요청 80회 + 야간 작업 20회 (YouTube 한도 100) |
-| 서비스 하루 YouTube 단위 | 9,000 (한도 10,000에서 1,000 여유) |
-| 서비스 하루 내 계정에 넣기 | 5개 (재생목록당 최대 30곡) |
-| 하루 자동 이슈 / 자동 수정 실행 | 5개 / 3회 |
-| 월 예산 알림 | $10 (Functions 예산 정지 함께) |
+| 항목                            | 값                                                   |
+| ------------------------------- | ---------------------------------------------------- |
+| 사용자별 하루 재생목록 만들기   | 10회                                                 |
+| 사용자별 하루 검색 사용         | 3회                                                  |
+| 사용자별 생성 간격              | 10초에 1회                                           |
+| 서비스 하루 AI 비용             | $1                                                   |
+| 서비스 하루 검색                | 사용자 요청 80회 + 야간 작업 20회 (YouTube 한도 100) |
+| 서비스 하루 YouTube 단위        | 9,000 (한도 10,000에서 1,000 여유)                   |
+| 서비스 하루 내 계정에 넣기      | 5개 (재생목록당 최대 30곡)                           |
+| 하루 자동 이슈 / 자동 수정 실행 | 5개 / 3회                                            |
+| 월 예산 알림                    | $10 (Functions 예산 정지 함께)                       |
 
 날짜 경계는 YouTube 한도와 맞춰 태평양 시간 자정이다.
 
@@ -341,32 +341,35 @@ firestore.rules, firebase.json
 
 ## 8. 환경 변수
 
-| 이름 | 위치 | 용도 |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | Secret Manager (`defineSecret`), GitHub Secrets(자동 수정·시험) | AI |
-| `YOUTUBE_API_KEY` | Secret Manager | YouTube 읽기 |
-| `LASTFM_API_KEY` | Secret Manager | Last.fm |
-| `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET` | Secret Manager | 내 계정에 넣기 권한 |
-| `TOKEN_ENC_KEY` | Secret Manager | 연결 정보 암호화(32바이트) |
-| `ACTOR_HASH_KEY` | Secret Manager | 이벤트 로그 사용자 해시 |
-| `GITHUB_ISSUE_TOKEN` | Secret Manager | 자동 이슈·GitHub 수치 (권한: 해당 저장소 issues/PR 읽기·이슈 쓰기만) |
-| `ADMIN_EMAILS` | Functions 매개변수(`defineString`) | 관리자 목록 |
-| `MB_CONTACT` | Functions 매개변수 | MusicBrainz User-Agent 연락처 |
-| `VITE_FIREBASE_*` | `apps/web/.env.local` (공개 설정값, 비밀 아님) | Firebase 웹 설정 |
-| `VITE_RECAPTCHA_SITE_KEY` | `apps/web/.env.local` | App Check |
-| `FIREBASE_SERVICE_ACCOUNT` | GitHub Secrets | 배포 |
+| 이름                                     | 위치                                                            | 용도                                                                 |
+| ---------------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY`                      | Secret Manager (`defineSecret`), GitHub Secrets(자동 수정·시험) | AI                                                                   |
+| `YOUTUBE_API_KEY`                        | Secret Manager                                                  | YouTube 읽기                                                         |
+| `LASTFM_API_KEY`                         | Secret Manager                                                  | Last.fm                                                              |
+| `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET` | Secret Manager                                                  | 내 계정에 넣기 권한                                                  |
+| `TOKEN_ENC_KEY`                          | Secret Manager                                                  | 연결 정보 암호화(32바이트)                                           |
+| `ACTOR_HASH_KEY`                         | Secret Manager                                                  | 이벤트 로그 사용자 해시                                              |
+| `GITHUB_ISSUE_TOKEN`                     | Secret Manager                                                  | 자동 이슈·GitHub 수치 (권한: 해당 저장소 issues/PR 읽기·이슈 쓰기만) |
+| `ADMIN_EMAILS`                           | Functions 매개변수(`defineString`)                              | 관리자 목록                                                          |
+| `MB_CONTACT`                             | Functions 매개변수                                              | MusicBrainz User-Agent 연락처                                        |
+| `VITE_FIREBASE_*`                        | `apps/web/.env.local` (공개 설정값, 비밀 아님)                  | Firebase 웹 설정                                                     |
+| `VITE_RECAPTCHA_SITE_KEY`                | `apps/web/.env.local`                                           | App Check                                                            |
+| `FIREBASE_SERVICE_ACCOUNT`               | GitHub Secrets                                                  | 배포                                                                 |
 
 비밀값은 저장소에 두지 않는다. 로컬 에뮬레이터용 값은 `functions/.secret.local`에 둔다(gitignore).
 
 ## 9. 나중에 할 기능
 
 ### 2단계
+
 내 재생목록 보관함, 조건 지정(연도, 제외 아티스트, 분위기), 무한 재생, 심사 통과 후 "내 계정에 바로 넣기" 전체 공개, 할당량 증가 신청(준수 심사).
 
 ### 3단계
+
 공개 재생목록 수집(그 곡이 든 재생목록 찾기, 추천 재료로 활용), 공연 예습 재생목록, Spotify, 언어 추가.
 
 ### 이후 아이디어
+
 사용자가 뺀 곡·남긴 곡을 추천 재료로 반영.
 
 ## 10. 리스크 & 주의사항

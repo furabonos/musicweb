@@ -7,14 +7,14 @@ description: ListenBrainz·MusicBrainz·Wikidata·Last.fm 이용 조건(라이�
 
 확인일 2026-11-21. 이 서비스는 **비상업**이다(D-005). 광고·유료 기능을 넣으면 이 표를 다시 검토한다.
 
-| 출처 | 쓰는 것 | 라이선스·조건 | 요청 한도 | 저장 |
-|---|---|---|---|---|
-| ListenBrainz Labs `labs.api.listenbrainz.org` | 비슷한 곡(similar-recordings), 비슷한 아티스트 | 공개 데이터 CC0 계열 (원문 재확인 필요). 실험 서비스라 SLA 없음 | **초당 1회 이하**, 429와 `X-RateLimit-*` 헤더를 따름 | 결과를 곡 목록에 반영해도 됨 |
-| MusicBrainz `musicbrainz.org/ws/2` | 녹음 MBID, 아티스트, 발매일, **URL 관계(YouTube 링크·채널)** | 핵심 데이터 CC0. **태그·장르 연결은 CC BY-NC-SA 3.0** | **IP당 평균 초당 1회**, 연락처가 든 User-Agent 필수(`musicweb/<ver> ( <MB_CONTACT> )`) | 핵심 데이터는 자유. 태그는 출처 표시 + 같은 조건 |
-| Wikidata SPARQL `query.wikidata.org` | YouTube 영상 ID(P1651), YouTube 채널(P2397), 장르(P136), 발매일(P577) | CC0 | 예의 있게(동시 요청 적게, User-Agent 명시) | 자유 |
-| Last.fm `ws.audioscrobbler.com` | track.getSimilar(유사도 점수), getTopTags — **보조** | **비상업 전용**. Last.fm 표시와 링크 의무. 이미지 사용 금지 | 숫자 한도 없음. "초당 여러 번 계속 호출"하면 정지되니 초당 1회로 맞춤 | **HTTP 캐시 헤더 기준 TTL**, 전체 **100MB 상한**. 이용 종료 시 전부 삭제 |
-| Spotify | 쓰지 않음 | 신규 앱 추천 API 차단, DB 구축·AI 학습 금지 | — | — |
-| Discogs | 쓰지 않음 (원문 미확인) | Restricted Data 상업 금지 | — | — |
+| 출처                                          | 쓰는 것                                                               | 라이선스·조건                                                   | 요청 한도                                                                              | 저장                                                                     |
+| --------------------------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| ListenBrainz Labs `labs.api.listenbrainz.org` | 비슷한 곡(similar-recordings), 비슷한 아티스트                        | 공개 데이터 CC0 계열 (원문 재확인 필요). 실험 서비스라 SLA 없음 | **초당 1회 이하**, 429와 `X-RateLimit-*` 헤더를 따름                                   | 결과를 곡 목록에 반영해도 됨                                             |
+| MusicBrainz `musicbrainz.org/ws/2`            | 녹음 MBID, 아티스트, 발매일, **URL 관계(YouTube 링크·채널)**          | 핵심 데이터 CC0. **태그·장르 연결은 CC BY-NC-SA 3.0**           | **IP당 평균 초당 1회**, 연락처가 든 User-Agent 필수(`musicweb/<ver> ( <MB_CONTACT> )`) | 핵심 데이터는 자유. 태그는 출처 표시 + 같은 조건                         |
+| Wikidata SPARQL `query.wikidata.org`          | YouTube 영상 ID(P1651), YouTube 채널(P2397), 장르(P136), 발매일(P577) | CC0                                                             | 예의 있게(동시 요청 적게, User-Agent 명시)                                             | 자유                                                                     |
+| Last.fm `ws.audioscrobbler.com`               | track.getSimilar(유사도 점수), getTopTags — **보조**                  | **비상업 전용**. Last.fm 표시와 링크 의무. 이미지 사용 금지     | 숫자 한도 없음. "초당 여러 번 계속 호출"하면 정지되니 초당 1회로 맞춤                  | **HTTP 캐시 헤더 기준 TTL**, 전체 **100MB 상한**. 이용 종료 시 전부 삭제 |
+| Spotify                                       | 쓰지 않음                                                             | 신규 앱 추천 API 차단, DB 구축·AI 학습 금지                     | —                                                                                      | —                                                                        |
+| Discogs                                       | 쓰지 않음 (원문 미확인)                                               | Restricted Data 상업 금지                                       | —                                                                                      | —                                                                        |
 
 ## 규칙
 

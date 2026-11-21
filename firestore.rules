@@ -1,0 +1,9 @@
+rules_version = '2';
+// 기본 전부 거부. 컬렉션별 읽기 허용은 T03에서 SPEC 5장 표대로 추가한다.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
