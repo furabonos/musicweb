@@ -260,26 +260,27 @@ PC 웹만 지원한다(최소 너비 1024px 기준). 모바일 화면은 고려�
 
 클라이언트가 직접 쓰는 컬렉션은 없다. **모든 쓰기는 Cloud Functions를 거친다.** 보안 규칙은 기본 전부 거부이고, 아래의 읽기만 연다.
 
-| 컬렉션                                      | 내용                                                                                                              | 클라이언트 읽기                           |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `songs/{songId}`                            | mbid, artist, title, releaseYear, genres[], source                                                                | 누구나                                    |
-| `songs/{songId}/links/{videoId}`            | kind, status, ytTitle, channelId, embeddable, madeForKids, verifiedAt                                             | 누구나 (`active`만)                       |
-| `artists/{artistId}`                        | name, mbid, channelId, uploadsPlaylistId, status, lastScannedAt, failCount                                        | 관리자                                    |
-| `playlists/{id}`                            | ownerUid, title, items[{songId, videoId, reason}], locale, createdAt, state                                       | `saved`는 누구나, `draft`는 소유자        |
-| `playlists/{id}/private/request`            | 검색 문장 원문, 해석 결과                                                                                         | 소유자만                                  |
-| `users/{uid}`                               | createdAt, consentAt, blocked, exportTester                                                                       | 본인                                      |
-| `users/{uid}/usage/{yyyy-mm-dd}`            | playlists, searches, exports                                                                                      | 본인                                      |
-| `ytExports/{id}`                            | ownerUid, youtubePlaylistId, itemCount, createdAt (이 앱이 만든 YouTube 재생목록 목록)                            | 본인                                      |
-| `secrets_oauth/{uid}`                       | 암호화한 YouTube 연결 정보                                                                                        | **없음** (서버만)                         |
-| `usage/{yyyy-mm-dd}`                        | ytUnits, ytSearchUser, ytSearchJob, aiCostMicroUsd, exports, autoIssues, autoFixes, musicDataCalls (D-020, D-024) | 관리자                                    |
-| `usage/{yyyy-mm-dd}/reservations/{id}`      | 예약 기록(uid는 정산 후 지움), service, user, settled                                                             | 없음 (서버만)                             |
-| `config/runtime`                            | killSwitches{create, ingest, autoIssue}, limits{...}                                                              | 누구나(안내 문구용), 쓰기는 관리자 함수만 |
-| `events/{id}`                               | type, at, actorHash, attrs, outcome, durationMs                                                                   | 없음 (서버만)                             |
-| `metrics/{yyyy-mm-dd}`, `metrics/current`   | 현황판 수치와 계산 방법                                                                                           | 누구나                                    |
-| `opsLog/{id}`                               | at, kind, message(정제됨), links[]                                                                                | 누구나                                    |
-| `adminAudit/{id}`                           | adminUid, at, action, before, after                                                                               | 관리자                                    |
-| `issueFingerprints/{fp}`                    | issueNumber, firstSeen, lastSeen, count                                                                           | 없음                                      |
-| `lastfmCache/{sha256}`, `lastfmCache/_meta` | Last.fm 응답 캐시(body, bytes, storedAt, expiresAt), 전체 크기 totalBytes. HTTP 캐시 기간만, 100MB 상한           | 없음 (서버만)                             |
+| 컬렉션                                              | 내용                                                                                                              | 클라이언트 읽기                           |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `songs/{songId}`                                    | mbid, artist, artistMbid, title, releaseYear, genres[](T13에서 채움), source, updatedAt                           | 누구나                                    |
+| `songs/{songId}/links/{videoId}`                    | videoId, kind, status, linkedBy, ytTitle, channelId, embeddable, madeForKids, durationSec, verifiedAt             | 누구나 (`active`만)                       |
+| `artists/{artistId}`                                | name, mbid, channelId, uploadsPlaylistId, status, lastSeenPublishedAt, lastScannedAt, failCount, addedBy          | 관리자                                    |
+| `playlists/{id}`                                    | ownerUid, title, items[{songId, videoId, reason}], locale, createdAt, state                                       | `saved`는 누구나, `draft`는 소유자        |
+| `playlists/{id}/private/request`                    | 검색 문장 원문, 해석 결과                                                                                         | 소유자만                                  |
+| `users/{uid}`                                       | createdAt, consentAt, blocked, exportTester                                                                       | 본인                                      |
+| `users/{uid}/usage/{yyyy-mm-dd}`                    | playlists, searches, exports                                                                                      | 본인                                      |
+| `ytExports/{id}`                                    | ownerUid, youtubePlaylistId, itemCount, createdAt (이 앱이 만든 YouTube 재생목록 목록)                            | 본인                                      |
+| `secrets_oauth/{uid}`                               | 암호화한 YouTube 연결 정보                                                                                        | **없음** (서버만)                         |
+| `usage/{yyyy-mm-dd}`                                | ytUnits, ytSearchUser, ytSearchJob, aiCostMicroUsd, exports, autoIssues, autoFixes, musicDataCalls (D-020, D-024) | 관리자                                    |
+| `usage/{yyyy-mm-dd}/reservations/{id}`              | 예약 기록(uid는 정산 후 지움), service, user, settled                                                             | 없음 (서버만)                             |
+| `config/runtime`                                    | killSwitches{create, ingest, autoIssue}, limits{...}                                                              | 누구나(안내 문구용), 쓰기는 관리자 함수만 |
+| `events/{id}`                                       | type, at, actorHash, attrs, outcome, durationMs                                                                   | 없음 (서버만)                             |
+| `metrics/{yyyy-mm-dd}`, `metrics/current`           | 현황판 수치와 계산 방법                                                                                           | 누구나                                    |
+| `opsLog/{id}`                                       | at, kind, message(정제됨), links[]                                                                                | 누구나                                    |
+| `adminAudit/{id}`                                   | adminUid, at, action, before, after                                                                               | 관리자                                    |
+| `issueFingerprints/{fp}`                            | issueNumber, firstSeen, lastSeen, count                                                                           | 없음                                      |
+| `ingestQueue/{artistMbid}`, `ingestQueueDays/{day}` | 사용자가 찾은 아티스트 대기열(mbid, name, queuedAt — 누가 찾았는지 없음), 하루 개수                               | 없음 (서버만)                             |
+| `lastfmCache/{sha256}`, `lastfmCache/_meta`         | Last.fm 응답 캐시(body, bytes, storedAt, expiresAt), 전체 크기 totalBytes. HTTP 캐시 기간만, 100MB 상한           | 없음 (서버만)                             |
 
 - 관리자 판별: 서버 함수는 `ADMIN_EMAILS`(확인된 Google 이메일)를 직접 확인한다. 보안 규칙용으로 서버가 사용자 정의 클레임 `admin: true`를 붙이고(로그인 직후 `account-syncClaims`, 관리자 함수 호출 때), 규칙은 `request.auth.token.admin == true`를 확인한다(D-022).
 - 시험 문제·기준 점수는 저장소 `evals/`에 둔다 (Firestore 아님).

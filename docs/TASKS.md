@@ -171,19 +171,22 @@
     - unit `packages/shared/src/matching/*.test.ts` — 스킬의 예시 표 전 항목(최소 40개: 한·영·일 제목, Topic 채널, "Provided to YouTube by" 설명)이 기대 종류와 곡으로 판정
     - unit — 애매함 기준에 걸린 경우만 AI 호출 함수가 불림(호출 횟수 검증)
 
-- [ ] **T10 YouTube 읽기 어댑터와 야간 수집 작업** — SPEC 4.4
+- [x] **T10 YouTube 읽기 어댑터와 야간 수집 작업** — SPEC 4.4
   - 의존: T04, T07, T08, T09
   - 산출물:
     - `adapters/youtube-read.ts`: channels/playlistItems/videos(50개씩)/search, 호출마다 budget
     - `jobs/ingest.ts`: 공식 채널 찾기 → 새 업로드만 → 연결 → 곡 목록 저장. 긴급 정지 `ingest` 확인
-    - 사용자가 찾은 아티스트 대기열(하루 최대 50명)
+    - 사용자가 찾은 아티스트 대기열(하루 최대 50명) `core/ingestQueue.ts`, 예약 함수 `jobs/schedules.ts`(`ingestNightly`, 태평양 03:00, 인스턴스 1개)
+    - YouTube 응답은 손으로 만든 것(`tests/fixtures/youtube/`, D-027). **T23 배포 전에 실제 키로 녹화본으로 바꾼다**
   - 완료 기준:
     - integration `functions/src/jobs/ingest.int.test.ts`
       - 녹화 응답으로 아티스트 2명 수집 시 곡·연결이 생기고 이미 본 영상은 다시 처리 안 함
       - 단위 사용량이 기대값과 일치
     - integration — 단위 상한에 닿으면 작업이 멈추고 운영 일지에 "한도 도달"
     - integration — `killSwitches.ingest=false`면 아무 호출도 하지 않음
-    - unit — 연속 3회 실패 아티스트는 `failed` 상태와 이벤트
+    - unit — 연속 3회 실패 아티스트는 `failed` 상태 (`jobs/ingest.test.ts`의 `nextArtistState`). 이벤트·운영 일지는 integration에서 확인
+    - integration — YouTube 할당량 소진·출처 장애는 아티스트 실패로 세지 않고 작업을 멈춤, 실행 시간 마감, 이어서 보기, 같은 게시 시각, 이미 연결된 영상 건너뛰기, 대기열 하루 50명
+    - unit `functions/src/adapters/youtube-read.test.ts` — 응답 해석, 호출 전 단위 사용, 50개씩, 검색 100단위+검색 한도, 키가 기록에 없음
 
 - [ ] **T11 30일 재확인과 정리 작업** — SPEC 3.1, 4.4 / 스킬 `youtube-policy`
   - 의존: T10
@@ -191,6 +194,7 @@
     - `jobs/refresh.ts`: 25일 넘은 연결 재확인. 없어지거나 비공개·퍼가기 불가면 `gone` + YouTube 필드 삭제
     - `jobs/purge.ts`: 30일 넘은 YouTube 데이터 무조건 삭제
     - `purgeExpiredCache(firestoreLastfmCache(db), now)`로 기간 지난 Last.fm 캐시를 매일 지운다(D-024)
+    - `artists.channelId`·`uploadsPlaylistId`(YouTube 데이터, T10)도 30일 재확인 대상이다(D-027)
     - `ytExports.youtubePlaylistId`가 30일 규칙 대상인지 정하고 처리한다(D-021). `ytExports`를 쓰는 파일은 `eslint.config.js`에 예외로 추가한다
   - 완료 기준:
     - integration `functions/src/jobs/refresh.int.test.ts`
@@ -347,6 +351,7 @@
 - [ ] **T23 배포** — SPEC 6.2, 6.3
   - 의존: T18, T21, T22
   - 산출물:
+    - functions 배포 묶음 확인: esbuild가 `@musicweb/shared`를 묶고, `workspace:` 개발 의존성이 Cloud Build 설치를 깨지 않게 한다(D-027). 손으로 만든 YouTube 응답을 실제 녹화본으로 바꾼다(T10)
     - Firebase 프로젝트(Blaze), 월 예산 알림 $10, Functions 예산 정지, App Check(reCAPTCHA Enterprise) 강제
     - Secret Manager 등록, 예약 작업 등록
     - `.github/workflows/deploy.yml`(main 합침 시), `docs/OPERATIONS.md`(복구·키 교체·긴급 정지 절차)

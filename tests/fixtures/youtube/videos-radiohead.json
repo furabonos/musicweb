@@ -1,0 +1,166 @@
+{
+  "_note": "손으로 만든 응답 (YouTube API 키 없음, D-027). 형식: https://developers.google.com/youtube/v3/docs — 실제 키로 녹화본으로 바꾼다(T23 전).",
+  "kind": "youtube#videoListResponse",
+  "etag": "e4",
+  "pageInfo": {
+    "totalResults": 5,
+    "resultsPerPage": 5
+  },
+  "items": [
+    {
+      "kind": "youtube#video",
+      "etag": "e",
+      "id": "rhKarmaMV01",
+      "snippet": {
+        "publishedAt": "2024-03-01T12:00:00Z",
+        "channelId": "UCq19-LqvG35A-30oyAiPiqA",
+        "title": "Radiohead - Karma Police (Official Music Video)",
+        "description": "The official video for Karma Police.",
+        "channelTitle": "Radiohead",
+        "categoryId": "10",
+        "liveBroadcastContent": "none"
+      },
+      "contentDetails": {
+        "duration": "PT4M24S",
+        "dimension": "2d",
+        "definition": "hd",
+        "caption": "false",
+        "licensedContent": true,
+        "contentRating": {},
+        "projection": "rectangular"
+      },
+      "status": {
+        "uploadStatus": "processed",
+        "privacyStatus": "public",
+        "license": "youtube",
+        "embeddable": true,
+        "publicStatsViewable": true,
+        "madeForKids": false
+      }
+    },
+    {
+      "kind": "youtube#video",
+      "etag": "e",
+      "id": "rhNoSurp001",
+      "snippet": {
+        "publishedAt": "2024-02-15T12:00:00Z",
+        "channelId": "UCq19-LqvG35A-30oyAiPiqA",
+        "title": "Radiohead - No Surprises (Official Audio)",
+        "description": "",
+        "channelTitle": "Radiohead",
+        "categoryId": "10",
+        "liveBroadcastContent": "none"
+      },
+      "contentDetails": {
+        "duration": "PT3M49S",
+        "dimension": "2d",
+        "definition": "hd",
+        "caption": "false",
+        "licensedContent": true,
+        "contentRating": {},
+        "projection": "rectangular"
+      },
+      "status": {
+        "uploadStatus": "processed",
+        "privacyStatus": "public",
+        "license": "youtube",
+        "embeddable": true,
+        "publicStatsViewable": true,
+        "madeForKids": false
+      }
+    },
+    {
+      "kind": "youtube#video",
+      "etag": "e",
+      "id": "rhKarmaLive",
+      "snippet": {
+        "publishedAt": "2024-02-01T12:00:00Z",
+        "channelId": "UCq19-LqvG35A-30oyAiPiqA",
+        "title": "Radiohead - Karma Police (Live at Glastonbury 1997)",
+        "description": "",
+        "channelTitle": "Radiohead",
+        "categoryId": "10",
+        "liveBroadcastContent": "none"
+      },
+      "contentDetails": {
+        "duration": "PT4M40S",
+        "dimension": "2d",
+        "definition": "hd",
+        "caption": "false",
+        "licensedContent": true,
+        "contentRating": {},
+        "projection": "rectangular"
+      },
+      "status": {
+        "uploadStatus": "processed",
+        "privacyStatus": "public",
+        "license": "youtube",
+        "embeddable": true,
+        "publicStatsViewable": true,
+        "madeForKids": false
+      }
+    },
+    {
+      "kind": "youtube#video",
+      "etag": "e",
+      "id": "rhTeaser001",
+      "snippet": {
+        "publishedAt": "2024-01-20T12:00:00Z",
+        "channelId": "UCq19-LqvG35A-30oyAiPiqA",
+        "title": "OK Computer OKNOTOK teaser",
+        "description": "",
+        "channelTitle": "Radiohead",
+        "categoryId": "10",
+        "liveBroadcastContent": "none"
+      },
+      "contentDetails": {
+        "duration": "PT0M45S",
+        "dimension": "2d",
+        "definition": "hd",
+        "caption": "false",
+        "licensedContent": true,
+        "contentRating": {},
+        "projection": "rectangular"
+      },
+      "status": {
+        "uploadStatus": "processed",
+        "privacyStatus": "public",
+        "license": "youtube",
+        "embeddable": true,
+        "publicStatsViewable": true,
+        "madeForKids": false
+      }
+    },
+    {
+      "kind": "youtube#video",
+      "etag": "e",
+      "id": "rhPrivate01",
+      "snippet": {
+        "publishedAt": "2024-01-10T12:00:00Z",
+        "channelId": "UCq19-LqvG35A-30oyAiPiqA",
+        "title": "Radiohead - Lucky (Official Audio)",
+        "description": "",
+        "channelTitle": "Radiohead",
+        "categoryId": "10",
+        "liveBroadcastContent": "none"
+      },
+      "contentDetails": {
+        "duration": "PT4M19S",
+        "dimension": "2d",
+        "definition": "hd",
+        "caption": "false",
+        "licensedContent": true,
+        "contentRating": {},
+        "projection": "rectangular"
+      },
+      "status": {
+        "uploadStatus": "processed",
+        "privacyStatus": "private",
+        "license": "youtube",
+        "embeddable": true,
+        "publicStatsViewable": true,
+        "madeForKids": false
+      }
+    }
+  ]
+}

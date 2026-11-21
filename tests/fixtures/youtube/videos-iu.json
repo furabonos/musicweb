@@ -1,0 +1,73 @@
+{
+  "_note": "손으로 만든 응답 (YouTube API 키 없음, D-027). 형식: https://developers.google.com/youtube/v3/docs — 실제 키로 녹화본으로 바꾼다(T23 전).",
+  "kind": "youtube#videoListResponse",
+  "etag": "e4",
+  "pageInfo": {
+    "totalResults": 2,
+    "resultsPerPage": 2
+  },
+  "items": [
+    {
+      "kind": "youtube#video",
+      "etag": "e",
+      "id": "iuNightMV01",
+      "snippet": {
+        "publishedAt": "2023-05-01T09:00:00Z",
+        "channelId": "UC3SyT4_WLHzN7JmHQwKQZww",
+        "title": "[MV] IU(아이유) _ Through the Night(밤편지)",
+        "description": "",
+        "channelTitle": "이지금 [IU Official]",
+        "categoryId": "10",
+        "liveBroadcastContent": "none"
+      },
+      "contentDetails": {
+        "duration": "PT4M13S",
+        "dimension": "2d",
+        "definition": "hd",
+        "caption": "false",
+        "licensedContent": true,
+        "contentRating": {},
+        "projection": "rectangular"
+      },
+      "status": {
+        "uploadStatus": "processed",
+        "privacyStatus": "public",
+        "license": "youtube",
+        "embeddable": true,
+        "publicStatsViewable": true,
+        "madeForKids": false
+      }
+    },
+    {
+      "kind": "youtube#video",
+      "etag": "e",
+      "id": "iuNoEmbed01",
+      "snippet": {
+        "publishedAt": "2023-04-01T09:00:00Z",
+        "channelId": "UC3SyT4_WLHzN7JmHQwKQZww",
+        "title": "IU - Palette (Official Audio)",
+        "description": "",
+        "channelTitle": "이지금 [IU Official]",
+        "categoryId": "10",
+        "liveBroadcastContent": "none"
+      },
+      "contentDetails": {
+        "duration": "PT3M37S",
+        "dimension": "2d",
+        "definition": "hd",
+        "caption": "false",
+        "licensedContent": true,
+        "contentRating": {},
+        "projection": "rectangular"
+      },
+      "status": {
+        "uploadStatus": "processed",
+        "privacyStatus": "public",
+        "license": "youtube",
+        "embeddable": false,
+        "publicStatsViewable": true,
+        "madeForKids": false
+      }
+    }
+  ]
+}

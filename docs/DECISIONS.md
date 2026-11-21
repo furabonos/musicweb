@@ -330,3 +330,32 @@
 - **예시 표**: 67개, 행마다 종류와 "그 곡의 제목과 맞는가"를 함께 확인한다(한·영·일, Topic, Provided, 라이브·커버·리믹스 함정, 피처링, 다국어 제목). 영상 정보는 실제 형식을 본뜬 예시이고, 실제 녹화 정답 50곡은 T17 `evals/matching/`에서 만든다.
 - **알려진 한계**: 표시 없는 공식 채널 업로드는 연결하지 않는다. 채널 ID가 MB·Wikidata에 없는 VEVO·레이블 채널은 공식으로 보지 못한다. 시험 문제(T17) 점수를 보고 조정한다.
 - **이유**: 규칙이 먼저, AI는 애매한 것만(비용·결정성). 스킬 표의 순서대로면 틀리는 경우를 테스트로 확인하고 고쳤다.
+
+## D-027 YouTube 읽기와 야간 수집, functions 묶기 (T10, 2026-11-21)
+
+- **functions를 esbuild로 묶는다**: 수집 작업이 곡 연결 규칙(`@musicweb/shared`, TypeScript 원본)을 쓴다. Functions 실행 환경(Node 22)은 `.ts`를 실행하지 못하고, pnpm `workspace:` 의존성은 Cloud Build의 설치에서 풀리지 않는다.
+  - 그래서 `pnpm --filter functions build`는 tsc로 타입만 검사하고, esbuild가 `src/index.ts`를 `lib/index.js` 한 파일로 묶는다. `firebase-admin`·`firebase-functions`·`zod`만 바깥 의존성으로 둔다.
+  - `@musicweb/shared`는 functions의 개발 의존성이다. 배포 때 설치가 이것 때문에 깨지지 않는지는 T23에서 확인한다(TASKS T23).
+- **YouTube 읽기 `adapters/youtube-read.ts`**:
+  - channels.list(1단위), playlistItems.list(1단위, 50개씩), videos.list(1단위, 50개씩). search.list는 단위를 쓰지 않고 하루 100회 별도 한도(작업 20·사용자 80)만 쓴다(D-007, RESEARCH 1 원문 "100 search.list calls … and 10,000 units per day combined for all other endpoints"). 처음 구현에서 검색에 100단위를 매긴 것은 리뷰에서 D-007과 충돌로 지적돼 고쳤다.
+  - 보내기 전에 한도를 쓴다(`consume`). 실패한 요청에도 할당량이 들기 때문에 정산하지 않는다. 수집 작업은 `firestoreYtBudget(db, 'ingest')`로 호출마다 긴급 정지도 확인한다.
+  - 응답은 **손으로 만든 것**이다(사용자 결정, 키 없음). `tests/fixtures/youtube/`에 `_note`로 표시했고, T23 전에 실제 키로 녹화본으로 바꾼다.
+- **야간 수집 `jobs/ingest.ts`**(`ingestNightly`, 태평양 03:00, 인스턴스 1개, 재시도 없음):
+  - 공식 채널: MusicBrainz 아티스트 URL 관계 → 없으면 Wikidata P2397.
+  - 새 업로드만: 업로드 목록은 최신 것부터 오므로, 지난번에 본 가장 새 게시 시각(`lastSeenPublishedAt`)에 닿으면 쪽 넘기기를 멈춘다. 시각은 `Date.parse`로 비교한다.
+    - 이번에 볼 영상이 상한(60개)보다 많으면 **오래된 것부터** 처리하고 기준 시각을 처리한 만큼만 옮긴다(다음 실행에서 이어서 봄). 자른 자리와 같은 시각인 영상은 함께 넣는다(다음 실행의 "기준 이하"에 걸려 잃지 않게).
+    - 처음 보는 아티스트는 최근 4쪽(200개)까지만 본다. 기존 아티스트의 새 업로드가 4쪽을 넘으면 그 사이 것은 건너뛰고 운영 일지에 남긴다.
+    - 업로드 목록 순서가 게시 시각 순서와 다를 수 있는지(예약 공개 등)는 실제 녹화 때 확인한다(T23).
+  - **이미 어느 곡에든 연결된 영상은 건너뛴다**(`links`의 `videoId` 컬렉션 그룹 조회). 재확인(T11)·AI 판정(T12)·관리자가 바꾼 상태를 덮지 않고, 같은 영상이 두 곡에 겹치지 않게 한다.
+  - **장애와 아티스트 실패를 구분한다**: YouTube 할당량 소진(`quotaExceeded` 등)·연결 실패·5xx, 음악 데이터 출처 장애(`SourceUnavailableError`)는 작업 전체를 멈추고 운영 일지에 남기며 실패 횟수를 올리지 않는다. 그렇지 않으면 며칠 장애로 대상 전원이 `failed`가 된다(리뷰 지적).
+  - **실행 시간 마감**: 예약 함수 제한 540초보다 60초 앞(`deadlineMs`)에서, 다음 아티스트나 다음 같은 시각 묶음으로 넘어가기 전에 멈추고 처리한 데까지 저장한 뒤 정상 종료 기록을 남긴다(MusicBrainz 초당 1회라 영상이 많으면 오래 걸림).
+  - Firestore 색인: `artists`(status, lastScannedAt) 복합 색인, `links.videoId` 컬렉션 그룹 색인을 `firestore.indexes.json`에 둔다. 에뮬레이터는 색인을 검사하지 않으므로 빠뜨리면 배포 뒤에야 실패한다. `lastScannedAt` 필드가 없는 아티스트는 조회에서 빠지므로, 아티스트를 추가하는 곳(관리자 T22, 대기열)은 반드시 `null`로 넣는다.
+  - 이벤트 오류 코드는 오류 이름을 snake_case로 바꿔 넣는다(`source_unavailable_error`). 그대로 넣으면 이벤트 검사가 uid·토큰 모양으로 보고 거부해, 장애가 난 순간 작업이 기록 오류로 멈춘다(테스트에서 발견).
+  - 공개·퍼가기 가능한 영상만 본다. 곡은 영상 제목으로 MusicBrainz를 검색해, 그 아티스트의 제목이 맞는 녹음 중 구분 설명(라이브 등)이 없는 것 → 이른 연도 순으로 고른다.
+  - 연결은 T09 규칙(`decideLink`)으로 한다. 라이브·리믹스 연결도 종류를 붙여 저장하고(커버는 아님), 추천에서 요청 조건으로 거른다. 애매하면 `pending_ai`로 저장한다(AI 판정 연결은 T12).
+  - 곡 문서에는 MusicBrainz 값(제목·아티스트·연도)만 넣는다. 장르는 아직 넣지 않는다(T13에서 필요할 때 MusicBrainz·Wikidata로 채움).
+  - 한도에 닿으면 그 자리에서 멈추고 `limit_reached` 이벤트와 운영 일지 "limit reached"를 남긴다. 긴급 정지면 외부 호출 없이 끝난다.
+  - 아티스트 실패(채널 없음, YouTube 오류 등)는 실패 횟수를 늘리고, 연속 3번이면 `failed`로 바꾸고 이벤트·운영 일지를 남긴다. 성공하면 0으로 되돌린다.
+- **아티스트 대기열** `core/ingestQueue.ts`: 하루(태평양) 50명. 이미 수집 대상이거나 대기 중이면 넣지 않는다. 누가 찾았는지는 남기지 않는다. 수집 작업이 시작할 때 대상으로 옮긴다.
+- **YouTube 데이터 30일 규칙**: 연결의 영상 정보뿐 아니라 `artists.channelId`·`uploadsPlaylistId`도 YouTube 데이터라 T11 재확인 대상에 넣는다.
+- **이유**: 검색(100단위)을 쓰지 않고 업로드 목록(1단위)으로 곡 목록을 채워 할당량을 아끼고, 규칙·한도·긴급 정지를 작업 안에서 모두 지키기 위함이다.

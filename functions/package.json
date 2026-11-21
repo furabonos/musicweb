@@ -8,7 +8,7 @@
     "node": "22"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "rm -rf lib && tsc -p tsconfig.build.json --noEmit && esbuild src/index.ts --bundle --platform=node --format=esm --target=node22 --sourcemap --outfile=lib/index.js --external:firebase-admin --external:'firebase-admin/*' --external:firebase-functions --external:'firebase-functions/*' --external:zod",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -17,6 +17,8 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/node": "^22.20.5"
+    "@musicweb/shared": "workspace:*",
+    "@types/node": "^22.20.5",
+    "esbuild": "^0.28.2"
   }
 }
