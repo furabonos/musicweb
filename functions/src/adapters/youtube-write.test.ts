@@ -21,7 +21,8 @@ function strictCtx() {
       },
     },
   ) as Firestore;
-  return { ctx: { db, fetch, getAccessToken }, fetch, getAccessToken };
+  const events = { record: vi.fn(async () => undefined) };
+  return { ctx: { db, events, fetch, getAccessToken }, fetch, getAccessToken };
 }
 
 describe('youtube-write: 공개 함수', () => {

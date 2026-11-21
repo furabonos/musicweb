@@ -1,0 +1,510 @@
+{
+  "created": "2026-11-21T13:05:41.896Z",
+  "count": 1,
+  "offset": 0,
+  "recordings": [
+    {
+      "id": "cf3b2fd9-e6cc-49bf-abf3-63a3af75a6dc",
+      "score": 100,
+      "artist-credit-id": "eece83ab-3f28-3366-8c0a-3edb2bf6c252",
+      "title": "밤편지",
+      "length": 253000,
+      "video": null,
+      "artist-credit": [
+        {
+          "name": "IU",
+          "artist": {
+            "id": "b9545342-1e6d-4dae-84ac-013374ad8d7c",
+            "name": "IU",
+            "sort-name": "IU",
+            "aliases": [
+              {
+                "sort-name": "Lee, Ji-eun",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "Lee Ji-eun",
+                "locale": "en",
+                "type": "Artist name",
+                "primary": null,
+                "begin-date": "2011-01-03",
+                "end-date": null
+              },
+              {
+                "sort-name": "아이유",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "아이유",
+                "locale": "ko",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": "2008-09-18",
+                "end-date": null
+              },
+              {
+                "sort-name": "이지은",
+                "type-id": "d4dcd0c0-b341-3612-a332-c0ce797b25cf",
+                "name": "이지은",
+                "locale": "ko",
+                "type": "Legal name",
+                "primary": null,
+                "begin-date": "1993-05-16",
+                "end-date": null
+              },
+              {
+                "sort-name": "IU",
+                "type-id": "894afba6-2816-3c24-8072-eadb66bd04bc",
+                "name": "IU",
+                "locale": "en",
+                "type": "Artist name",
+                "primary": true,
+                "begin-date": "2008-09-18",
+                "end-date": null
+              }
+            ]
+          }
+        }
+      ],
+      "first-release-date": "2017-03-24",
+      "releases": [
+        {
+          "id": "9e5202e8-ae1f-4a0e-a0d8-f08fe67ce875",
+          "status-id": "41121bb9-3413-3818-8a9a-9742318349aa",
+          "artist-credit-id": "eece83ab-3f28-3366-8c0a-3edb2bf6c252",
+          "count": 2,
+          "title": "Smash Hits 2: The Stories Between U & I",
+          "status": "Pseudo-Release",
+          "artist-credit": [
+            {
+              "name": "IU",
+              "artist": {
+                "id": "b9545342-1e6d-4dae-84ac-013374ad8d7c",
+                "name": "IU",
+                "sort-name": "IU"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "6b63852f-0892-4bea-b603-597aaca629db",
+            "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Smash Hits 2: The Stories Between U & I",
+            "primary-type": "Album",
+            "secondary-types": ["Compilation"],
+            "secondary-type-ids": ["dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"]
+          },
+          "track-count": 24,
+          "media": [
+            {
+              "id": "0fa33402-2df1-3025-9e02-7cdf4356f9b4",
+              "position": 1,
+              "track": [
+                {
+                  "id": "0cfd392b-6767-4655-9985-1637ee45582e",
+                  "number": "7",
+                  "title": "Through the Night",
+                  "length": 252720
+                }
+              ],
+              "track-count": 12,
+              "track-offset": 6
+            }
+          ]
+        },
+        {
+          "id": "aff45e25-c258-45a1-bd01-fcebff8f2987",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "eece83ab-3f28-3366-8c0a-3edb2bf6c252",
+          "count": 1,
+          "title": "Palette",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "IU",
+              "artist": {
+                "id": "b9545342-1e6d-4dae-84ac-013374ad8d7c",
+                "name": "IU",
+                "sort-name": "IU"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "8409ea9b-5f9d-4954-88b7-a9ae77a1814c",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Palette",
+            "primary-type": "Album"
+          },
+          "date": "2017-04-21",
+          "country": "XW",
+          "release-events": [
+            {
+              "date": "2017-04-21",
+              "area": {
+                "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+                "name": "[Worldwide]",
+                "sort-name": "[Worldwide]",
+                "iso-3166-1-codes": ["XW"]
+              }
+            }
+          ],
+          "track-count": 10,
+          "media": [
+            {
+              "id": "993dcf58-38f2-379f-b77f-0d6c38357a77",
+              "position": 1,
+              "format": "Digital Media",
+              "track": [
+                {
+                  "id": "0ece8a43-d906-4ede-8e32-8f0c676ebba5",
+                  "number": "8",
+                  "title": "Through the Night",
+                  "length": 253000
+                }
+              ],
+              "track-count": 10,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "373e9186-e1a8-44fc-b16c-c7de57439a7e",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "eece83ab-3f28-3366-8c0a-3edb2bf6c252",
+          "count": 1,
+          "title": "Palette",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "IU",
+              "artist": {
+                "id": "b9545342-1e6d-4dae-84ac-013374ad8d7c",
+                "name": "IU",
+                "sort-name": "IU"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "8409ea9b-5f9d-4954-88b7-a9ae77a1814c",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Palette",
+            "primary-type": "Album"
+          },
+          "date": "2017-04-21",
+          "country": "KR",
+          "release-events": [
+            {
+              "date": "2017-04-21",
+              "area": {
+                "id": "b9f7d640-46e8-313e-b158-ded6d18593b3",
+                "name": "South Korea",
+                "sort-name": "South Korea",
+                "iso-3166-1-codes": ["KR"]
+              }
+            }
+          ],
+          "track-count": 10,
+          "media": [
+            {
+              "id": "fd17e59b-2b19-3f71-8c59-5657cf91a240",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "708404d4-5e16-424e-84f9-e83f3a9d5d62",
+                  "number": "8",
+                  "title": "밤편지",
+                  "length": 253000
+                }
+              ],
+              "track-count": 10,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "57fb8158-6798-492e-b5f9-6fcfb98d2758",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "eece83ab-3f28-3366-8c0a-3edb2bf6c252",
+          "count": 3,
+          "title": "Smash Hits 2: The Stories Between U & I",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "IU",
+              "artist": {
+                "id": "b9545342-1e6d-4dae-84ac-013374ad8d7c",
+                "name": "IU",
+                "sort-name": "IU"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "6b63852f-0892-4bea-b603-597aaca629db",
+            "type-id": "dd2a21e1-0c00-3729-a7a0-de60b84eb5d1",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Smash Hits 2: The Stories Between U & I",
+            "primary-type": "Album",
+            "secondary-types": ["Compilation"],
+            "secondary-type-ids": ["dd2a21e1-0c00-3729-a7a0-de60b84eb5d1"]
+          },
+          "date": "2018-09-18",
+          "country": "TW",
+          "release-events": [
+            {
+              "date": "2018-09-18",
+              "area": {
+                "id": "41637cec-9a4f-389c-86d2-fc6abf3357b5",
+                "name": "Taiwan",
+                "sort-name": "Taiwan",
+                "iso-3166-1-codes": ["TW"]
+              }
+            }
+          ],
+          "track-count": 32,
+          "media": [
+            {
+              "id": "4fb00707-5fd1-37b9-af69-a698269f8999",
+              "position": 1,
+              "format": "CD",
+              "track": [
+                {
+                  "id": "56361ff6-061d-40b8-b094-c277532bfde6",
+                  "number": "7",
+                  "title": "夜信",
+                  "length": 252720
+                }
+              ],
+              "track-count": 12,
+              "track-offset": 6
+            }
+          ]
+        },
+        {
+          "id": "a13618f0-b59e-417a-9322-7e5f38844bcf",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "eece83ab-3f28-3366-8c0a-3edb2bf6c252",
+          "count": 1,
+          "title": "Palette",
+          "status": "Official",
+          "disambiguation": "24bit/96khz",
+          "artist-credit": [
+            {
+              "name": "IU",
+              "artist": {
+                "id": "b9545342-1e6d-4dae-84ac-013374ad8d7c",
+                "name": "IU",
+                "sort-name": "IU"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "8409ea9b-5f9d-4954-88b7-a9ae77a1814c",
+            "type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "primary-type-id": "f529b476-6e62-324f-b0aa-1f3e33d313fc",
+            "title": "Palette",
+            "primary-type": "Album"
+          },
+          "date": "2017-04-21",
+          "country": "KR",
+          "release-events": [
+            {
+              "date": "2017-04-21",
+              "area": {
+                "id": "b9f7d640-46e8-313e-b158-ded6d18593b3",
+                "name": "South Korea",
+                "sort-name": "South Korea",
+                "iso-3166-1-codes": ["KR"]
+              }
+            }
+          ],
+          "track-count": 10,
+          "media": [
+            {
+              "id": "0b59d1f3-e8c7-3591-a7d4-dd5891799e28",
+              "position": 1,
+              "format": "Digital Media",
+              "track": [
+                {
+                  "id": "56833981-dc6e-4be5-9c7a-a7fa1b3d5739",
+                  "number": "8",
+                  "title": "밤편지",
+                  "length": 253000
+                }
+              ],
+              "track-count": 10,
+              "track-offset": 7
+            }
+          ]
+        },
+        {
+          "id": "149fef1f-5921-42d2-b91d-dd41e04895ad",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "eece83ab-3f28-3366-8c0a-3edb2bf6c252",
+          "count": 1,
+          "title": "밤편지 (Through the Night)",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "IU",
+              "artist": {
+                "id": "b9545342-1e6d-4dae-84ac-013374ad8d7c",
+                "name": "IU",
+                "sort-name": "IU"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "eb99a577-be58-4eb4-a0a2-f1860c3e5158",
+            "type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+            "primary-type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+            "title": "밤편지",
+            "primary-type": "Single"
+          },
+          "date": "2017-03-24",
+          "country": "US",
+          "release-events": [
+            {
+              "date": "2017-03-24",
+              "area": {
+                "id": "489ce91b-6658-3307-9877-795b68554c98",
+                "name": "United States",
+                "sort-name": "United States",
+                "iso-3166-1-codes": ["US"]
+              }
+            }
+          ],
+          "track-count": 1,
+          "media": [
+            {
+              "id": "12596988-0584-36b8-8aed-ad95534b9c9e",
+              "position": 1,
+              "format": "Digital Media",
+              "track": [
+                {
+                  "id": "196af644-5c47-4810-849e-3cf939b3681e",
+                  "number": "1",
+                  "title": "밤편지 (Through the Night)",
+                  "length": 253000
+                }
+              ],
+              "track-count": 1,
+              "track-offset": 0
+            }
+          ]
+        },
+        {
+          "id": "81972c8a-52ed-4641-b6a6-d096465007ea",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "eece83ab-3f28-3366-8c0a-3edb2bf6c252",
+          "count": 1,
+          "title": "Through the Night",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "IU",
+              "artist": {
+                "id": "b9545342-1e6d-4dae-84ac-013374ad8d7c",
+                "name": "IU",
+                "sort-name": "IU"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "eb99a577-be58-4eb4-a0a2-f1860c3e5158",
+            "type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+            "primary-type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+            "title": "밤편지",
+            "primary-type": "Single"
+          },
+          "date": "2017-03-24",
+          "country": "XW",
+          "release-events": [
+            {
+              "date": "2017-03-24",
+              "area": {
+                "id": "525d4e18-3d00-31b9-a58b-a146a916de8f",
+                "name": "[Worldwide]",
+                "sort-name": "[Worldwide]",
+                "iso-3166-1-codes": ["XW"]
+              }
+            }
+          ],
+          "track-count": 1,
+          "media": [
+            {
+              "id": "f1a14951-0eea-313a-9a23-3eef3d331b1e",
+              "position": 1,
+              "format": "Digital Media",
+              "track": [
+                {
+                  "id": "4b825f48-a65f-482a-b546-025ce6d13f46",
+                  "number": "1",
+                  "title": "Through the Night",
+                  "length": 253000
+                }
+              ],
+              "track-count": 1,
+              "track-offset": 0
+            }
+          ]
+        },
+        {
+          "id": "d5adf940-a711-4680-bf28-ffbc29440bee",
+          "status-id": "4e304316-386d-3409-af2e-78857eec5cfe",
+          "artist-credit-id": "eece83ab-3f28-3366-8c0a-3edb2bf6c252",
+          "count": 1,
+          "title": "밤편지",
+          "status": "Official",
+          "artist-credit": [
+            {
+              "name": "IU",
+              "artist": {
+                "id": "b9545342-1e6d-4dae-84ac-013374ad8d7c",
+                "name": "IU",
+                "sort-name": "IU"
+              }
+            }
+          ],
+          "release-group": {
+            "id": "eb99a577-be58-4eb4-a0a2-f1860c3e5158",
+            "type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+            "primary-type-id": "d6038452-8ee0-3f68-affc-2de9a1ede0b9",
+            "title": "밤편지",
+            "primary-type": "Single"
+          },
+          "date": "2017-03-24",
+          "country": "KR",
+          "release-events": [
+            {
+              "date": "2017-03-24",
+              "area": {
+                "id": "b9f7d640-46e8-313e-b158-ded6d18593b3",
+                "name": "South Korea",
+                "sort-name": "South Korea",
+                "iso-3166-1-codes": ["KR"]
+              }
+            }
+          ],
+          "track-count": 1,
+          "media": [
+            {
+              "id": "1e4f4e79-8d12-357d-b0e8-c6744dfde235",
+              "position": 1,
+              "format": "Digital Media",
+              "track": [
+                {
+                  "id": "f65e5248-4533-456f-99ce-a44ccdb88a5a",
+                  "number": "1",
+                  "title": "밤편지",
+                  "length": 253000
+                }
+              ],
+              "track-count": 1,
+              "track-offset": 0
+            }
+          ]
+        }
+      ],
+      "isrcs": ["KRA381700611"]
+    }
+  ]
+}

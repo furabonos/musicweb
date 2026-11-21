@@ -133,12 +133,13 @@
 
 ## B. 기록
 
-- [ ] **T07 이벤트 로그와 운영 일지 기록기** — SPEC 4.1, 4.10
+- [x] **T07 이벤트 로그와 운영 일지 기록기** — SPEC 4.1, 4.10
   - 의존: T00, T03
   - 산출물:
     - `functions/src/core/events.ts`: 이벤트 종류별 zod 스키마, 정의되지 않은 필드 거부, `actorHash`(HMAC)
     - `functions/src/core/opsLog.ts`
-    - 외부 호출 공통 기록 래퍼(대상, 단위·비용, 소요 시간, 결과) — 어댑터가 사용
+    - 외부 호출 공통 기록 래퍼 `recordCall`(대상, 단위·비용, 소요 시간, 결과) — 어댑터가 사용(첫 적용: `youtube-write`)
+    - unit `functions/src/core/opsLog.test.ts` — 이메일·긴 문장·줄바꿈·다른 사이트 링크 거부
   - 완료 기준:
     - unit `functions/src/core/events.test.ts`
       - 스키마에 없는 필드·검색 문장으로 보이는 긴 자유 텍스트 필드·이메일 형식 값은 거부
@@ -147,17 +148,18 @@
 
 ## C. 곡 목록 수집
 
-- [ ] **T08 음악 데이터 어댑터** — SPEC 4.3, 4.4 / 스킬 `music-data-terms`
+- [x] **T08 음악 데이터 어댑터** — SPEC 4.3, 4.4 / 스킬 `music-data-terms`
   - 의존: T04, T07
   - 산출물:
     - `adapters/musicbrainz.ts`, `listenbrainz.ts`, `wikidata.ts`, `lastfm.ts`
     - 초당 1회 제한, 연락처 User-Agent, Last.fm은 HTTP 캐시 헤더 기준 TTL·100MB 상한
-    - `tests/fixtures/`에 녹화 응답
+    - `tests/fixtures/music/`에 녹화 응답(`tools/record-music-fixtures.ts`로 다시 받음, Last.fm은 손으로 만듦), 공통 요청 `adapters/music-http.ts`
   - 완료 기준:
     - unit `functions/src/adapters/*.test.ts`
       - 녹화 응답으로 곡·아티스트·비슷한 곡·YouTube ID(MB URL 관계, P1651) 파싱
       - 초당 1회를 넘는 연속 호출이 지연됨
       - 429 응답이면 재시도 후 실패 이벤트를 남김
+    - integration `functions/src/adapters/music-data.int.test.ts` — Last.fm 캐시 크기 합계·오래된 것부터 삭제, 호출 한도 `musicDataCalls`
     - unit `lastfm.test.ts` — 캐시 TTL 만료 후 재요청, 저장 용량 상한 초과 시 오래된 항목 삭제
 
 - [ ] **T09 곡 연결 규칙 (제목 해석·종류 판별)** — SPEC 3.1 / 스킬 `song-matching`
@@ -188,6 +190,7 @@
   - 산출물:
     - `jobs/refresh.ts`: 25일 넘은 연결 재확인. 없어지거나 비공개·퍼가기 불가면 `gone` + YouTube 필드 삭제
     - `jobs/purge.ts`: 30일 넘은 YouTube 데이터 무조건 삭제
+    - `purgeExpiredCache(firestoreLastfmCache(db), now)`로 기간 지난 Last.fm 캐시를 매일 지운다(D-024)
     - `ytExports.youtubePlaylistId`가 30일 규칙 대상인지 정하고 처리한다(D-021). `ytExports`를 쓰는 파일은 `eslint.config.js`에 예외로 추가한다
   - 완료 기준:
     - integration `functions/src/jobs/refresh.int.test.ts`
@@ -214,6 +217,7 @@
 - [ ] **T13 추천 파이프라인** — SPEC 4.3
   - 의존: T08, T11, T12
   - 산출물: `core/recommend.ts` — 기준 곡 확정 → 후보 모으기 → 곡 목록으로 걸러 내기 → (부족 시) 조회 순서 → AI 고르기·정렬·이유(화면 언어)
+  - 주의(D-024): 기준 곡은 ListenBrainz `searchRecording`으로 대표 MBID를 먼저 찾는다. 사용자 요청 함수는 여러 인스턴스로 늘어나 출처별 초당 1회 합계를 넘을 수 있으므로, 음악 데이터 호출을 최대 인스턴스 1개인 함수로 모으거나 결과를 캐시한다. Last.fm은 실제 키로 응답 헤더(Cache-Control)를 확인하고 녹화본으로 바꾼다
   - 완료 기준:
     - unit `functions/src/core/recommend.test.ts` (가짜 어댑터)
       - AI가 지어낸 곡은 결과에 없고 "걸러 낸 수"로 기록
@@ -334,7 +338,7 @@
     - 화면: 긴급 정지 3종, 한도 설정, 사용량, 수집 대상 관리·수동 재실행, 연결 고치기·막기(→ 시험 문제 추가 PR), 사용자 차단, 테스트 사용자 관리(최대 100)
     - 해당 관리자 callable들
   - 완료 기준:
-    - integration `functions/src/api/admin.int.test.ts`(확장) — 모든 관리자 callable이 비관리자에게 거부되고, 성공 시 `adminAudit`·운영 일지 기록
+    - integration `functions/src/api/admin.int.test.ts`(확장) — 모든 관리자 callable이 비관리자에게 거부되고, 성공 시 `adminAudit`·운영 일지·`admin_change` 이벤트 기록(D-023: 관리자 함수에 `ACTOR_HASH_KEY` 연결)
     - integration — 차단된 계정은 만들기 거부, 테스트 사용자 101번째 등록 거부
     - e2e `apps/web/e2e/admin.spec.ts` — 비관리자는 /admin에서 접근 거부 화면, 관리자가 긴급 정지를 켜면 다른 사용자의 만들기가 즉시 실패, 검색 문장 기본 미노출
 

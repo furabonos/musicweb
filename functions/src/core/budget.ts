@@ -109,6 +109,22 @@ const serviceRef = (db: Firestore, day: string) => db.doc(`usage/${day}`);
 const userRef = (db: Firestore, uid: string, day: string) => db.doc(`users/${uid}/usage/${day}`);
 
 export async function reserve(db: Firestore, req: ReserveRequest): Promise<Reservation> {
+  return reserveInternal(db, req, true);
+}
+
+/**
+ * 정산이 필요 없는 호출용(쓴 양이 항상 예약한 양과 같을 때, 예: 무료 API 요청 1회 = 1).
+ * reserve와 같은 검사(긴급 정지, 한도, 막는 쪽 실패)를 하되 예약 기록을 남기지 않아 Firestore 쓰기가 한 번이다(D-024).
+ */
+export async function consume(db: Firestore, req: ReserveRequest): Promise<void> {
+  await reserveInternal(db, req, false);
+}
+
+async function reserveInternal(
+  db: Firestore,
+  req: ReserveRequest,
+  keepRecord: boolean,
+): Promise<Reservation> {
   const service = pick(req.service ?? {}, SERVICE_COUNTERS);
   const user = pick(req.user?.counters ?? {}, USER_COUNTERS);
   const anyPositive = [validateAmounts(service), validateAmounts(user)].some(Boolean);
@@ -157,6 +173,7 @@ export async function reserve(db: Firestore, req: ReserveRequest): Promise<Reser
 
       incrementAll(tx, sRef, service);
       if (uRef) incrementAll(tx, uRef, user);
+      if (!keepRecord) return;
       tx.set(resRef, {
         uid: req.user?.uid ?? null,
         service,

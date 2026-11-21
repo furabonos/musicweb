@@ -15,6 +15,7 @@ export const SERVICE_COUNTERS = [
   'exports',
   'autoIssues',
   'autoFixes',
+  'musicDataCalls',
 ] as const;
 export const USER_COUNTERS = ['playlists', 'searches', 'exports'] as const;
 export const FEATURES = ['create', 'ingest', 'autoIssue'] as const;
@@ -43,6 +44,7 @@ export const DEFAULT_RUNTIME: RuntimeConfig = {
       exports: 5,
       autoIssues: 5,
       autoFixes: 3, // 자동 수정(Claude Code Action) 실행. 실제 차감은 T20에서 연결
+      musicDataCalls: 20_000, // 음악 데이터 요청(무료). 도는 코드가 폭주하지 않게 막는 상한 (D-024)
     },
     user: { playlists: 10, searches: 3, exports: 1 },
   },

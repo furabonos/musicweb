@@ -1,5 +1,6 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import { reserve, settle, type Reservation } from '../core/budget.js';
+import { recordCall } from '../core/events.js';
 import {
   InvalidWriteInputError,
   MAX_EXPORT_ITEMS,
@@ -50,7 +51,7 @@ export async function createPlaylist(
   try {
     const token = await ctx.getAccessToken(uid);
     spent += YT_INSERT_UNITS;
-    const body = await insert(ctx, token, 'playlists', 'snippet,status', {
+    const body = await insert(ctx, uid, token, 'playlists', 'snippet,status', {
       snippet: { title: cleanTitle },
       status: { privacyStatus: 'private' },
     });
@@ -68,7 +69,13 @@ export async function createPlaylist(
       createdAt: FieldValue.serverTimestamp(),
     });
 
-    const { added, failed, attempts } = await insertItems(ctx, token, youtubePlaylistId, items);
+    const { added, failed, attempts } = await insertItems(
+      ctx,
+      uid,
+      token,
+      youtubePlaylistId,
+      items,
+    );
     spent += attempts * YT_INSERT_UNITS;
     await releaseSlotsQuietly(exportRef, items.length - added);
     return { exportId: exportRef.id, youtubePlaylistId, added, failed };
@@ -128,7 +135,7 @@ export async function addItems(
       ...(ctx.now ? { now: ctx.now } : {}),
     });
     const token = await ctx.getAccessToken(uid);
-    const result = await insertItems(ctx, token, youtubePlaylistId, items);
+    const result = await insertItems(ctx, uid, token, youtubePlaylistId, items);
     added = result.added;
     spent = result.attempts * YT_INSERT_UNITS;
     return { exportId: ytExportId, youtubePlaylistId, added, failed: result.failed };
@@ -143,6 +150,7 @@ export async function addItems(
 
 async function insertItems(
   ctx: YouTubeWriteContext,
+  uid: string,
   token: string,
   playlistId: string,
   items: string[],
@@ -154,7 +162,7 @@ async function insertItems(
   for (const [i, videoId] of items.entries()) {
     attempts++;
     try {
-      await insert(ctx, token, 'playlistItems', 'snippet', {
+      await insert(ctx, uid, token, 'playlistItems', 'snippet', {
         snippet: { playlistId, resourceId: { kind: 'youtube#video', videoId } },
       });
       added++;
@@ -195,28 +203,40 @@ async function releaseSlotsQuietly(ref: FirebaseFirestore.DocumentReference, cou
   }
 }
 
+/** 한 번의 insert. 결과와 관계없이 external_call 이벤트를 남긴다(실패한 요청도 50단위). */
 async function insert(
   ctx: YouTubeWriteContext,
+  uid: string,
   token: string,
   resource: 'playlists' | 'playlistItems',
   part: string,
   body: unknown,
 ): Promise<Record<string, unknown>> {
   const doFetch = ctx.fetch ?? fetch;
-  let res: Response;
-  try {
-    res = await doFetch(`${API}/${resource}?part=${encodeURIComponent(part)}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-  } catch {
-    throw new YouTubeWriteError(null, 'network');
-  }
-  const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!res.ok) throw new YouTubeWriteError(res.status, errorReason(json));
-  return json;
+  return recordCall(
+    ctx.events,
+    { target: 'youtube_write', op: `${resource}.insert`, actorUid: uid },
+    async () => {
+      let res: Response;
+      try {
+        res = await doFetch(`${API}/${resource}?part=${encodeURIComponent(part)}`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        });
+      } catch {
+        throw new YouTubeWriteError(null, 'network');
+      }
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!res.ok) throw new YouTubeWriteError(res.status, errorReason(json));
+      return { result: json, units: YT_INSERT_UNITS, status: res.status };
+    },
+    (err) => ({
+      units: YT_INSERT_UNITS,
+      ...(err instanceof YouTubeWriteError && err.status !== null ? { status: err.status } : {}),
+    }),
+  );
 }
 
 function errorReason(json: Record<string, unknown>): string | null {

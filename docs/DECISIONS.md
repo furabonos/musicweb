@@ -239,7 +239,7 @@
   - 목록에서 빠진 계정은 클레임을 지우고 로그인 토큰을 끊는다. 다른 클레임은 그대로 둔다.
   - 전 관리자가 `account-syncClaims`를 부르지 않으면 클레임이 무기한 남으므로, 다른 관리자가 `admin-syncUserClaims({uid})`로 지운다(OPERATIONS 4). 이것도 `adminAudit`(targetUid 포함)·운영 일지에 남는다.
 - **로그인 차단 함수(beforeUserSignedIn)를 쓰지 않은 이유**: Firebase Auth를 Identity Platform으로 올려야 한다. 요금·설정이 바뀌는 프로젝트 단위 결정이라, 1단계는 callable로 한다. 대신 뺀 관리자의 규칙 읽기 권한은 위 정리를 할 때까지 남는다(OPERATIONS 4).
-- **변경 기록**: 설정 변경, `adminAudit`(adminUid·시각·action·전후 값), 운영 일지를 한 트랜잭션에서 쓴다. 운영 일지는 누구나 읽으므로 uid·이메일 없이 영어 고정 문장만 쓴다(D-013 기본 영어). T07에서 `core/opsLog.ts`로 옮긴다.
+- **변경 기록**: 설정 변경, `adminAudit`(adminUid·시각·action·전후 값), 운영 일지를 한 트랜잭션에서 쓴다. 운영 일지는 누구나 읽으므로 uid·이메일 없이 영어 고정 문장만 쓴다(D-013 기본 영어). `core/opsLog.ts`로 쓴다(T07).
 - **저장 방식**: 저장된 문서에 바뀐 필드만 합친다. 기본값을 문서에 굳히지 않아서, 나중에 코드의 기본값(SPEC 6.3)을 바꾸면 문서에 없는 값은 새 기본값을 따른다.
 - **입력 검사**: 바꾼 결과도 `parseRuntimeConfig` 검사(YouTube 할당·검색 합계 상한)를 통과해야 저장한다. 틀리면 `invalid-argument`다. 지금 문서가 깨져 있으면 `failed-precondition`이고 콘솔에서 고친다.
 - **callable 이름**: `admin-setKillSwitch`처럼 묶음 이름을 쓴다(`export const admin = { setKillSwitch }`). 화면은 `httpsCallable(functions, 'admin-setKillSwitch')`로 부른다.
@@ -247,3 +247,48 @@
 - **에뮬레이터 매개변수**: Functions 에뮬레이터는 `defineList`·`defineString` 값을 `functions/.env*` 파일에서만 읽고, 없으면 함수 로딩이 실패한다. `.env*`는 커밋하지 않으므로 `tools/emulator-env.sh`가 `functions/.env.demo-musicweb`(가짜 프로젝트 전용, 비밀값 없음)를 실행할 때마다 만든다. `defineList` 값은 실행 중에 JSON 배열로 읽힌다. 배포 때 CLI는 쉼표 목록도 받아 JSON으로 바꾼다. 그래서 SPEC 8장 표기를 고쳤다. `firebase.json` functions `ignore`에 `.env.demo-*`를 넣어 배포 묶음에 섞이지 않게 한다.
 - **Auth·Firestore 관리 SDK는 외부 호출 규칙(D-020)의 예외**다. 같은 프로젝트 안의 서비스이고 호출당 비용이 없어서 `api/`·`core/`에서 쓴다. App Check(T23)로 호출을 줄인다.
 - **이유**: 관리자 권한은 사고 영향이 가장 큰 권한이라, 판단 기준을 하나(목록)로 두고 클레임은 규칙 읽기 보조로만 쓴다.
+
+## D-023 이벤트 로그와 운영 일지 (T07, 2026-11-21)
+
+- **이벤트 종류는 코드에 고정**한다(`EVENT_SCHEMAS`). 종류마다 attrs가 `strictObject`라 모르는 필드는 저장 전에 거부한다. 최상위 필드도 `type, attrs, outcome, durationMs, actorUid`만 받는다.
+- **글자 값은 짧은 식별자만**: 영문·숫자·`_ . : -`, 64자 이하. 검색 문장·재생목록 이름·이메일·주소는 형식상 들어갈 수 없다.
+  - 값이 정해진 필드는 목록(enum)으로만 받는다: `op`(`EXTERNAL_OPS`, 어댑터를 추가할 때 늘림), `counter`(한도 카운터), `feature`(긴급 정지 기능) 등. 자유 식별자는 `reason`·`code`·`where`·`action`만 남는다.
+  - 저장 직전에 모든 값을 한 번 더 훑어 이메일 형식·64자 초과·공백 든 글·uid/토큰처럼 보이는 긴 영숫자 덩어리(구분자 없이 20자 이상)를 거부한다(`assertNoFreeText`).
+  - attrs에 `actorUid`와 같은 값이나 그 값을 포함한 값이 있으면 거부한다.
+  - 숫자: 점수는 소수 둘째 자리까지, 소요 시간은 15분까지, 개수는 10억까지. 스키마를 넓게 고치는 실수가 있어도 두 번째 검사가 막는다. 두 겹 각각을 테스트로 확인한다.
+- **사용자 식별**: `actorHash = HMAC-SHA256(ACTOR_HASH_KEY, "actor:" + uid)`(base64url). 키는 32바이트 이상이어야 하고, 없거나 짧으면 기록을 거부한다. 원문 uid는 저장하지 않는다. 계정을 지워도 해시는 남는다(SPEC 4.7, 개인 식별 불가).
+- **실패 처리**:
+  - `firestoreEventSink`는 만들 때 해시 키를 검사한다. 키가 없거나 짧으면 함수가 외부 호출을 하기 전에 바로 실패한다.
+  - `record`는 스키마 위반이면 던지고(코드 버그), Firestore 저장 실패는 삼키고 서버 로그에 종류·오류 이름만 남긴다.
+  - `recordCall`은 기록이 어떤 이유로 실패해도 호출 결과와 원래 오류를 바꾸지 않는다. 외부 요청이 이미 끝난 뒤라, 여기서 던지면 youtube-write가 성공한 쓰기를 실패로 보고 `ytExports`·곡 수·정산이 틀어진다(리뷰 지적). 스키마 위반은 같은 `buildEvent`를 쓰는 테스트용 메모리 기록기로 잡는다.
+- **외부 호출 기록** `recordCall(sink, {target, op, actorUid}, fn, onError)`: 성공·실패 모두 `external_call` 이벤트(대상, 단위·비용, 상태, 소요 시간)를 남긴다. 어댑터는 `EventSink`를 받아 쓰고, 운영에서는 `firestoreEventSink(db, ACTOR_HASH_KEY)`를 넣는다. 첫 적용은 `youtube-write`(요청마다 50단위 기록, 실패한 요청 포함).
+  - 함수에서 `firestoreEventSink`를 쓰려면 그 함수 옵션에 `secrets: [secrets.ACTOR_HASH_KEY]`를 붙여야 한다(T14·T26에서 연결).
+- **운영 일지** `opsLogEntry`: 종류 6가지(job, job_failed, issue, pr, limit, admin_change). message는 코드가 만든 영어 고정 문장만 넣고, 이메일·200자 초과·줄바꿈·uid/토큰처럼 보이는 긴 영숫자 덩어리를 거부한다. 링크는 이 저장소의 이슈·PR·Actions 실행 주소만 받는다(저장소 주소를 코드에 고정했다. 저장소를 옮기면 같이 고친다). T06의 관리자 기록도 이 함수로 바꿨다.
+- **아직 이벤트로 남기지 않는 것**: 관리자 변경은 지금 `adminAudit`·운영 일지에만 남는다. 관리자 함수에 해시 키를 연결하는 일은 관리자 화면(T22)에서 한다.
+- **이유**: 기록은 처음부터 남기되(SPEC 4.1), 현황판·자동 이슈로 밖에 보일 수 있으므로 개인정보가 들어갈 길을 형식으로 막는다.
+
+## D-024 음악 데이터 어댑터 (T08, 2026-11-21)
+
+- **공통 요청 `adapters/music-http.ts`**: 출처(MusicBrainz, ListenBrainz, Wikidata, Last.fm)마다 줄을 세운다. 앞 요청 시작에서 1초가 지나야 다음이 나간다(스킬 music-data-terms).
+  - 줄은 함수 인스턴스 안에서만 공유된다. 여러 인스턴스가 동시에 돌면 합이 초당 1회를 넘을 수 있으므로, 수집 작업(T10)은 최대 인스턴스 1개로 둔다.
+  - ListenBrainz가 `X-RateLimit-Remaining: 0`을 보내면 `X-RateLimit-Reset-In`만큼 다음 요청을 미룬다.
+  - User-Agent `musicweb/0.1 ( <MB_CONTACT> )`. 연락처가 없거나 헤더를 깨는 글자가 있으면 클라이언트를 만들지 않는다.
+  - 429·503·연결 실패(본문 받는 중 끊김 포함)는 `Retry-After` 또는 2초·4초 쉬고 2번 더 한다. 다 실패하면 `source_unavailable` 이벤트와 `SourceUnavailableError`. 404 등 다른 오류는 재시도하지 않는다.
+  - 실패로 끝나도 마지막 대기만큼 이 출처의 다음 요청을 미룬다(다른 호출이 바로 다시 두드리지 않게). `Retry-After`가 30초를 넘으면 기다리며 붙잡지 않고 바로 포기하되, 그 시간(최대 1시간) 동안 이 출처를 쉰다.
+  - 줄은 기본으로 공유하고, 테스트만 `deps.limiter`로 따로 넣는다(시계만 바꿔도 공유가 깨지지 않게).
+  - 요청마다(재시도 포함) `external_call` 이벤트를 남긴다. 요청 주소는 기록·오류 메시지에 넣지 않는다(Last.fm 키가 주소에 있음).
+- **한도**: 무료 API라 비용은 없지만, "모든 외부 호출은 budget을 거친다"(SPEC 6.2)를 지키고 도는 코드가 폭주하지 않게 서비스 카운터 `musicDataCalls`(하루 20,000)를 추가했다. 요청 1번(재시도 포함)에 1씩 쓴다. 초당 1회 × 4출처라 하루 이론상 최대치보다 작게 둔 값이다.
+  - 정산할 것이 없으므로 예약 기록 없는 `budget.consume()`을 쓴다(쓰기 1번). `withBudget`(예약·정산·예약 문서)을 쓰면 요청 1번에 쓰기가 약 4번이라, 상한까지 쓰는 날 Firestore 무료 쓰기 한도를 넘는다(리뷰 지적). 이벤트 기록 1번을 더해 요청당 쓰기 2번이다.
+- **ListenBrainz 대표 녹음**: 비슷한 곡(similar-recordings)은 ListenBrainz가 대표로 쓰는 녹음 MBID에서만 결과가 나온다. MusicBrainz 검색이 주는 다른 판(라이브·재발매) MBID로는 빈 목록이 온다(녹화하며 확인). 그래서 기준 곡은 Labs `recording-search`로 대표 MBID를 먼저 찾는다(T13에서 사용). 알고리즘 이름은 Labs 화면에 나온 값을 고정했다(바뀌면 빈 결과 → 녹화 응답을 다시 받아 확인).
+  - `api.listenbrainz.org/1/metadata/lookup`은 로그인 토큰이 필요해서 쓰지 않는다.
+- **YouTube 영상 ID 찾는 곳**: MusicBrainz 녹음의 URL 관계(`free streaming` 등의 youtube.com/watch 주소)와 Wikidata 작품(P435 → P1651). 녹음 항목(P4404)에는 P1651이 거의 없어서 작품 기준으로 찾는다. 공식 채널은 MusicBrainz 아티스트 URL 관계 `youtube`와 Wikidata P2397. `@이름` 주소는 채널 ID를 알 수 없어 버린다.
+- **질의 주입 방지**: 주소·SPARQL에 들어가는 MBID와 응답에서 받은 ID는 UUID 형식 검사를 거친다. Wikidata는 한 질의에 50개까지, 넘으면 나눠 요청한다. MusicBrainz 검색어는 따옴표로 감싸고 `"`·`\`를 이스케이프한다.
+- **Last.fm 캐시**: `lastfmCache/{sha256(요청 내용, 키 제외)}`. HTTP `Cache-Control`(max-age, s-maxage)·`Expires`가 정한 기간만 두고, 헤더가 없거나 no-store·no-cache·private면 저장하지 않는다. 전체 크기는 `_meta.totalBytes`에 트랜잭션으로 더하고 빼며, 100MB를 넘으면 오래 저장된 것부터 지운다. 900KB 넘는 응답은 저장하지 않는다(문서 한도). 곡 목록에는 영구 저장하지 않는다.
+  - 기간은 `s-maxage`가 `max-age`보다 우선이고, `Age`만큼 뺀다.
+  - **기간이 지난 항목**은 다시 요청될 때만이 아니라 매일 정리 작업(T11)의 `purgeExpiredCache`로 지운다(리뷰 지적: 그렇지 않으면 "기간만 둔다"가 지켜지지 않음). Firestore 자체 TTL은 `_meta.totalBytes`가 어긋나서 쓰지 않는다.
+  - 깨진 캐시 본문은 지우고 다시 받는다.
+  - Last.fm 오류 코드는 6(곡 없음)만 빈 결과로 보고, 키 오류(10)·정지(26) 등은 `LastfmApiError`로 던져 설정 문제가 숨지 않게 한다.
+  - 실제 Last.fm 응답에 캐시 헤더가 없으면 캐시가 동작하지 않는다. 실제 키로 확인할 때(T13) 헤더도 확인한다.
+- **녹화 응답**: `tools/record-music-fixtures.ts`가 공개 API에서 받아 `tests/fixtures/music/`에 저장한다(사용자 승인, 2026-11-21). 녹화 질의가 어댑터 질의와 같은지 테스트로 확인한다(`tools/record-music-fixtures.test.ts`). 연락처는 공개 저장소 주소다. Last.fm은 키가 없어 문서 형식대로 손으로 만들었고(`_note` 표시), 실제 키로 확인하면 녹화본으로 바꾼다. 녹화 중 MusicBrainz가 "busy"(503)를 두 번 보냈다 → 재시도 설계의 근거.
+- **테스트 도우미**: `functions/src/testing/`(가짜 서버·시계·기록기). 배포 빌드에서 빠지고 lint는 테스트처럼 다룬다.
+- **이유**: 무료 데이터 출처의 예의(초당 1회, 연락처)를 코드 한 곳에서 지키고, 응답 형식은 실제 녹화로 고정해 파싱이 실제와 어긋나지 않게 하기 위함이다.

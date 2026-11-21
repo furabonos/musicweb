@@ -260,25 +260,26 @@ PC 웹만 지원한다(최소 너비 1024px 기준). 모바일 화면은 고려�
 
 클라이언트가 직접 쓰는 컬렉션은 없다. **모든 쓰기는 Cloud Functions를 거친다.** 보안 규칙은 기본 전부 거부이고, 아래의 읽기만 연다.
 
-| 컬렉션                                    | 내용                                                                                       | 클라이언트 읽기                           |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------- |
-| `songs/{songId}`                          | mbid, artist, title, releaseYear, genres[], source                                         | 누구나                                    |
-| `songs/{songId}/links/{videoId}`          | kind, status, ytTitle, channelId, embeddable, madeForKids, verifiedAt                      | 누구나 (`active`만)                       |
-| `artists/{artistId}`                      | name, mbid, channelId, uploadsPlaylistId, status, lastScannedAt, failCount                 | 관리자                                    |
-| `playlists/{id}`                          | ownerUid, title, items[{songId, videoId, reason}], locale, createdAt, state                | `saved`는 누구나, `draft`는 소유자        |
-| `playlists/{id}/private/request`          | 검색 문장 원문, 해석 결과                                                                  | 소유자만                                  |
-| `users/{uid}`                             | createdAt, consentAt, blocked, exportTester                                                | 본인                                      |
-| `users/{uid}/usage/{yyyy-mm-dd}`          | playlists, searches, exports                                                               | 본인                                      |
-| `ytExports/{id}`                          | ownerUid, youtubePlaylistId, itemCount, createdAt (이 앱이 만든 YouTube 재생목록 목록)     | 본인                                      |
-| `secrets_oauth/{uid}`                     | 암호화한 YouTube 연결 정보                                                                 | **없음** (서버만)                         |
-| `usage/{yyyy-mm-dd}`                      | ytUnits, ytSearchUser, ytSearchJob, aiCostMicroUsd, exports, autoIssues, autoFixes (D-020) | 관리자                                    |
-| `usage/{yyyy-mm-dd}/reservations/{id}`    | 예약 기록(uid는 정산 후 지움), service, user, settled                                      | 없음 (서버만)                             |
-| `config/runtime`                          | killSwitches{create, ingest, autoIssue}, limits{...}                                       | 누구나(안내 문구용), 쓰기는 관리자 함수만 |
-| `events/{id}`                             | type, at, actorHash, attrs, outcome, durationMs                                            | 없음 (서버만)                             |
-| `metrics/{yyyy-mm-dd}`, `metrics/current` | 현황판 수치와 계산 방법                                                                    | 누구나                                    |
-| `opsLog/{id}`                             | at, kind, message(정제됨), links[]                                                         | 누구나                                    |
-| `adminAudit/{id}`                         | adminUid, at, action, before, after                                                        | 관리자                                    |
-| `issueFingerprints/{fp}`                  | issueNumber, firstSeen, lastSeen, count                                                    | 없음                                      |
+| 컬렉션                                      | 내용                                                                                                              | 클라이언트 읽기                           |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `songs/{songId}`                            | mbid, artist, title, releaseYear, genres[], source                                                                | 누구나                                    |
+| `songs/{songId}/links/{videoId}`            | kind, status, ytTitle, channelId, embeddable, madeForKids, verifiedAt                                             | 누구나 (`active`만)                       |
+| `artists/{artistId}`                        | name, mbid, channelId, uploadsPlaylistId, status, lastScannedAt, failCount                                        | 관리자                                    |
+| `playlists/{id}`                            | ownerUid, title, items[{songId, videoId, reason}], locale, createdAt, state                                       | `saved`는 누구나, `draft`는 소유자        |
+| `playlists/{id}/private/request`            | 검색 문장 원문, 해석 결과                                                                                         | 소유자만                                  |
+| `users/{uid}`                               | createdAt, consentAt, blocked, exportTester                                                                       | 본인                                      |
+| `users/{uid}/usage/{yyyy-mm-dd}`            | playlists, searches, exports                                                                                      | 본인                                      |
+| `ytExports/{id}`                            | ownerUid, youtubePlaylistId, itemCount, createdAt (이 앱이 만든 YouTube 재생목록 목록)                            | 본인                                      |
+| `secrets_oauth/{uid}`                       | 암호화한 YouTube 연결 정보                                                                                        | **없음** (서버만)                         |
+| `usage/{yyyy-mm-dd}`                        | ytUnits, ytSearchUser, ytSearchJob, aiCostMicroUsd, exports, autoIssues, autoFixes, musicDataCalls (D-020, D-024) | 관리자                                    |
+| `usage/{yyyy-mm-dd}/reservations/{id}`      | 예약 기록(uid는 정산 후 지움), service, user, settled                                                             | 없음 (서버만)                             |
+| `config/runtime`                            | killSwitches{create, ingest, autoIssue}, limits{...}                                                              | 누구나(안내 문구용), 쓰기는 관리자 함수만 |
+| `events/{id}`                               | type, at, actorHash, attrs, outcome, durationMs                                                                   | 없음 (서버만)                             |
+| `metrics/{yyyy-mm-dd}`, `metrics/current`   | 현황판 수치와 계산 방법                                                                                           | 누구나                                    |
+| `opsLog/{id}`                               | at, kind, message(정제됨), links[]                                                                                | 누구나                                    |
+| `adminAudit/{id}`                           | adminUid, at, action, before, after                                                                               | 관리자                                    |
+| `issueFingerprints/{fp}`                    | issueNumber, firstSeen, lastSeen, count                                                                           | 없음                                      |
+| `lastfmCache/{sha256}`, `lastfmCache/_meta` | Last.fm 응답 캐시(body, bytes, storedAt, expiresAt), 전체 크기 totalBytes. HTTP 캐시 기간만, 100MB 상한           | 없음 (서버만)                             |
 
 - 관리자 판별: 서버 함수는 `ADMIN_EMAILS`(확인된 Google 이메일)를 직접 확인한다. 보안 규칙용으로 서버가 사용자 정의 클레임 `admin: true`를 붙이고(로그인 직후 `account-syncClaims`, 관리자 함수 호출 때), 규칙은 `request.auth.token.admin == true`를 확인한다(D-022).
 - 시험 문제·기준 점수는 저장소 `evals/`에 둔다 (Firestore 아님).
@@ -327,6 +328,7 @@ firestore.rules, firebase.json
 | 서비스 하루 YouTube 단위        | 9,000 (한도 10,000에서 1,000 여유)                   |
 | 서비스 하루 내 계정에 넣기      | 5개 (재생목록당 최대 30곡)                           |
 | 하루 자동 이슈 / 자동 수정 실행 | 5개 / 3회                                            |
+| 서비스 하루 음악 데이터 요청    | 20,000회 (무료, 폭주 방지용, D-024)                  |
 | 월 예산 알림                    | $10 (Functions 예산 정지 함께)                       |
 
 날짜 경계는 YouTube 한도와 맞춰 태평양 시간 자정이다.
