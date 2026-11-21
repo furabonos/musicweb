@@ -32,7 +32,18 @@ export const EXTERNAL_TARGETS = [
 ] as const;
 
 /** 외부 호출 종류. 어댑터를 추가하면 여기에 그 호출 이름을 더한다(자유 문자열을 받지 않기 위함). */
-export const EXTERNAL_OPS = ['playlists.insert', 'playlistItems.insert'] as const;
+export const EXTERNAL_OPS = [
+  'playlists.insert',
+  'playlistItems.insert',
+  'musicbrainz.recording.search',
+  'musicbrainz.recording.get',
+  'musicbrainz.artist.get',
+  'listenbrainz.recording.search',
+  'listenbrainz.similarRecordings',
+  'listenbrainz.similarArtists',
+  'wikidata.sparql',
+  'lastfm.track.getSimilar',
+] as const;
 export type ExternalOp = (typeof EXTERNAL_OPS)[number];
 
 export const JOBS = [
@@ -79,6 +90,11 @@ export const EVENT_SCHEMAS = {
   job_started: z.strictObject({ job: z.enum(JOBS) }),
   job_finished: z.strictObject({ job: z.enum(JOBS), processed: count, failed: count }),
   admin_change: z.strictObject({ action: id }),
+  // 재시도해도 응답이 없을 때(429·503·연결 실패). 추천은 다른 출처로 대신한다(스킬 music-data-terms).
+  source_unavailable: z.strictObject({
+    source: z.enum(['musicbrainz', 'listenbrainz', 'wikidata', 'lastfm']),
+    status: z.number().int().min(0).max(999).optional(),
+  }),
   embed_blocked: z.strictObject({ code: z.union([z.literal(101), z.literal(150)]) }),
 } as const;
 

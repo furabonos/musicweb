@@ -266,3 +266,29 @@
 - **운영 일지** `opsLogEntry`: 종류 6가지(job, job_failed, issue, pr, limit, admin_change). message는 코드가 만든 영어 고정 문장만 넣고, 이메일·200자 초과·줄바꿈·uid/토큰처럼 보이는 긴 영숫자 덩어리를 거부한다. 링크는 이 저장소의 이슈·PR·Actions 실행 주소만 받는다(저장소 주소를 코드에 고정했다. 저장소를 옮기면 같이 고친다). T06의 관리자 기록도 이 함수로 바꿨다.
 - **아직 이벤트로 남기지 않는 것**: 관리자 변경은 지금 `adminAudit`·운영 일지에만 남는다. 관리자 함수에 해시 키를 연결하는 일은 관리자 화면(T22)에서 한다.
 - **이유**: 기록은 처음부터 남기되(SPEC 4.1), 현황판·자동 이슈로 밖에 보일 수 있으므로 개인정보가 들어갈 길을 형식으로 막는다.
+
+## D-024 음악 데이터 어댑터 (T08, 2026-11-21)
+
+- **공통 요청 `adapters/music-http.ts`**: 출처(MusicBrainz, ListenBrainz, Wikidata, Last.fm)마다 줄을 세운다. 앞 요청 시작에서 1초가 지나야 다음이 나간다(스킬 music-data-terms).
+  - 줄은 함수 인스턴스 안에서만 공유된다. 여러 인스턴스가 동시에 돌면 합이 초당 1회를 넘을 수 있으므로, 수집 작업(T10)은 최대 인스턴스 1개로 둔다.
+  - ListenBrainz가 `X-RateLimit-Remaining: 0`을 보내면 `X-RateLimit-Reset-In`만큼 다음 요청을 미룬다.
+  - User-Agent `musicweb/0.1 ( <MB_CONTACT> )`. 연락처가 없거나 헤더를 깨는 글자가 있으면 클라이언트를 만들지 않는다.
+  - 429·503·연결 실패(본문 받는 중 끊김 포함)는 `Retry-After` 또는 2초·4초 쉬고 2번 더 한다. 다 실패하면 `source_unavailable` 이벤트와 `SourceUnavailableError`. 404 등 다른 오류는 재시도하지 않는다.
+  - 실패로 끝나도 마지막 대기만큼 이 출처의 다음 요청을 미룬다(다른 호출이 바로 다시 두드리지 않게). `Retry-After`가 30초를 넘으면 기다리며 붙잡지 않고 바로 포기하되, 그 시간(최대 1시간) 동안 이 출처를 쉰다.
+  - 줄은 기본으로 공유하고, 테스트만 `deps.limiter`로 따로 넣는다(시계만 바꿔도 공유가 깨지지 않게).
+  - 요청마다(재시도 포함) `external_call` 이벤트를 남긴다. 요청 주소는 기록·오류 메시지에 넣지 않는다(Last.fm 키가 주소에 있음).
+- **한도**: 무료 API라 비용은 없지만, "모든 외부 호출은 budget을 거친다"(SPEC 6.2)를 지키고 도는 코드가 폭주하지 않게 서비스 카운터 `musicDataCalls`(하루 20,000)를 추가했다. 요청 1번(재시도 포함)에 1씩 쓴다. 초당 1회 × 4출처라 하루 이론상 최대치보다 작게 둔 값이다.
+  - 정산할 것이 없으므로 예약 기록 없는 `budget.consume()`을 쓴다(쓰기 1번). `withBudget`(예약·정산·예약 문서)을 쓰면 요청 1번에 쓰기가 약 4번이라, 상한까지 쓰는 날 Firestore 무료 쓰기 한도를 넘는다(리뷰 지적). 이벤트 기록 1번을 더해 요청당 쓰기 2번이다.
+- **ListenBrainz 대표 녹음**: 비슷한 곡(similar-recordings)은 ListenBrainz가 대표로 쓰는 녹음 MBID에서만 결과가 나온다. MusicBrainz 검색이 주는 다른 판(라이브·재발매) MBID로는 빈 목록이 온다(녹화하며 확인). 그래서 기준 곡은 Labs `recording-search`로 대표 MBID를 먼저 찾는다(T13에서 사용). 알고리즘 이름은 Labs 화면에 나온 값을 고정했다(바뀌면 빈 결과 → 녹화 응답을 다시 받아 확인).
+  - `api.listenbrainz.org/1/metadata/lookup`은 로그인 토큰이 필요해서 쓰지 않는다.
+- **YouTube 영상 ID 찾는 곳**: MusicBrainz 녹음의 URL 관계(`free streaming` 등의 youtube.com/watch 주소)와 Wikidata 작품(P435 → P1651). 녹음 항목(P4404)에는 P1651이 거의 없어서 작품 기준으로 찾는다. 공식 채널은 MusicBrainz 아티스트 URL 관계 `youtube`와 Wikidata P2397. `@이름` 주소는 채널 ID를 알 수 없어 버린다.
+- **질의 주입 방지**: 주소·SPARQL에 들어가는 MBID와 응답에서 받은 ID는 UUID 형식 검사를 거친다. Wikidata는 한 질의에 50개까지, 넘으면 나눠 요청한다. MusicBrainz 검색어는 따옴표로 감싸고 `"`·`\`를 이스케이프한다.
+- **Last.fm 캐시**: `lastfmCache/{sha256(요청 내용, 키 제외)}`. HTTP `Cache-Control`(max-age, s-maxage)·`Expires`가 정한 기간만 두고, 헤더가 없거나 no-store·no-cache·private면 저장하지 않는다. 전체 크기는 `_meta.totalBytes`에 트랜잭션으로 더하고 빼며, 100MB를 넘으면 오래 저장된 것부터 지운다. 900KB 넘는 응답은 저장하지 않는다(문서 한도). 곡 목록에는 영구 저장하지 않는다.
+  - 기간은 `s-maxage`가 `max-age`보다 우선이고, `Age`만큼 뺀다.
+  - **기간이 지난 항목**은 다시 요청될 때만이 아니라 매일 정리 작업(T11)의 `purgeExpiredCache`로 지운다(리뷰 지적: 그렇지 않으면 "기간만 둔다"가 지켜지지 않음). Firestore 자체 TTL은 `_meta.totalBytes`가 어긋나서 쓰지 않는다.
+  - 깨진 캐시 본문은 지우고 다시 받는다.
+  - Last.fm 오류 코드는 6(곡 없음)만 빈 결과로 보고, 키 오류(10)·정지(26) 등은 `LastfmApiError`로 던져 설정 문제가 숨지 않게 한다.
+  - 실제 Last.fm 응답에 캐시 헤더가 없으면 캐시가 동작하지 않는다. 실제 키로 확인할 때(T13) 헤더도 확인한다.
+- **녹화 응답**: `tools/record-music-fixtures.ts`가 공개 API에서 받아 `tests/fixtures/music/`에 저장한다(사용자 승인, 2026-11-21). 녹화 질의가 어댑터 질의와 같은지 테스트로 확인한다(`tools/record-music-fixtures.test.ts`). 연락처는 공개 저장소 주소다. Last.fm은 키가 없어 문서 형식대로 손으로 만들었고(`_note` 표시), 실제 키로 확인하면 녹화본으로 바꾼다. 녹화 중 MusicBrainz가 "busy"(503)를 두 번 보냈다 → 재시도 설계의 근거.
+- **테스트 도우미**: `functions/src/testing/`(가짜 서버·시계·기록기). 배포 빌드에서 빠지고 lint는 테스트처럼 다룬다.
+- **이유**: 무료 데이터 출처의 예의(초당 1회, 연락처)를 코드 한 곳에서 지키고, 응답 형식은 실제 녹화로 고정해 파싱이 실제와 어긋나지 않게 하기 위함이다.

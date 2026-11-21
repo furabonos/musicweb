@@ -49,7 +49,9 @@
       "ytSearchJob": 20,
       "aiCostMicroUsd": 1000000,
       "exports": 5,
-      "autoIssues": 5
+      "autoIssues": 5,
+      "autoFixes": 3,
+      "musicDataCalls": 20000
     },
     "user": { "playlists": 10, "searches": 3, "exports": 1 }
   }
@@ -83,3 +85,8 @@
 
 - 스위치는 매 요청마다 새로 읽으므로, 저장하면 다음 요청부터 바로 적용된다.
 - 원인을 고친 뒤 `true`로 되돌린다. 관리자 callable로 바꾸면 운영 일지·`adminAudit`에 자동으로 남는다(T06). 콘솔에서 직접 고쳤으면 그 사실을 손으로 남긴다.
+
+## 6. Last.fm 데이터
+
+- Last.fm 응답은 `lastfmCache`에만 HTTP 캐시 기간 동안 두고, 매일 정리 작업이 기간 지난 것을 지운다(D-024). 전체 100MB 상한.
+- **Last.fm 사용을 그만두면** `lastfmCache` 컬렉션을 전부 지운다(Firestore 콘솔 또는 `firebase firestore:delete lastfmCache --recursive`). 이용 조건상 종료 후 남겨 두지 않는다.

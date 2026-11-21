@@ -11,6 +11,7 @@ const SERVER_ONLY = [
   'events/e1',
   'issueFingerprints/f1',
   'usage/2026-11-21/reservations/r1',
+  'lastfmCache/k1',
 ];
 const collectionOf = (path: string) => path.split('/').slice(0, -1).join('/');
 const WHO = { alice: as.alice, admin: as.admin, anon: as.anon };

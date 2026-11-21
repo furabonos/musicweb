@@ -67,6 +67,7 @@ async function seed() {
       put('opsLog/o1', { kind: 'job', message: 'done' }),
       put('secrets_oauth/alice', { sealed: 'v1.x.y.z' }),
       put('events/e1', { type: 'x' }),
+      put('lastfmCache/k1', { bytes: 1 }),
       put('issueFingerprints/f1', { issueNumber: 1 }),
       put('misc/x', { a: 1 }),
     ]);
@@ -112,5 +113,6 @@ export const WRITE_TARGETS = [
   'opsLog/o1',
   'adminAudit/x1',
   'issueFingerprints/f1',
+  'lastfmCache/k1',
   'misc/x',
 ];

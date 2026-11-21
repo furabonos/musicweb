@@ -9,7 +9,8 @@ const FUNCTIONS_PROCESS_MESSAGE =
 const FUNCTIONS_NETWORK_MESSAGE =
   '외부 호출은 functions/src/adapters/에서만 합니다(호출마다 budget.reserve()를 거치게 하기 위함). 필요한 호출을 어댑터 함수로 만들고 그 함수를 쓰세요.';
 
-const FUNCTIONS_TEST_FILES = ['functions/src/**/*.test.ts'];
+// 테스트와 테스트 도우미(functions/src/testing/, 배포 빌드에서 빠짐)는 실행 코드 제한을 받지 않는다.
+const FUNCTIONS_TEST_FILES = ['functions/src/**/*.test.ts', 'functions/src/testing/**'];
 
 // 네트워크를 여는 Node 내장 모듈 (node: 접두어 유무 둘 다 막는다).
 const NODE_NETWORK_BUILTINS = ['http', 'https', 'http2', 'net', 'tls', 'dgram', 'child_process'];

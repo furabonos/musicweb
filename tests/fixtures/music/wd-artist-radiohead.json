@@ -1,0 +1,37 @@
+{
+  "head": {
+    "vars": ["item", "artist", "channel"]
+  },
+  "results": {
+    "bindings": [
+      {
+        "artist": {
+          "type": "literal",
+          "value": "a74b1b7f-71a5-4011-9441-d0b5e4122711"
+        },
+        "item": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q44190"
+        },
+        "channel": {
+          "type": "literal",
+          "value": "UCq19-LqvG35A-30oyAiPiqA"
+        }
+      },
+      {
+        "artist": {
+          "type": "literal",
+          "value": "a74b1b7f-71a5-4011-9441-d0b5e4122711"
+        },
+        "item": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q44190"
+        },
+        "channel": {
+          "type": "literal",
+          "value": "UCr_iyUANcn9OX_yy9piYoLw"
+        }
+      }
+    ]
+  }
+}

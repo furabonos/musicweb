@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   AlreadySettledError,
   BudgetExceededError,
+  consume,
   BudgetStateError,
   reserve,
   settle,
@@ -394,5 +395,25 @@ describe('withBudget', () => {
       }),
     ).rejects.toBeInstanceOf(BudgetExceededError);
     expect(called).toBe(false);
+  });
+});
+
+describe('consume: 예약 기록 없이 카운터만 (D-024)', () => {
+  it('한도 안에서 올리고, 넘으면 거부하며, 예약 기록을 남기지 않는다', async () => {
+    await setLimits({ service: { musicDataCalls: 2 } });
+    await consume(db, { service: { musicDataCalls: 1 }, now });
+    await consume(db, { service: { musicDataCalls: 1 }, now });
+    await expect(consume(db, { service: { musicDataCalls: 1 }, now })).rejects.toBeInstanceOf(
+      BudgetExceededError,
+    );
+    expect(await used(`usage/${day}`, 'musicDataCalls')).toBe(2);
+    expect((await db.collection(`usage/${day}/reservations`).get()).size).toBe(0);
+  });
+
+  it('긴급 정지 확인도 같이 한다', async () => {
+    await setLimits({}, { ingest: false });
+    await expect(
+      consume(db, { service: { musicDataCalls: 1 }, feature: 'ingest', now }),
+    ).rejects.toBeInstanceOf(KillSwitchError);
   });
 });

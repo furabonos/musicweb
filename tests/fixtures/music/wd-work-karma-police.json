@@ -1,0 +1,81 @@
+{
+  "head": {
+    "vars": ["item", "work", "yt", "genreLabel", "date"]
+  },
+  "results": {
+    "bindings": [
+      {
+        "work": {
+          "type": "literal",
+          "value": "babefb9d-3d87-3378-bfac-e13f89ae7a48"
+        },
+        "item": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q1750699"
+        },
+        "yt": {
+          "type": "literal",
+          "value": "IBH97ma9YiI"
+        },
+        "genreLabel": {
+          "xml:lang": "en",
+          "type": "literal",
+          "value": "alternative rock"
+        },
+        "date": {
+          "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+          "type": "literal",
+          "value": "1997-08-25T00:00:00Z"
+        }
+      },
+      {
+        "work": {
+          "type": "literal",
+          "value": "babefb9d-3d87-3378-bfac-e13f89ae7a48"
+        },
+        "item": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q1750699"
+        },
+        "yt": {
+          "type": "literal",
+          "value": "IBH97ma9YiI"
+        },
+        "genreLabel": {
+          "xml:lang": "en",
+          "type": "literal",
+          "value": "indie rock"
+        },
+        "date": {
+          "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+          "type": "literal",
+          "value": "1997-08-25T00:00:00Z"
+        }
+      },
+      {
+        "work": {
+          "type": "literal",
+          "value": "babefb9d-3d87-3378-bfac-e13f89ae7a48"
+        },
+        "item": {
+          "type": "uri",
+          "value": "http://www.wikidata.org/entity/Q1750699"
+        },
+        "yt": {
+          "type": "literal",
+          "value": "IBH97ma9YiI"
+        },
+        "genreLabel": {
+          "xml:lang": "en",
+          "type": "literal",
+          "value": "art rock"
+        },
+        "date": {
+          "datatype": "http://www.w3.org/2001/XMLSchema#dateTime",
+          "type": "literal",
+          "value": "1997-08-25T00:00:00Z"
+        }
+      }
+    ]
+  }
+}
