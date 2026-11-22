@@ -379,6 +379,9 @@ async function linkVideo(
     .get();
   if (!existing.empty) return 'skipped';
   const split = splitArtistTitle(video.title, video.channelTitle, [artist.name]);
+  // 자동 이슈 감지 재료(T19): 숫자로만 남긴다(제목 원문 없음)
+  if (split.failed)
+    await deps.events.record({ type: 'title_split_failed', attrs: {}, outcome: 'ok' });
   const titleGuess = split.titles[0];
   if (!titleGuess) return 'skipped';
   const recording = pickRecording(

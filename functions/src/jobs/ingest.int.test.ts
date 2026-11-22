@@ -23,7 +23,8 @@ if (!getApps().length) initializeApp({ projectId });
 const db = getFirestore();
 const API_KEY = 'AIzaFAKEKEYFORTESTS000000000000000000';
 
-beforeEach(async () => {
+beforeEach(() => clearAll());
+async function clearAll() {
   const host = process.env.FIRESTORE_EMULATOR_HOST;
   if (!host) throw new Error('pnpm test:int로 실행하세요.');
   const res = await fetch(
@@ -33,7 +34,7 @@ beforeEach(async () => {
     },
   );
   expect(res.ok).toBe(true);
-});
+}
 
 /** 가짜 서버로 수집 작업 하나를 꾸민다. YouTube 한도는 실제 Firestore 카운터(consume)를 쓴다. */
 function setup(world = fakeMusicWorld()) {
@@ -142,6 +143,21 @@ describe('수집 작업 (에뮬레이터, 가짜 YouTube·음악 데이터)', ()
     // 단위: Radiohead 채널 1 + 업로드 2쪽 + 영상 1 = 4, IU 채널 1 + 업로드 1 + 영상 1 = 3. 검색은 0.
     expect(await ytUnits()).toBe(7);
     expect(world.count('www.googleapis.com', '/search')).toBe(0);
+  });
+
+  it('제목을 아티스트·곡으로 나누지 못하면 숫자로만 기록한다(자동 이슈 감지 재료, 제목 원문 없음)', async () => {
+    await seedArtists();
+    const normal = setup();
+    await runIngest(normal.deps);
+    expect(normal.events.filter((e) => e.type === 'title_split_failed')).toEqual([]);
+
+    await clearAll();
+    await seedArtists();
+    const odd = setup(fakeMusicWorld({ unsplittableUpload: true }));
+    await runIngest(odd.deps);
+    const failed = odd.events.filter((e) => e.type === 'title_split_failed');
+    expect(failed).toHaveLength(1);
+    expect(failed[0]?.attrs).toEqual({});
   });
 
   it('두 번째 실행에서는 이미 본 영상을 다시 처리하지 않는다 (업로드 목록 1쪽씩만 확인)', async () => {

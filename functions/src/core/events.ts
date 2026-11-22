@@ -53,6 +53,9 @@ export const EXTERNAL_OPS = [
   'llm.candidates',
   'llm.pick',
   'watch_videos.check',
+  'github.issues.create',
+  'github.issues.get',
+  'github.issues.comment',
 ] as const;
 export type ExternalOp = (typeof EXTERNAL_OPS)[number];
 
@@ -64,6 +67,7 @@ export const JOBS = [
   'dailyEval',
   'metrics',
   'githubStats',
+  'autoIssue',
 ] as const;
 
 /** 이벤트 종류 → attrs 스키마. 새 종류는 여기에 추가한다(스키마 없는 종류는 기록되지 않음). */
@@ -112,6 +116,8 @@ export const EVENT_SCHEMAS = {
     status: z.number().int().min(0).max(999).optional(),
   }),
   embed_blocked: z.strictObject({ code: z.union([z.literal(101), z.literal(150)]) }),
+  // 수집 중 영상 제목에서 아티스트·곡 제목을 나누지 못함 (자동 이슈 감지 재료, T19). 제목 원문은 남기지 않는다.
+  title_split_failed: z.strictObject({}),
 } as const;
 
 export type EventType = keyof typeof EVENT_SCHEMAS;

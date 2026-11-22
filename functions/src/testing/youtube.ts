@@ -29,6 +29,8 @@ export function fakeMusicWorld(
     tie?: boolean;
     /** channels.list가 빈 결과를 주는 채널(채널 삭제) */
     goneChannels?: string[];
+    /** 아티스트·곡 제목을 나눌 수 없는 제목의 업로드 하나 더 (자동 이슈 감지 재료, T19) */
+    unsplittableUpload?: boolean;
   } = {},
 ) {
   const calls: { host: string; path: string; url: URL }[] = [];
@@ -54,6 +56,26 @@ export function fakeMusicWorld(
         channelId: 'UCq19-LqvG35A-30oyAiPiqA',
         channelTitle: 'Radiohead',
         title: 'Radiohead - No Surprises (Official Video)',
+        description: '',
+      },
+      contentDetails: { duration: 'PT3M50S' },
+      status: { privacyStatus: 'public', embeddable: true, madeForKids: false },
+    });
+  }
+
+  if (opts.unsplittableUpload) {
+    (rhPage1.items as unknown[]).unshift({
+      kind: 'youtube#playlistItem',
+      contentDetails: { videoId: 'rhUnsplit01', videoPublishedAt: '2024-04-02T12:00:00Z' },
+    });
+    (rhVideos.items as unknown[]).push({
+      id: 'rhUnsplit01',
+      snippet: {
+        publishedAt: '2024-04-02T12:00:00Z',
+        channelId: 'UCq19-LqvG35A-30oyAiPiqA',
+        // 채널 이름도 아티스트가 아니고 제목 양쪽 어느 쪽도 아티스트가 아님
+        channelTitle: 'Archive Uploads',
+        title: 'Session Tape - Reel Two',
         description: '',
       },
       contentDetails: { duration: 'PT3M50S' },
