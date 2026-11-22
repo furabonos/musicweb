@@ -326,13 +326,15 @@ describe('금지 필드 검사', () => {
   });
 
   it('만든 제목·본문에는 고정 문장과 허용한 사실만 들어감', () => {
+    // 공개 음악 데이터 ID(MusicBrainz). key: '...' 글자 그대로 쓰면 비밀값 검사(gitleaks)가 API 키로 오인한다
+    const mbid = 'a74b1b7f-71a5-4011-9441-d0b5e4122711';
     const f: Finding = {
       rule: 'job_failed',
-      key: 'artist-a74b1b7f-71a5-4011-9441-d0b5e4122711',
+      key: `artist-${mbid}`,
       facts: {
         job: 'ingest',
         reason: 'artist_failed',
-        artistMbid: 'a74b1b7f-71a5-4011-9441-d0b5e4122711',
+        artistMbid: mbid,
       },
     };
     const { title, body } = renderIssue(f, fingerprint(f));
