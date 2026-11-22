@@ -299,7 +299,7 @@
 
 ## G. CI
 
-- [ ] **T18 CI** — SPEC 4.9, 6.2
+- [x] **T18 CI** — SPEC 4.9, 6.2
   - 의존: T01, T02, T03, T17
   - 산출물: `.github/workflows/ci.yml`
     - lint·format·typecheck·unit·rules·integration(에뮬레이터)·e2e·번들 비밀값 검사·eval 회귀
