@@ -601,3 +601,19 @@
   - 곡 수는 AI가 무엇을 답하든 코드가 5~30으로 묶으므로 보안 문제는 아니다.
 - **이유**: 기준 곡을 곡 목록(이름 키)과 MusicBrainz에서 찾을 때 공식 이름이어야 맞는다. 한글로 적은 외국 이름은 찾지 못한다.
 - 남은 일: 데이터베이스에 한글 이름으로 올라 있는 가수를 AI가 영문 이름으로 답하면, 기준 곡 확정(제목·아티스트 일치 확인)에서 빠질 수 있다. MusicBrainz 별칭 비교는 실제 데이터로 확인한 뒤 정한다.
+
+## D-036 CI: 모든 검사를 PR마다, 필수 검사는 `ci` 하나로 묶음 (T18, 2026-11-23)
+
+- `.github/workflows/ci.yml`을 PR, main push, 수동 실행 때 돌린다. job은 넷이다.
+  - `static`: 설치(`--frozen-lockfile`), lint, format, typecheck, unit, `pnpm eval`(시험 회귀), `pnpm scan:bundle`.
+  - `emulator`: Java 21과 에뮬레이터로 보안 규칙(`test:rules`)과 통합 테스트(`test:int`).
+  - `e2e`: Chromium과 에뮬레이터로 `test:e2e`. 실패하면 Playwright 기록을 7일 남긴다.
+  - `ci`: 위 셋을 기다렸다가 하나라도 성공이 아니면 실패한다(`if: always()`).
+- **main 보호 규칙의 필수 검사는 `ci`와 `gitleaks`다.** job을 더하거나 이름을 바꿔도 보호 규칙은 `ci` 하나만 보면 된다. `ci`의 `needs`에 모든 job이 들어 있는지는 `tools/ci-workflow.test.ts`가 확인한다.
+- **비밀값**:
+  - `pull_request`만 쓰고 `pull_request_target`은 쓰지 않는다. 포크 PR에는 비밀값이 넘어가지 않는다.
+  - 실제 AI 시험은 같은 저장소의 PR(또는 main)이고 `ANTHROPIC_API_KEY` 비밀값이 있을 때만 `EVAL_LLM=api`로 켠다. 지금은 키가 없어 곡 연결 시험만 기준과 비교한다(D-034). 구독(`cli`)은 CI에 쓰지 않는다.
+  - 권한은 `contents: read`뿐이다.
+- 외부 액션은 모두 커밋 해시(40자)로 고정한다(D-017과 같은 방식). 모든 워크플로 파일에 대해 테스트가 확인한다.
+- Node는 24(루트 `engines` ≥24.12), pnpm은 `packageManager`의 버전이다. 에뮬레이터 내려받기는 캐시한다.
+- **이유**: SPEC 4.9·6.2의 "CI를 통과한 PR만 합침"을 GitHub가 강제하게 하고, D-025의 깨끗한 사본 검증과 같은 검사를 사람 손 없이도 돌리기 위함이다.
