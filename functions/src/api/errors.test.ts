@@ -2,6 +2,7 @@ import { HttpsError } from 'firebase-functions/v2/https';
 import { describe, expect, it } from 'vitest';
 import { NotAdminError } from '../core/auth.js';
 import { BudgetExceededError } from '../core/budget.js';
+import { PlaylistError } from '../core/playlists.js';
 import { KillSwitchError, RuntimeConfigError } from '../core/runtimeConfig.js';
 import { handle, toHttpsError } from './errors.js';
 
@@ -24,6 +25,18 @@ describe('toHttpsError: 서버 오류 → 화면용 오류 코드', () => {
       counter: 'playlists',
       resetAt: '2026-11-22T08:00:00.000Z',
     });
+  });
+  it.each([
+    ['notFound', 'not-found'],
+    ['notOwner', 'permission-denied'],
+    ['badPosition', 'invalid-argument'],
+    ['alreadySaved', 'failed-precondition'],
+    ['lastSong', 'failed-precondition'],
+    ['noSpare', 'failed-precondition'],
+  ] as const)('재생목록 거부 %s → %s + 이유', (reason, code) => {
+    const e = toHttpsError(new PlaylistError(reason));
+    expect(e.code).toBe(code);
+    expect(e.details).toEqual({ reason });
   });
   it('설정 깨짐 → failed-precondition', () => {
     expect(toHttpsError(new RuntimeConfigError('x')).code).toBe('failed-precondition');

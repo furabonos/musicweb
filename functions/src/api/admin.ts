@@ -142,7 +142,7 @@ function mergeStored(
  * 관리자 확인(끊긴 토큰·사용 중지 계정 포함). 규칙용 클레임이 없으면 붙이되,
  * 실패해도 긴급 정지 같은 관리자 작업은 막지 않는다(클레임은 보조).
  */
-async function requireAdmin(caller: CallerAuth | undefined): Promise<string> {
+export async function requireAdmin(caller: CallerAuth | undefined): Promise<string> {
   const list = ADMIN_EMAILS.value();
   const { uid, claimSynced } = await verifyAdmin(getAuth(), caller, list);
   if (!claimSynced) {

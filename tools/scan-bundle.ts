@@ -30,6 +30,19 @@ export const SECRET_PATTERNS: { kind: string; source: string }[] = [
 
 const MIN_SECRET_VALUE_LENGTH = 8;
 
+/**
+ * 서버 비밀값 이름을 품고 있지만 비밀값과 무관한 라이브러리 식별자(정확히 이 이름만).
+ * - INVALID_OAUTH_CLIENT_ID: Firebase Auth SDK의 서버 오류 코드 표(→ 'invalid-oauth-client-id'). T14에서 로그인 SDK가 들어오며 생겼다.
+ * 새 항목은 어느 라이브러리의 무엇인지 확인한 뒤에만 넣는다. VITE_OAUTH_CLIENT_ID 같은 다른 접두어는 계속 잡힌다.
+ */
+/**
+ * 에뮬레이터·e2e 전용 코드의 흔적(D-031). 운영 빌드에 있으면 VITE_USE_EMULATORS가 켜진 채 빌드된 것이다:
+ * 서명 없는 토큰으로 로그인하는 e2e 도우미와 로컬 에뮬레이터 주소가 실린다.
+ */
+export const EMULATOR_MARKERS = ['__musicwebE2E', '127.0.0.1:9099', '127.0.0.1:5001'];
+
+export const KNOWN_LIBRARY_IDENTIFIERS = ['INVALID_OAUTH_CLIENT_ID'];
+
 export interface ScanOptions {
   /** 번들에 있어도 되는 공개값 (Firebase 웹 API 키). */
   allowedValues: string[];
@@ -69,9 +82,17 @@ export function scanBundle(
         }
       }
     }
+    const named = KNOWN_LIBRARY_IDENTIFIERS.reduce(
+      (t, id) => t.replace(new RegExp(`(?<![A-Za-z0-9_])${id}(?![A-Za-z0-9_])`, 'g'), ''),
+      text,
+    );
     for (const name of SERVER_SECRET_NAMES) {
-      if (new RegExp(`(?<![A-Za-z0-9])${name}(?![A-Za-z0-9])`).test(text))
+      if (new RegExp(`(?<![A-Za-z0-9])${name}(?![A-Za-z0-9])`).test(named))
         kinds.add(`서버 비밀값 이름 ${name}`);
+    }
+    for (const marker of EMULATOR_MARKERS) {
+      if (text.includes(marker))
+        kinds.add(`에뮬레이터 전용 코드 ${marker} (VITE_USE_EMULATORS를 비우고 빌드)`);
     }
     for (const [name, value] of values) {
       if (text.includes(value)) kinds.add(`서버 비밀값 ${name}의 실제 값`);

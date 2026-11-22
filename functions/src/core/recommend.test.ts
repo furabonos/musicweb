@@ -332,6 +332,35 @@ describe('recommend — 모자랄 때', () => {
     expect(r.shortfall).toBeNull();
   });
 
+  it('예비 곡(spares)은 남는 후보에서만 더 고르고, 요청 수를 채웠으면 조회·검색하지 않음 (D-031)', async () => {
+    const many = Array.from({ length: 7 }, (_, i) => ({
+      mbid: mbid(200 + i),
+      artist: 'Radiohead',
+      artistMbid: RH,
+      title: `Spare ${i}`,
+      releaseYear: 1997,
+    }));
+    const { ports, calls } = setup(
+      world({
+        catalog: [SEED, ...many],
+        links: Object.fromEntries(
+          many.map((s, i) => [s.mbid, [link(`spr${String(i).padStart(8, '0')}`)]]),
+        ),
+        lbSimilar: [...many, AIRBAG],
+        aiCandidates: [],
+        searchResults: { 'Radiohead Airbag': ['airbagSrch1'] },
+      }),
+    );
+    const r = await recommend(ports, req({ count: 5 }), { uid: 'u1' }, { spares: 5 });
+    if (!r.ok) throw new Error('fail');
+    // 재생할 수 있는 7곡: 요청 5 + 예비 2. 예비 3곡이 모자라도 조회·검색은 하지 않음
+    expect(r.items).toHaveLength(7);
+    expect(r.shortfall).toBeNull();
+    expect(calls.filter((c) => c.startsWith('getRecording:') || c.startsWith('search:'))).toEqual(
+      [],
+    );
+  });
+
   it('기준 곡이 없거나 못 찾으면 실패 이유와 request_parse_failed', async () => {
     const a = setup(world());
     expect(await recommend(a.ports, req({ seed: null }), { uid: 'u1' })).toEqual({
