@@ -12,7 +12,7 @@ import { createYouTubeRead, firestoreYtBudget } from '../adapters/youtube-read.j
 import { fakeExternalEnabled } from '../config/runtimeEnv.js';
 import { MB_CONTACT, secrets } from '../config/secrets.js';
 import type { CallerAuth } from '../core/auth.js';
-import { firestoreEventSink, type EventSink } from '../core/events.js';
+import type { EventSink } from '../core/events.js';
 import { enqueueArtist } from '../core/ingestQueue.js';
 import { parseRequest } from '../core/parseRequest.js';
 import { createPlaylist, savePlaylist, updatePlaylist } from '../core/playlists.js';
@@ -21,6 +21,7 @@ import { firestoreRecommendPorts } from '../core/recommendPorts.js';
 import { fakeLlm, fakeMusicAndYt } from '../dev/fakeWorld.js';
 import { requireAdmin } from './admin.js';
 import { handle } from './errors.js';
+import { callableEventSink } from './eventSink.js';
 
 /**
  * 재생목록 callable (SPEC 1.3, 4.3, T14, D-031).
@@ -29,9 +30,6 @@ import { handle } from './errors.js';
  *   조회로 찾은 연결 저장의 "이미 연결된 영상" 확인이 동시에 돌지 않게 하기 위함(D-030). 동시 요청은 줄을 선다.
  * - 에뮬레이터의 가짜 프로젝트에서는 가짜 AI·음악 데이터·YouTube를 쓴다(config/runtimeEnv.ts).
  */
-
-// 에뮬레이터 가짜 모드에서 이벤트 해시에 쓰는 고정 키(실제 배포에서는 쓰이지 않음, fakeExternalEnabled 참고)
-const FAKE_HASH_KEY = 'emulator-only-actor-hash-key-not-a-secret';
 
 const createInput = z.strictObject({
   // 200자(코드 포인트) 검사는 parseRequest가 한다(넘으면 too_long). 여기서는 터무니없이 긴 값만 막는다.
@@ -63,10 +61,6 @@ function requireUid(auth: { uid?: string } | undefined): string {
 }
 
 const fake = () => fakeExternalEnabled();
-
-function eventSink(db: Firestore): EventSink {
-  return firestoreEventSink(db, fake() ? FAKE_HASH_KEY : secrets.ACTOR_HASH_KEY.value());
-}
 
 /** 실제 어댑터(또는 에뮬레이터 가짜)로 추천 포트와 AI를 만든다. */
 function buildPorts(db: Firestore, events: EventSink): { ports: RecommendPorts; llm: Llm } {
@@ -131,7 +125,7 @@ export const playlists = {
         const uid = await requireAdmin(req.auth as CallerAuth | undefined);
         const input = parseInput(createInput, req.data);
         const db = getFirestore();
-        const events = eventSink(db);
+        const events = callableEventSink(db);
         const { ports, llm } = buildPorts(db, events);
         return createPlaylist(
           {
@@ -151,7 +145,7 @@ export const playlists = {
       const uid = requireUid(req.auth);
       const input = parseInput(updateInput, req.data);
       const db = getFirestore();
-      return updatePlaylist({ db, events: eventSink(db) }, uid, input);
+      return updatePlaylist({ db, events: callableEventSink(db) }, uid, input);
     }),
   ),
   save: onCall((req) =>

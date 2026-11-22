@@ -76,5 +76,8 @@ export function createFirebaseApi(): MusicwebApi {
     update: (id, action, position) =>
       call<{ items: PlayableItem[] }>('playlists-update', { id, action, position }),
     save: (id) => call<{ id: string; state: 'saved' }>('playlists-save', { id }),
+    reportEmbedBlocked: async (code) => {
+      await call('playback-reportEmbedBlocked', { code });
+    },
   };
 }

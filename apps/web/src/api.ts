@@ -56,4 +56,6 @@ export interface MusicwebApi {
     position: number,
   ): Promise<{ items: PlayableItem[] }>;
   save(id: string): Promise<{ id: string; state: 'saved' }>;
+  /** 플레이어 오류 101·150(퍼가기 불가)을 기록한다(embed_blocked). 실패해도 재생은 계속. */
+  reportEmbedBlocked(code: 101 | 150): Promise<void>;
 }
