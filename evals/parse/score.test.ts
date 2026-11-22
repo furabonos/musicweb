@@ -13,11 +13,15 @@ const { cases } = JSON.parse(readFileSync(join(import.meta.dirname, 'cases.json'
   cases: ParseCase[];
 };
 
+const first = (x: string | string[]) => (Array.isArray(x) ? (x[0] ?? '') : x);
+
 /** 기대값을 그대로 돌려주는 "완벽한" 출력 */
 const perfect = (c: ParseCase) => ({
   ok: true,
   value: {
-    seed: c.expect.seed ?? null,
+    seed: c.expect.seed
+      ? { artist: first(c.expect.seed.artist), title: first(c.expect.seed.title) }
+      : null,
     count: c.expect.count ?? 10,
     include: c.expect.include ?? { live: false, cover: false, remix: false },
     unsupported: c.expect.unsupported ?? [],
@@ -61,6 +65,21 @@ describe('scoreCase', () => {
     out.value.seed = { artist: 'Daft Punk', title: 'One More Time' };
     out.value.include = { live: true, cover: true, remix: false };
     expect(scoreCase(c, out)).toEqual(['seed', 'include.live', 'include.remix']);
+  });
+
+  it('기준 곡은 공식 이름으로: 목록 중 하나면 맞음, 한글로 옮겨 적은 외국 이름은 틀림', () => {
+    const c = must(cases.find((x) => x.id === 'ko-02'));
+    const out = perfect(c);
+    out.value.seed = { artist: 'Radiohead', title: 'Karma Police' };
+    expect(scoreCase(c, out)).toEqual([]);
+    out.value.seed = { artist: '라디오헤드', title: 'Karma Police' };
+    expect(scoreCase(c, out)).toEqual(['seed']);
+    const iu = must(cases.find((x) => x.id === 'ko-01'));
+    const o2 = perfect(iu);
+    for (const artist of ['IU', '아이유']) {
+      o2.value.seed = { artist, title: '밤편지' };
+      expect(scoreCase(iu, o2)).toEqual([]);
+    }
   });
 
   it('해석 실패는 parse_failed, 기준 곡이 null이어야 하는데 있으면 seed 틀림', () => {
