@@ -15,6 +15,12 @@ import { runRefresh } from './refresh.js';
 import { createOpenLinkChecker, firestoreOpenLinkBudget } from '../adapters/youtube-openlink.js';
 import { firestoreLinkHealthPorts, runLinkHealth } from './linkHealth.js';
 import { runDailyEval } from './dailyEval.js';
+import {
+  createIssueFiler,
+  firestoreFingerprintStore,
+  firestoreIssueBudget,
+} from '../adapters/github.js';
+import { runAutoIssue } from './autoIssue.js';
 
 /**
  * 예약 작업 (SPEC 4.4). 태평양 시간 기준, YouTube 할당 초기화(자정) 뒤에 차례로 돈다:
@@ -158,6 +164,35 @@ export const dailyEvalNightly = onSchedule(
       }
     }
     await runDailyEval({ db, events, llm });
+  },
+);
+
+/**
+ * 자동 이슈 (T19, D-037). 06:00, 다른 작업·매일 시험(05:00)이 끝난 뒤 지난 24시간을 본다.
+ * 긴급 정지 autoIssue와 하루 상한(autoIssues 5, githubCalls)을 따른다. 토큰이 없으면 감지만 하고 운영 일지에 남긴다.
+ */
+export const autoIssueNightly = onSchedule(
+  {
+    schedule: 'every day 06:00',
+    timeZone: 'America/Los_Angeles',
+    maxInstances: 1,
+    timeoutSeconds: 120,
+    retryCount: 0,
+    secrets: [secrets.ACTOR_HASH_KEY, secrets.GITHUB_ISSUE_TOKEN],
+  },
+  async () => {
+    const db = getFirestore();
+    const events = firestoreEventSink(db, secrets.ACTOR_HASH_KEY.value());
+    const token = secrets.GITHUB_ISSUE_TOKEN.value();
+    const filer = token
+      ? createIssueFiler({
+          token,
+          events,
+          budget: firestoreIssueBudget(db),
+          store: firestoreFingerprintStore(db),
+        })
+      : null;
+    await runAutoIssue({ db, events, filer });
   },
 );
 
