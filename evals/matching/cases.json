@@ -42,7 +42,7 @@
         }
       ],
       "expect": {
-        "videoId": "mv000000002",
+        "videoId": "mv000000001",
         "kind": "official_audio"
       }
     },
