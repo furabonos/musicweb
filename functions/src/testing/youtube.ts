@@ -27,6 +27,8 @@ export function fakeMusicWorld(
     musicbrainzDown?: boolean;
     /** No Surprises의 게시 시각을 Karma Police (Live)와 같게 */
     tie?: boolean;
+    /** channels.list가 빈 결과를 주는 채널(채널 삭제) */
+    goneChannels?: string[];
   } = {},
 ) {
   const calls: { host: string; path: string; url: URL }[] = [];
@@ -80,6 +82,7 @@ export function fakeMusicWorld(
     if (url.host === 'www.googleapis.com') {
       if (opts.quotaExceeded) return { status: 403, body: ytFixture('error-quota-exceeded.json') };
       if (url.pathname.endsWith('/channels')) {
+        if (opts.goneChannels?.includes(p.get('id') ?? '')) return { body: { items: [] } };
         return {
           body: ytFixture(
             p.get('id') === 'UC3SyT4_WLHzN7JmHQwKQZww'

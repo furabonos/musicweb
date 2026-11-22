@@ -285,6 +285,22 @@ describe('YouTube 재생목록 쓰기는 adapters/youtube-write.ts에서만 (SPE
     expect(await ytErrors(code, 'functions/src/adapters/youtube-write.ts')).toEqual([]);
   });
 
+  it('30일 정리(jobs/purge.ts)만 ytExports를 쓸 수 있고, 다른 금지는 그대로다', async () => {
+    const code = "export const c = 'ytExports';";
+    expect(await ytErrors(code, 'functions/src/jobs/purge.ts')).toEqual([]);
+    for (const file of ['functions/src/jobs/refresh.ts', 'functions/src/jobs/purge2.ts']) {
+      expect(await ytErrors(code, file), file).toHaveLength(1);
+    }
+    const [r] = await eslint.lintText(
+      "await fetch('https://www.googleapis.com/youtube/v3/playlists');\nexport const e = process.env;",
+      { filePath: 'functions/src/jobs/purge.ts' },
+    );
+    const rules = (r?.messages ?? []).map((m) => m.ruleId);
+    // fetch·process 전역 금지와 YouTube 쓰기 주소 금지가 모두 걸린다
+    expect(rules.filter((id) => id === 'no-restricted-globals')).toHaveLength(2);
+    expect(rules).toContain('no-restricted-syntax');
+  });
+
   it('youtube-read.ts에서 GET 읽기는 허용한다', async () => {
     expect(
       await ytErrors(

@@ -129,6 +129,11 @@ describe('수집 작업 (에뮬레이터, 가짜 YouTube·음악 데이터)', ()
     expect((await db.doc(`artists/${IU.mbid}`).get()).get('channelId')).toBe(
       'UC3SyT4_WLHzN7JmHQwKQZww',
     );
+    // 채널 정보(YouTube 데이터)를 확인한 시각이 남는다 — 25일 재확인·30일 정리 기준(T11)
+    for (const mbid of [RADIOHEAD.mbid, IU.mbid]) {
+      const at = (await db.doc(`artists/${mbid}`).get()).get('ytVerifiedAt') as { toDate(): Date };
+      expect(Date.now() - at.toDate().getTime()).toBeLessThan(60_000);
+    }
     expect((await db.collection('ingestQueue').get()).size).toBe(0);
     expect(world.count('query.wikidata.org')).toBe(1);
 

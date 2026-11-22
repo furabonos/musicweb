@@ -10,9 +10,10 @@ import {
 import type { createMusicBrainz, RecordingCandidate } from '../adapters/musicbrainz.js';
 import type { createWikidata } from '../adapters/wikidata.js';
 import { SourceUnavailableError } from '../adapters/music-http.js';
-import { YouTubeReadError, type VideoDetail, type YouTubeRead } from '../adapters/youtube-read.js';
+import type { VideoDetail, YouTubeRead } from '../adapters/youtube-read.js';
 import { BudgetExceededError } from '../core/budget.js';
 import type { EventSink } from '../core/events.js';
+import { errName, isOutage } from '../core/jobErrors.js';
 import { addOpsLog } from '../core/opsLog.js';
 import { assertEnabled, KillSwitchError, type ServiceCounter } from '../core/runtimeConfig.js';
 
@@ -26,7 +27,7 @@ import { assertEnabled, KillSwitchError, type ServiceCounter } from '../core/run
  *   YouTube 호출마다 쓰는 한도(firestoreYtBudget(db, 'ingest'))도 매번 스위치를 다시 확인한다.
  * - 한도에 닿으면 그 자리에서 멈추고 운영 일지에 "한도 도달"을 남긴다. 처리한 것까지는 저장돼 있다.
  * - 곡 정보(아티스트·제목·연도)는 MusicBrainz에서 온다. YouTube 제목은 곡을 찾는 데만 쓰고 곡 정보로 저장하지 않는다.
- * - 연결에는 YouTube 데이터(영상 제목·채널·퍼가기·아동용)와 확인 시각이 들어간다. 30일 규칙은 T11.
+ * - 연결에는 YouTube 데이터(영상 제목·채널·퍼가기·아동용)와 확인 시각이 들어간다. 25일 재확인·30일 정리는 refresh.ts·purge.ts(T11).
  * - 연속 3번 실패한 아티스트는 failed로 바꾸고 이벤트·운영 일지를 남긴다.
  */
 
@@ -80,6 +81,8 @@ export interface ArtistDoc {
   lastSeenPublishedAt: string | null;
   lastScannedAt: unknown;
   failCount: number;
+  /** 채널 정보(YouTube 데이터)를 마지막으로 확인한 시각. 25일 재확인·30일 정리 기준(T11). */
+  ytVerifiedAt: unknown;
 }
 
 /** 실패·성공에 따른 아티스트 상태 변화. 연속 3번 실패면 failed. */
@@ -95,29 +98,6 @@ export function nextArtistState(
 
 class NoChannelError extends Error {
   override name = 'NoChannelError';
-}
-
-const YT_OUTAGE_REASONS = new Set([
-  'quotaExceeded',
-  'dailyLimitExceeded',
-  'rateLimitExceeded',
-  'userRateLimitExceeded',
-]);
-
-/**
- * 아티스트 탓이 아니라 서비스 전체 문제인가: YouTube 할당량 소진·연결 실패·5xx, 음악 데이터 출처 장애.
- * 이런 오류로 아티스트 실패 횟수를 올리면 장애 며칠 만에 전원이 failed가 된다 → 작업을 멈추고 다음 밤에 다시 한다.
- */
-export function isOutage(err: unknown): boolean {
-  if (err instanceof SourceUnavailableError) return true;
-  if (err instanceof YouTubeReadError) {
-    return (
-      err.status === null ||
-      err.status >= 500 ||
-      (err.reason !== null && YT_OUTAGE_REASONS.has(err.reason))
-    );
-  }
-  return false;
 }
 
 const ms = (iso: string) => Date.parse(iso);
@@ -287,7 +267,7 @@ async function ingestArtist(
       channelId = wd.get(artist.mbid)?.youtubeChannelIds[0] ?? null;
     }
     if (!channelId) throw new NoChannelError('공식 채널을 찾지 못했습니다.');
-    await ref.update({ channelId });
+    await ref.update({ channelId, ytVerifiedAt: now() });
   }
 
   // 2. uploads 재생목록
@@ -295,7 +275,7 @@ async function ingestArtist(
   if (!uploads) {
     uploads = await deps.yt.uploadsPlaylist(channelId);
     if (!uploads) throw new NoChannelError('업로드 목록이 없습니다.');
-    await ref.update({ uploadsPlaylistId: uploads });
+    await ref.update({ uploadsPlaylistId: uploads, ytVerifiedAt: now() });
   }
 
   // 3. 지난번 이후 새 업로드만 (최신 것부터 오므로, 이미 본 시각에 닿으면 멈춘다).
@@ -367,6 +347,8 @@ async function ingestArtist(
   await ref.update({
     lastSeenPublishedAt: lastSeen ?? null,
     lastScannedAt: FieldValue.serverTimestamp(),
+    // 업로드 목록을 방금 읽었으므로 채널 정보가 확인됐다(30일 규칙, T11)
+    ytVerifiedAt: now(),
   });
   const processed = lastSeen ? toCheck.filter((v) => v.t <= ms(lastSeen)).length : 0;
   return { videosSeen: processed, linksActive, linksPending, gap, deadlineHit };
@@ -472,17 +454,6 @@ export function pickRecording(
   return ok[0] ?? null;
 }
 
-/**
- * 이벤트용 오류 코드: 오류 이름을 snake_case로(SourceUnavailableError → source_unavailable_error).
- * 이벤트 검사가 구분자 없는 긴 영숫자(uid·토큰 모양)를 거부하므로 그대로 쓰면 기록이 실패한다.
- */
-export const errName = (err: unknown) =>
-  (err instanceof Error ? err.name : 'unknown')
-    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-    .toLowerCase()
-    .replace(/[^a-z0-9_.:-]/g, '')
-    .slice(0, 64) || 'unknown';
-
 /** 대기열(사용자가 찾은 아티스트)을 수집 대상으로 옮긴다. 이미 있으면 건너뛴다. */
 async function promoteQueue(db: Firestore, max: number) {
   const queued = await db.collection('ingestQueue').orderBy('queuedAt').limit(max).get();
@@ -501,6 +472,7 @@ async function promoteQueue(db: Firestore, max: number) {
           lastSeenPublishedAt: null,
           lastScannedAt: null,
           failCount: 0,
+          ytVerifiedAt: null,
         };
         tx.set(ref, { ...doc, addedBy: 'queue' });
       }
