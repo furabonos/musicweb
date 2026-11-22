@@ -25,8 +25,11 @@ describe('ci.yml', () => {
       'pnpm test:rules',
       'pnpm test:int',
       'pnpm test:e2e',
-    ])
-      expect(ci, `ci.yml에 '${cmd}' 단계가 없습니다`).toContain(`run: ${cmd}`);
+    ]) {
+      // 줄 전체가 같아야 한다('run: pnpm test'가 'run: pnpm test:e2e'에 걸리지 않게)
+      const lines = ci.split('\n').map((l) => l.trim().replace(/^- /, ''));
+      expect(lines, `ci.yml에 'run: ${cmd}' 단계가 없습니다`).toContain(`run: ${cmd}`);
+    }
   });
 
   it('필수 검사 job "ci"는 다른 모든 job을 기다리고, 하나라도 성공이 아니면 실패', () => {
@@ -43,11 +46,19 @@ describe('ci.yml', () => {
 
   it('포크 PR에 비밀값을 주지 않는다: pull_request_target 금지, AI 키는 같은 저장소일 때만, 구독(cli) 금지', () => {
     expect(ci).not.toContain('pull_request_target');
-    const keyLines = ci.split('\n').filter((l) => l.includes('secrets.ANTHROPIC_API_KEY'));
+    const keyLines = ci.split('\n').filter((l) => l.includes('ANTHROPIC_API_KEY'));
     expect(keyLines.length).toBeGreaterThan(0);
-    for (const l of keyLines) expect(l).toContain('head.repo.full_name == github.repository');
+    // 키를 쓰는 줄은 모두 "같은 저장소의 PR"일 때만(포크 PR·main push 제외, SPEC 4.9)
+    for (const l of keyLines) {
+      expect(l).toContain("github.event_name == 'pull_request'");
+      expect(l).toContain('head.repo.full_name == github.repository');
+    }
     expect(ci).not.toMatch(/EVAL_LLM:\s*['"]?cli/);
     expect(ci).not.toMatch(/'cli'/);
+  });
+
+  it('main에 합친 커밋의 CI는 취소하지 않는다(PR만 앞 실행 취소)', () => {
+    expect(ci).toContain("cancel-in-progress: ${{ github.event_name == 'pull_request' }}");
   });
 
   it('권한은 읽기만', () => {
@@ -57,7 +68,7 @@ describe('ci.yml', () => {
 });
 
 describe('모든 워크플로', () => {
-  const files = readdirSync(DIR).filter((f) => f.endsWith('.yml'));
+  const files = readdirSync(DIR).filter((f) => /\.ya?ml$/.test(f));
   it.each(files)('%s: 외부 액션은 커밋 해시(40자)로 고정', (f) => {
     const text = readFileSync(join(DIR, f), 'utf8');
     for (const m of text.matchAll(/uses:\s*([^\s#]+)/g)) {

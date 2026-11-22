@@ -612,8 +612,10 @@
 - **main 보호 규칙의 필수 검사는 `ci`와 `gitleaks`다.** job을 더하거나 이름을 바꿔도 보호 규칙은 `ci` 하나만 보면 된다. `ci`의 `needs`에 모든 job이 들어 있는지는 `tools/ci-workflow.test.ts`가 확인한다.
 - **비밀값**:
   - `pull_request`만 쓰고 `pull_request_target`은 쓰지 않는다. 포크 PR에는 비밀값이 넘어가지 않는다.
-  - 실제 AI 시험은 같은 저장소의 PR(또는 main)이고 `ANTHROPIC_API_KEY` 비밀값이 있을 때만 `EVAL_LLM=api`로 켠다. 지금은 키가 없어 곡 연결 시험만 기준과 비교한다(D-034). 구독(`cli`)은 CI에 쓰지 않는다.
+  - 실제 AI 시험은 같은 저장소의 PR이고 `ANTHROPIC_API_KEY` 비밀값이 있을 때만 `EVAL_LLM=api`로 켠다(SPEC 4.9). main push에서는 돌리지 않는다. 합칠 때마다 비용이 들고 매일 시험(dailyEval)과 겹치기 때문이다(리뷰 지적). 지금은 키가 없어 곡 연결 시험만 기준과 비교한다(D-034). 구독(`cli`)은 CI에 쓰지 않는다.
   - 권한은 `contents: read`뿐이다.
 - 외부 액션은 모두 커밋 해시(40자)로 고정한다(D-017과 같은 방식). 모든 워크플로 파일에 대해 테스트가 확인한다.
+- PR은 새 커밋이 오면 앞 실행을 취소하고, main은 합친 커밋마다 결과가 남게 취소하지 않는다(리뷰 지적).
+- e2e가 실패하면 Playwright html 보고서와 기록을 7일 남긴다(CI에서만 html 보고서를 만든다).
 - Node는 24(루트 `engines` ≥24.12), pnpm은 `packageManager`의 버전이다. 에뮬레이터 내려받기는 캐시한다.
 - **이유**: SPEC 4.9·6.2의 "CI를 통과한 PR만 합침"을 GitHub가 강제하게 하고, D-025의 깨끗한 사본 검증과 같은 검사를 사람 손 없이도 돌리기 위함이다.

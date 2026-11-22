@@ -12,7 +12,8 @@ export default defineConfig({
   workers: 1,
   fullyParallel: false,
   timeout: 60_000,
-  reporter: 'list',
+  // CI에서는 실패 기록을 올릴 수 있게 html 보고서도 만든다(.github/workflows/ci.yml)
+  reporter: process.env.CI_HTML_REPORT ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     ...devices['Desktop Chrome'],
     baseURL: `http://127.0.0.1:${PORT}`,
