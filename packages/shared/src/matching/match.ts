@@ -295,7 +295,7 @@ export function rankCandidates(
     .sort((a, b) => b.score - a.score || KIND_RANK[a.kind] - KIND_RANK[b.kind]);
 }
 
-export const AMBIGUOUS_TOP_BELOW = 70;
+export const AMBIGUOUS_TOP_BELOW = 95;
 export const AMBIGUOUS_GAP_BELOW = 10;
 
 /**
