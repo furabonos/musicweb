@@ -3,8 +3,9 @@
   "compilerOptions": {
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "outDir": "lib",
-    "rootDir": "src"
+    "noEmit": true
   },
-  "include": ["src"]
+  // 매일 시험(jobs/dailyEval.ts)이 evals/의 문제·채점기를 묶어 쓴다(D-034). 출력은 esbuild가 만든다(tsc는 검사만).
+  "include": ["src", "../evals/matching", "../evals/parse/score.ts", "../evals/parse/cases.json"],
+  "exclude": ["../evals/**/*.test.ts"]
 }

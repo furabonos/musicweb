@@ -1,0 +1,33 @@
+{
+  "_note": "시험 기준 점수(T17, D-034). `pnpm eval`이 이보다 (허용 폭을 넘어) 낮으면 실패한다. `EVAL_UPDATE_BASELINE=1`로 다시 쓴다.",
+  "suites": {
+    "parse": {
+      "score": 0.9,
+      "cases": 20,
+      "passed": 18,
+      "failedIds": ["ko-02", "ko-03"],
+      "tolerance": 0.05,
+      "llm": "claude-code-cli (구독, claude-haiku-5-5)",
+      "measuredAt": "2026-11-22T14:42:08.887Z"
+    },
+    "recommend": {
+      "cases": 20,
+      "score": 1,
+      "aiPicked": 100,
+      "failedIds": [],
+      "tolerance": 0.05,
+      "llm": "claude-code-cli (구독, claude-haiku-5-5)",
+      "measuredAt": "2026-11-22T14:42:08.887Z"
+    },
+    "matching": {
+      "cases": 50,
+      "correct": 49,
+      "score": 0.98,
+      "pendingAi": 0,
+      "failedIds": ["t07"],
+      "tolerance": 0,
+      "llm": "none",
+      "measuredAt": "2026-11-22T14:50:33.868Z"
+    }
+  }
+}

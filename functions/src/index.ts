@@ -8,6 +8,7 @@ export { admin } from './api/admin.js';
 export { playlists, site } from './api/playlists.js';
 export { playback } from './api/playback.js';
 export {
+  dailyEvalNightly,
   ingestNightly,
   linkHealthNightly,
   purgeNightly,

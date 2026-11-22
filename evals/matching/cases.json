@@ -1,0 +1,1815 @@
+{
+  "_note": "곡 연결 시험 문제(T17). 실제 곡 이름에 손으로 만든 영상 후보(영상·채널 ID는 지어낸 값). 실제 YouTube 응답 녹화본은 키가 생기면(T23) 보강한다. 정답은 사람이 보기에 맞는 영상이다(규칙 출력이 아님). expect.videoId null = 연결하지 않아야 함.",
+  "cases": [
+    {
+      "id": "a01",
+      "note": "Topic 공식 음원이 MV·라이브·커버보다 우선",
+      "song": {
+        "title": "Karma Police",
+        "artist": "Radiohead",
+        "lengthMs": 264000,
+        "officialChannelIds": ["UC6d8484eab5a1be28a28606"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000001",
+          "title": "Radiohead - Karma Police (Official Music Video)",
+          "channelId": "UC6d8484eab5a1be28a28606",
+          "channelTitle": "Radiohead",
+          "durationSec": 276
+        },
+        {
+          "videoId": "mv000000002",
+          "title": "Karma Police",
+          "channelId": "UCfd7928f5088e34c5c68f22",
+          "channelTitle": "Radiohead - Topic",
+          "durationSec": 265,
+          "description": "Provided to YouTube by Label\n\nKarma Police · Radiohead"
+        },
+        {
+          "videoId": "mv000000003",
+          "title": "Radiohead - Karma Police (Live at Wembley)",
+          "channelId": "UC6d8484eab5a1be28a28606",
+          "channelTitle": "Radiohead",
+          "durationSec": 304
+        },
+        {
+          "videoId": "mv000000004",
+          "title": "Karma Police - Radiohead cover",
+          "channelId": "UC4c9b09fc32c62100b555c6",
+          "channelTitle": "Random Covers",
+          "durationSec": 264
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000002",
+        "kind": "official_audio"
+      }
+    },
+    {
+      "id": "a02",
+      "note": "Topic 공식 음원이 MV·라이브·커버보다 우선",
+      "song": {
+        "title": "Paranoid Android",
+        "artist": "Radiohead",
+        "lengthMs": 387000,
+        "officialChannelIds": ["UC6d8484eab5a1be28a28606"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000005",
+          "title": "Radiohead - Paranoid Android (Official Music Video)",
+          "channelId": "UC6d8484eab5a1be28a28606",
+          "channelTitle": "Radiohead",
+          "durationSec": 399
+        },
+        {
+          "videoId": "mv000000006",
+          "title": "Paranoid Android",
+          "channelId": "UCfd7928f5088e34c5c68f22",
+          "channelTitle": "Radiohead - Topic",
+          "durationSec": 388,
+          "description": "Provided to YouTube by Label\n\nParanoid Android · Radiohead"
+        },
+        {
+          "videoId": "mv000000007",
+          "title": "Radiohead - Paranoid Android (Live at Wembley)",
+          "channelId": "UC6d8484eab5a1be28a28606",
+          "channelTitle": "Radiohead",
+          "durationSec": 427
+        },
+        {
+          "videoId": "mv000000008",
+          "title": "Paranoid Android - Radiohead cover",
+          "channelId": "UC4c9b09fc32c62100b555c6",
+          "channelTitle": "Random Covers",
+          "durationSec": 387
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000006",
+        "kind": "official_audio"
+      }
+    },
+    {
+      "id": "a03",
+      "note": "Topic 공식 음원이 MV·라이브·커버보다 우선",
+      "song": {
+        "title": "Bohemian Rhapsody",
+        "artist": "Queen",
+        "lengthMs": 355000,
+        "officialChannelIds": ["UC1dc54e0292cc1f28742982"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000009",
+          "title": "Queen - Bohemian Rhapsody (Official Music Video)",
+          "channelId": "UC1dc54e0292cc1f28742982",
+          "channelTitle": "Queen",
+          "durationSec": 367
+        },
+        {
+          "videoId": "mv000000010",
+          "title": "Bohemian Rhapsody",
+          "channelId": "UC1aa02147ea780d6ce599ca",
+          "channelTitle": "Queen - Topic",
+          "durationSec": 356,
+          "description": "Provided to YouTube by Label\n\nBohemian Rhapsody · Queen"
+        },
+        {
+          "videoId": "mv000000011",
+          "title": "Queen - Bohemian Rhapsody (Live at Wembley)",
+          "channelId": "UC1dc54e0292cc1f28742982",
+          "channelTitle": "Queen",
+          "durationSec": 395
+        },
+        {
+          "videoId": "mv000000012",
+          "title": "Bohemian Rhapsody - Queen cover",
+          "channelId": "UC4c9b09fc32c62100b555c6",
+          "channelTitle": "Random Covers",
+          "durationSec": 355
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000010",
+        "kind": "official_audio"
+      }
+    },
+    {
+      "id": "a04",
+      "note": "Topic 공식 음원이 MV·라이브·커버보다 우선",
+      "song": {
+        "title": "Blinding Lights",
+        "artist": "The Weeknd",
+        "lengthMs": 200000,
+        "officialChannelIds": ["UC8c4489030ccd38d8798ab4"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000013",
+          "title": "The Weeknd - Blinding Lights (Official Music Video)",
+          "channelId": "UC8c4489030ccd38d8798ab4",
+          "channelTitle": "The Weeknd",
+          "durationSec": 212
+        },
+        {
+          "videoId": "mv000000014",
+          "title": "Blinding Lights",
+          "channelId": "UC979adcf21a5438b5fb2ee9",
+          "channelTitle": "The Weeknd - Topic",
+          "durationSec": 201,
+          "description": "Provided to YouTube by Label\n\nBlinding Lights · The Weeknd"
+        },
+        {
+          "videoId": "mv000000015",
+          "title": "The Weeknd - Blinding Lights (Live at Wembley)",
+          "channelId": "UC8c4489030ccd38d8798ab4",
+          "channelTitle": "The Weeknd",
+          "durationSec": 240
+        },
+        {
+          "videoId": "mv000000016",
+          "title": "Blinding Lights - The Weeknd cover",
+          "channelId": "UC4c9b09fc32c62100b555c6",
+          "channelTitle": "Random Covers",
+          "durationSec": 200
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000014",
+        "kind": "official_audio"
+      }
+    },
+    {
+      "id": "a05",
+      "note": "Topic 공식 음원이 MV·라이브·커버보다 우선",
+      "song": {
+        "title": "Levitating",
+        "artist": "Dua Lipa",
+        "lengthMs": 203000,
+        "officialChannelIds": ["UCf38bfad2eb61c0f676c4c1"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000017",
+          "title": "Dua Lipa - Levitating (Official Music Video)",
+          "channelId": "UCf38bfad2eb61c0f676c4c1",
+          "channelTitle": "Dua Lipa",
+          "durationSec": 215
+        },
+        {
+          "videoId": "mv000000018",
+          "title": "Levitating",
+          "channelId": "UC50970f1ba470959c4c241b",
+          "channelTitle": "Dua Lipa - Topic",
+          "durationSec": 204,
+          "description": "Provided to YouTube by Label\n\nLevitating · Dua Lipa"
+        },
+        {
+          "videoId": "mv000000019",
+          "title": "Dua Lipa - Levitating (Live at Wembley)",
+          "channelId": "UCf38bfad2eb61c0f676c4c1",
+          "channelTitle": "Dua Lipa",
+          "durationSec": 243
+        },
+        {
+          "videoId": "mv000000020",
+          "title": "Levitating - Dua Lipa cover",
+          "channelId": "UC4c9b09fc32c62100b555c6",
+          "channelTitle": "Random Covers",
+          "durationSec": 203
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000018",
+        "kind": "official_audio"
+      }
+    },
+    {
+      "id": "a06",
+      "note": "Topic 공식 음원이 MV·라이브·커버보다 우선",
+      "song": {
+        "title": "bad guy",
+        "artist": "Billie Eilish",
+        "lengthMs": 194000,
+        "officialChannelIds": ["UC5798cc9e3177d4281ce985"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000021",
+          "title": "Billie Eilish - bad guy (Official Music Video)",
+          "channelId": "UC5798cc9e3177d4281ce985",
+          "channelTitle": "Billie Eilish",
+          "durationSec": 206
+        },
+        {
+          "videoId": "mv000000022",
+          "title": "bad guy",
+          "channelId": "UC8283f700da6b761627729e",
+          "channelTitle": "Billie Eilish - Topic",
+          "durationSec": 195,
+          "description": "Provided to YouTube by Label\n\nbad guy · Billie Eilish"
+        },
+        {
+          "videoId": "mv000000023",
+          "title": "Billie Eilish - bad guy (Live at Wembley)",
+          "channelId": "UC5798cc9e3177d4281ce985",
+          "channelTitle": "Billie Eilish",
+          "durationSec": 234
+        },
+        {
+          "videoId": "mv000000024",
+          "title": "bad guy - Billie Eilish cover",
+          "channelId": "UC4c9b09fc32c62100b555c6",
+          "channelTitle": "Random Covers",
+          "durationSec": 194
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000022",
+        "kind": "official_audio"
+      }
+    },
+    {
+      "id": "b01",
+      "note": "공식 음원이 없으면 공식 채널 MV, 가사 영상·리액션·커버는 아님",
+      "song": {
+        "title": "Gangnam Style",
+        "artist": "PSY",
+        "lengthMs": 252000,
+        "officialChannelIds": ["UC39a130de1a71a605a5694c"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000025",
+          "title": "Gangnam Style lyrics",
+          "channelId": "UC95d10fe5555ea3358c0586",
+          "channelTitle": "LyricsHub",
+          "durationSec": 252
+        },
+        {
+          "videoId": "mv000000026",
+          "title": "PSY - Gangnam Style (Official Music Video)",
+          "channelId": "UC39a130de1a71a605a5694c",
+          "channelTitle": "PSY",
+          "durationSec": 260
+        },
+        {
+          "videoId": "mv000000027",
+          "title": "PSY - Gangnam Style | REACTION",
+          "channelId": "UCedda5800c3f4c3c03f8bca",
+          "channelTitle": "ReactTV",
+          "durationSec": 552
+        },
+        {
+          "videoId": "mv000000028",
+          "title": "Gangnam Style (Piano Cover)",
+          "channelId": "UCb756f8a3edc0c4080bcb1d",
+          "channelTitle": "PianoGuy",
+          "durationSec": 232
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000026",
+        "kind": "official_mv"
+      }
+    },
+    {
+      "id": "b02",
+      "note": "공식 음원이 없으면 공식 채널 MV, 가사 영상·리액션·커버는 아님",
+      "song": {
+        "title": "Dynamite",
+        "artist": "BTS",
+        "lengthMs": 199000,
+        "officialChannelIds": ["UCb04d6d0b0536a1c4935e7a"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000029",
+          "title": "Dynamite lyrics",
+          "channelId": "UC95d10fe5555ea3358c0586",
+          "channelTitle": "LyricsHub",
+          "durationSec": 199
+        },
+        {
+          "videoId": "mv000000030",
+          "title": "BTS - Dynamite (Official Music Video)",
+          "channelId": "UCb04d6d0b0536a1c4935e7a",
+          "channelTitle": "BTS",
+          "durationSec": 207
+        },
+        {
+          "videoId": "mv000000031",
+          "title": "BTS - Dynamite | REACTION",
+          "channelId": "UCedda5800c3f4c3c03f8bca",
+          "channelTitle": "ReactTV",
+          "durationSec": 499
+        },
+        {
+          "videoId": "mv000000032",
+          "title": "Dynamite (Piano Cover)",
+          "channelId": "UCb756f8a3edc0c4080bcb1d",
+          "channelTitle": "PianoGuy",
+          "durationSec": 179
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000030",
+        "kind": "official_mv"
+      }
+    },
+    {
+      "id": "b03",
+      "note": "공식 음원이 없으면 공식 채널 MV, 가사 영상·리액션·커버는 아님",
+      "song": {
+        "title": "Rolling in the Deep",
+        "artist": "Adele",
+        "lengthMs": 228000,
+        "officialChannelIds": ["UCa04fa672ed3097939028b6"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000033",
+          "title": "Rolling in the Deep lyrics",
+          "channelId": "UC95d10fe5555ea3358c0586",
+          "channelTitle": "LyricsHub",
+          "durationSec": 228
+        },
+        {
+          "videoId": "mv000000034",
+          "title": "Adele - Rolling in the Deep (Official Music Video)",
+          "channelId": "UCa04fa672ed3097939028b6",
+          "channelTitle": "Adele",
+          "durationSec": 236
+        },
+        {
+          "videoId": "mv000000035",
+          "title": "Adele - Rolling in the Deep | REACTION",
+          "channelId": "UCedda5800c3f4c3c03f8bca",
+          "channelTitle": "ReactTV",
+          "durationSec": 528
+        },
+        {
+          "videoId": "mv000000036",
+          "title": "Rolling in the Deep (Piano Cover)",
+          "channelId": "UCb756f8a3edc0c4080bcb1d",
+          "channelTitle": "PianoGuy",
+          "durationSec": 208
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000034",
+        "kind": "official_mv"
+      }
+    },
+    {
+      "id": "b04",
+      "note": "공식 음원이 없으면 공식 채널 MV, 가사 영상·리액션·커버는 아님",
+      "song": {
+        "title": "Take On Me",
+        "artist": "a-ha",
+        "lengthMs": 225000,
+        "officialChannelIds": ["UCcf9ac4aee5fe708b134db8"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000037",
+          "title": "Take On Me lyrics",
+          "channelId": "UC95d10fe5555ea3358c0586",
+          "channelTitle": "LyricsHub",
+          "durationSec": 225
+        },
+        {
+          "videoId": "mv000000038",
+          "title": "a-ha - Take On Me (Official Music Video)",
+          "channelId": "UCcf9ac4aee5fe708b134db8",
+          "channelTitle": "a-ha",
+          "durationSec": 233
+        },
+        {
+          "videoId": "mv000000039",
+          "title": "a-ha - Take On Me | REACTION",
+          "channelId": "UCedda5800c3f4c3c03f8bca",
+          "channelTitle": "ReactTV",
+          "durationSec": 525
+        },
+        {
+          "videoId": "mv000000040",
+          "title": "Take On Me (Piano Cover)",
+          "channelId": "UCb756f8a3edc0c4080bcb1d",
+          "channelTitle": "PianoGuy",
+          "durationSec": 205
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000038",
+        "kind": "official_mv"
+      }
+    },
+    {
+      "id": "b05",
+      "note": "공식 음원이 없으면 공식 채널 MV, 가사 영상·리액션·커버는 아님",
+      "song": {
+        "title": "Uptown Funk",
+        "artist": "Mark Ronson",
+        "lengthMs": 270000,
+        "officialChannelIds": ["UC87967d17ee0efa221d5975"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000041",
+          "title": "Uptown Funk lyrics",
+          "channelId": "UC95d10fe5555ea3358c0586",
+          "channelTitle": "LyricsHub",
+          "durationSec": 270
+        },
+        {
+          "videoId": "mv000000042",
+          "title": "Mark Ronson - Uptown Funk (Official Music Video)",
+          "channelId": "UC87967d17ee0efa221d5975",
+          "channelTitle": "Mark Ronson",
+          "durationSec": 278
+        },
+        {
+          "videoId": "mv000000043",
+          "title": "Mark Ronson - Uptown Funk | REACTION",
+          "channelId": "UCedda5800c3f4c3c03f8bca",
+          "channelTitle": "ReactTV",
+          "durationSec": 570
+        },
+        {
+          "videoId": "mv000000044",
+          "title": "Uptown Funk (Piano Cover)",
+          "channelId": "UCb756f8a3edc0c4080bcb1d",
+          "channelTitle": "PianoGuy",
+          "durationSec": 250
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000042",
+        "kind": "official_mv"
+      }
+    },
+    {
+      "id": "b06",
+      "note": "공식 음원이 없으면 공식 채널 MV, 가사 영상·리액션·커버는 아님",
+      "song": {
+        "title": "Thriller",
+        "artist": "Michael Jackson",
+        "lengthMs": 357000,
+        "officialChannelIds": ["UC6445b66487376b0f9eba46"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000045",
+          "title": "Thriller lyrics",
+          "channelId": "UC95d10fe5555ea3358c0586",
+          "channelTitle": "LyricsHub",
+          "durationSec": 357
+        },
+        {
+          "videoId": "mv000000046",
+          "title": "Michael Jackson - Thriller (Official Music Video)",
+          "channelId": "UC6445b66487376b0f9eba46",
+          "channelTitle": "Michael Jackson",
+          "durationSec": 365
+        },
+        {
+          "videoId": "mv000000047",
+          "title": "Michael Jackson - Thriller | REACTION",
+          "channelId": "UCedda5800c3f4c3c03f8bca",
+          "channelTitle": "ReactTV",
+          "durationSec": 657
+        },
+        {
+          "videoId": "mv000000048",
+          "title": "Thriller (Piano Cover)",
+          "channelId": "UCb756f8a3edc0c4080bcb1d",
+          "channelTitle": "PianoGuy",
+          "durationSec": 337
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000046",
+        "kind": "official_mv"
+      }
+    },
+    {
+      "id": "c01",
+      "note": "라이브·커버·리믹스만 있으면 기본 조건에서는 연결 안 함",
+      "song": {
+        "title": "Wonderwall",
+        "artist": "Oasis",
+        "lengthMs": 258000,
+        "officialChannelIds": ["UC55ecd51a2410f49c09855d"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000049",
+          "title": "Oasis - Wonderwall (Live at Knebworth)",
+          "channelId": "UC55ecd51a2410f49c09855d",
+          "channelTitle": "Oasis",
+          "durationSec": 288
+        },
+        {
+          "videoId": "mv000000050",
+          "title": "Wonderwall cover",
+          "channelId": "UCa493afc9343e27a03a8ba8",
+          "channelTitle": "Acoustic Covers",
+          "durationSec": 258
+        },
+        {
+          "videoId": "mv000000051",
+          "title": "Wonderwall (Remix)",
+          "channelId": "UC2cc9b8157a323d3d594c1f",
+          "channelTitle": "DJ Mix",
+          "durationSec": 218
+        }
+      ],
+      "expect": {
+        "videoId": null
+      }
+    },
+    {
+      "id": "c02",
+      "note": "라이브·커버·리믹스만 있으면 기본 조건에서는 연결 안 함",
+      "song": {
+        "title": "Creep",
+        "artist": "Radiohead",
+        "lengthMs": 238000,
+        "officialChannelIds": ["UC6d8484eab5a1be28a28606"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000052",
+          "title": "Radiohead - Creep (Live in Paris)",
+          "channelId": "UC6d8484eab5a1be28a28606",
+          "channelTitle": "Radiohead",
+          "durationSec": 268
+        },
+        {
+          "videoId": "mv000000053",
+          "title": "Creep - Cover by Sam",
+          "channelId": "UC51476c5d0f116f5d53bb04",
+          "channelTitle": "Sam Music",
+          "durationSec": 238
+        },
+        {
+          "videoId": "mv000000054",
+          "title": "Creep (sped up)",
+          "channelId": "UC78f4464c67f8660b5af569",
+          "channelTitle": "Speed Songs",
+          "durationSec": 198
+        }
+      ],
+      "expect": {
+        "videoId": null
+      }
+    },
+    {
+      "id": "c03",
+      "note": "라이브·커버·리믹스만 있으면 기본 조건에서는 연결 안 함",
+      "song": {
+        "title": "Yellow",
+        "artist": "Coldplay",
+        "lengthMs": 269000,
+        "officialChannelIds": ["UC2584c9df67840c0f1c6be6"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000055",
+          "title": "Coldplay - Yellow Live from Glastonbury",
+          "channelId": "UC2584c9df67840c0f1c6be6",
+          "channelTitle": "Coldplay",
+          "durationSec": 299
+        },
+        {
+          "videoId": "mv000000056",
+          "title": "Yellow | Cover",
+          "channelId": "UC35036527f809ea3ddfb9e9",
+          "channelTitle": "Couch Sessions",
+          "durationSec": 269
+        },
+        {
+          "videoId": "mv000000057",
+          "title": "Yellow (Slowed + Reverb)",
+          "channelId": "UC53e6f9526008dd0e7d92a1",
+          "channelTitle": "Slowed Vibes",
+          "durationSec": 229
+        }
+      ],
+      "expect": {
+        "videoId": null
+      }
+    },
+    {
+      "id": "c04",
+      "note": "라이브·커버·리믹스만 있으면 기본 조건에서는 연결 안 함",
+      "song": {
+        "title": "Africa",
+        "artist": "Toto",
+        "lengthMs": 295000,
+        "officialChannelIds": ["UC60f79ebcfddede062b7e79"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000058",
+          "title": "Toto - Africa Live in Amsterdam",
+          "channelId": "UC60f79ebcfddede062b7e79",
+          "channelTitle": "Toto",
+          "durationSec": 325
+        },
+        {
+          "videoId": "mv000000059",
+          "title": "Africa (Cover)",
+          "channelId": "UC73bad6b856df7519364f88",
+          "channelTitle": "Weezer Fans",
+          "durationSec": 295
+        },
+        {
+          "videoId": "mv000000060",
+          "title": "Africa (Nightcore)",
+          "channelId": "UC73f25f552ebccfb649c66f",
+          "channelTitle": "Nightcore Hub",
+          "durationSec": 255
+        }
+      ],
+      "expect": {
+        "videoId": null
+      }
+    },
+    {
+      "id": "c05",
+      "note": "라이브·커버·리믹스만 있으면 기본 조건에서는 연결 안 함",
+      "song": {
+        "title": "Numb",
+        "artist": "Linkin Park",
+        "lengthMs": 187000,
+        "officialChannelIds": ["UC9fe9382587996ac7346e81"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000061",
+          "title": "Linkin Park - Numb Live at Milton Keynes",
+          "channelId": "UC9fe9382587996ac7346e81",
+          "channelTitle": "Linkin Park",
+          "durationSec": 217
+        },
+        {
+          "videoId": "mv000000062",
+          "title": "Numb cover",
+          "channelId": "UCbbeaeb4f344a8c96da5e6f",
+          "channelTitle": "Garage Band",
+          "durationSec": 187
+        },
+        {
+          "videoId": "mv000000063",
+          "title": "Numb (8D Audio)",
+          "channelId": "UC6c88ad3bb66b0692780682",
+          "channelTitle": "8D Tunes",
+          "durationSec": 147
+        }
+      ],
+      "expect": {
+        "videoId": null
+      }
+    },
+    {
+      "id": "c06",
+      "note": "라이브·커버·리믹스만 있으면 기본 조건에서는 연결 안 함",
+      "song": {
+        "title": "Seven Nation Army",
+        "artist": "The White Stripes",
+        "lengthMs": 232000,
+        "officialChannelIds": ["UC619ebfbeac5092dada9c88"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000064",
+          "title": "The White Stripes - Seven Nation Army Live Under Blackpool Lights",
+          "channelId": "UC619ebfbeac5092dada9c88",
+          "channelTitle": "The White Stripes",
+          "durationSec": 262
+        },
+        {
+          "videoId": "mv000000065",
+          "title": "Seven Nation Army cover",
+          "channelId": "UC67c80ecff3fddef781e8cf",
+          "channelTitle": "Drum Cover Kid",
+          "durationSec": 232
+        },
+        {
+          "videoId": "mv000000066",
+          "title": "Seven Nation Army (Remix)",
+          "channelId": "UC9638cbccfd4c1182591f95",
+          "channelTitle": "Bass Boosted",
+          "durationSec": 192
+        }
+      ],
+      "expect": {
+        "videoId": null
+      }
+    },
+    {
+      "id": "d01",
+      "note": "라이브 포함 요청이면 공식 라이브를 연결(커버는 아님)",
+      "song": {
+        "title": "Fake Plastic Trees",
+        "artist": "Radiohead",
+        "lengthMs": 290000,
+        "officialChannelIds": ["UC6d8484eab5a1be28a28606"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000067",
+          "title": "Radiohead - Fake Plastic Trees (Live at Glastonbury)",
+          "channelId": "UC6d8484eab5a1be28a28606",
+          "channelTitle": "Radiohead",
+          "durationSec": 315
+        },
+        {
+          "videoId": "mv000000068",
+          "title": "Fake Plastic Trees cover",
+          "channelId": "UC07e18e7a967671faec8101",
+          "channelTitle": "Cover Club",
+          "durationSec": 290
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000067",
+        "kind": "live"
+      },
+      "include": {
+        "live": true,
+        "cover": false,
+        "remix": false
+      }
+    },
+    {
+      "id": "d02",
+      "note": "라이브 포함 요청이면 공식 라이브를 연결(커버는 아님)",
+      "song": {
+        "title": "Clocks",
+        "artist": "Coldplay",
+        "lengthMs": 307000,
+        "officialChannelIds": ["UC2584c9df67840c0f1c6be6"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000069",
+          "title": "Coldplay - Clocks (Live at Glastonbury)",
+          "channelId": "UC2584c9df67840c0f1c6be6",
+          "channelTitle": "Coldplay",
+          "durationSec": 332
+        },
+        {
+          "videoId": "mv000000070",
+          "title": "Clocks cover",
+          "channelId": "UC07e18e7a967671faec8101",
+          "channelTitle": "Cover Club",
+          "durationSec": 307
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000069",
+        "kind": "live"
+      },
+      "include": {
+        "live": true,
+        "cover": false,
+        "remix": false
+      }
+    },
+    {
+      "id": "d03",
+      "note": "라이브 포함 요청이면 공식 라이브를 연결(커버는 아님)",
+      "song": {
+        "title": "In the End",
+        "artist": "Linkin Park",
+        "lengthMs": 216000,
+        "officialChannelIds": ["UC9fe9382587996ac7346e81"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000071",
+          "title": "Linkin Park - In the End (Live at Glastonbury)",
+          "channelId": "UC9fe9382587996ac7346e81",
+          "channelTitle": "Linkin Park",
+          "durationSec": 241
+        },
+        {
+          "videoId": "mv000000072",
+          "title": "In the End cover",
+          "channelId": "UC07e18e7a967671faec8101",
+          "channelTitle": "Cover Club",
+          "durationSec": 216
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000071",
+        "kind": "live"
+      },
+      "include": {
+        "live": true,
+        "cover": false,
+        "remix": false
+      }
+    },
+    {
+      "id": "e01",
+      "note": "리믹스 포함 요청이면 공식 리믹스를 연결",
+      "song": {
+        "title": "Don't Start Now",
+        "artist": "Dua Lipa",
+        "lengthMs": 183000,
+        "officialChannelIds": ["UCf38bfad2eb61c0f676c4c1"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000073",
+          "title": "Dua Lipa - Don't Start Now (Purple Disco Machine Remix)",
+          "channelId": "UCf38bfad2eb61c0f676c4c1",
+          "channelTitle": "Dua Lipa",
+          "durationSec": 203
+        },
+        {
+          "videoId": "mv000000074",
+          "title": "Don't Start Now cover",
+          "channelId": "UC07e18e7a967671faec8101",
+          "channelTitle": "Cover Club",
+          "durationSec": 183
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000073",
+        "kind": "remix"
+      },
+      "include": {
+        "live": false,
+        "cover": false,
+        "remix": true
+      }
+    },
+    {
+      "id": "e02",
+      "note": "리믹스 포함 요청이면 공식 리믹스를 연결",
+      "song": {
+        "title": "Save Your Tears",
+        "artist": "The Weeknd",
+        "lengthMs": 215000,
+        "officialChannelIds": ["UC8c4489030ccd38d8798ab4"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000075",
+          "title": "The Weeknd - Save Your Tears (Remix)",
+          "channelId": "UC8c4489030ccd38d8798ab4",
+          "channelTitle": "The Weeknd",
+          "durationSec": 235
+        },
+        {
+          "videoId": "mv000000076",
+          "title": "Save Your Tears cover",
+          "channelId": "UC07e18e7a967671faec8101",
+          "channelTitle": "Cover Club",
+          "durationSec": 215
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000075",
+        "kind": "remix"
+      },
+      "include": {
+        "live": false,
+        "cover": false,
+        "remix": true
+      }
+    },
+    {
+      "id": "f01",
+      "note": "한국어 제목·다국어 제목의 공식 MV (라이브 클립·커버는 아님)",
+      "song": {
+        "title": "좋은 날",
+        "artist": "아이유",
+        "lengthMs": 233000,
+        "aliases": ["Good Day"],
+        "artistAliases": ["IU"],
+        "officialChannelIds": ["UCd787fcbcc2054b315b0d44"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000077",
+          "title": "[MV] IU(아이유) _ 좋은 날 (Good Day)",
+          "channelId": "UCd787fcbcc2054b315b0d44",
+          "channelTitle": "IU",
+          "durationSec": 243
+        },
+        {
+          "videoId": "mv000000078",
+          "title": "IU(아이유) - 좋은 날 (Good Day) 라이브 (Live Clip)",
+          "channelId": "UCb0461b8c4b8306b8a90dcd",
+          "channelTitle": "KBS Kpop",
+          "durationSec": 253
+        },
+        {
+          "videoId": "mv000000079",
+          "title": "좋은 날 (Good Day) 커버 cover by 보컬",
+          "channelId": "UC17c63f0d344038927a4223",
+          "channelTitle": "보컬커버",
+          "durationSec": 233
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000077",
+        "kind": "official_mv"
+      }
+    },
+    {
+      "id": "f02",
+      "note": "한국어 제목·다국어 제목의 공식 MV (라이브 클립·커버는 아님)",
+      "song": {
+        "title": "밤편지",
+        "artist": "아이유",
+        "lengthMs": 253000,
+        "aliases": ["Through the Night"],
+        "artistAliases": ["IU"],
+        "officialChannelIds": ["UCd787fcbcc2054b315b0d44"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000080",
+          "title": "[MV] IU(아이유) _ 밤편지 (Through the Night)",
+          "channelId": "UCd787fcbcc2054b315b0d44",
+          "channelTitle": "IU",
+          "durationSec": 263
+        },
+        {
+          "videoId": "mv000000081",
+          "title": "IU(아이유) - 밤편지 (Through the Night) 라이브 (Live Clip)",
+          "channelId": "UCb0461b8c4b8306b8a90dcd",
+          "channelTitle": "KBS Kpop",
+          "durationSec": 273
+        },
+        {
+          "videoId": "mv000000082",
+          "title": "밤편지 (Through the Night) 커버 cover by 보컬",
+          "channelId": "UC17c63f0d344038927a4223",
+          "channelTitle": "보컬커버",
+          "durationSec": 253
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000080",
+        "kind": "official_mv"
+      }
+    },
+    {
+      "id": "f03",
+      "note": "한국어 제목·다국어 제목의 공식 MV (라이브 클립·커버는 아님)",
+      "song": {
+        "title": "Love Dive",
+        "artist": "IVE",
+        "lengthMs": 177000,
+        "artistAliases": ["아이브"],
+        "officialChannelIds": ["UC42a1a78ea7b691fd2d6dfb"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000083",
+          "title": "[MV] 아이브(IVE) _ Love Dive",
+          "channelId": "UC42a1a78ea7b691fd2d6dfb",
+          "channelTitle": "아이브",
+          "durationSec": 187
+        },
+        {
+          "videoId": "mv000000084",
+          "title": "아이브(IVE) - Love Dive 라이브 (Live Clip)",
+          "channelId": "UCb0461b8c4b8306b8a90dcd",
+          "channelTitle": "KBS Kpop",
+          "durationSec": 197
+        },
+        {
+          "videoId": "mv000000085",
+          "title": "Love Dive 커버 cover by 보컬",
+          "channelId": "UC17c63f0d344038927a4223",
+          "channelTitle": "보컬커버",
+          "durationSec": 177
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000083",
+        "kind": "official_mv"
+      }
+    },
+    {
+      "id": "f04",
+      "note": "한국어 제목·다국어 제목의 공식 MV (라이브 클립·커버는 아님)",
+      "song": {
+        "title": "Hype Boy",
+        "artist": "NewJeans",
+        "lengthMs": 179000,
+        "artistAliases": ["뉴진스"],
+        "officialChannelIds": ["UCdba10c31a8bbd51cf421eb"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000086",
+          "title": "[MV] 뉴진스(NewJeans) _ Hype Boy",
+          "channelId": "UCdba10c31a8bbd51cf421eb",
+          "channelTitle": "뉴진스",
+          "durationSec": 189
+        },
+        {
+          "videoId": "mv000000087",
+          "title": "뉴진스(NewJeans) - Hype Boy 라이브 (Live Clip)",
+          "channelId": "UCb0461b8c4b8306b8a90dcd",
+          "channelTitle": "KBS Kpop",
+          "durationSec": 199
+        },
+        {
+          "videoId": "mv000000088",
+          "title": "Hype Boy 커버 cover by 보컬",
+          "channelId": "UC17c63f0d344038927a4223",
+          "channelTitle": "보컬커버",
+          "durationSec": 179
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000086",
+        "kind": "official_mv"
+      }
+    },
+    {
+      "id": "f05",
+      "note": "한국어 제목·다국어 제목의 공식 MV (라이브 클립·커버는 아님)",
+      "song": {
+        "title": "봄날",
+        "artist": "방탄소년단",
+        "lengthMs": 274000,
+        "aliases": ["Spring Day"],
+        "artistAliases": ["BTS"],
+        "officialChannelIds": ["UC3784f9642d005469e9ba66"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000089",
+          "title": "[MV] BTS(방탄소년단) _ 봄날 (Spring Day)",
+          "channelId": "UC3784f9642d005469e9ba66",
+          "channelTitle": "BTS",
+          "durationSec": 284
+        },
+        {
+          "videoId": "mv000000090",
+          "title": "BTS(방탄소년단) - 봄날 (Spring Day) 라이브 (Live Clip)",
+          "channelId": "UCb0461b8c4b8306b8a90dcd",
+          "channelTitle": "KBS Kpop",
+          "durationSec": 294
+        },
+        {
+          "videoId": "mv000000091",
+          "title": "봄날 (Spring Day) 커버 cover by 보컬",
+          "channelId": "UC17c63f0d344038927a4223",
+          "channelTitle": "보컬커버",
+          "durationSec": 274
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000089",
+        "kind": "official_mv"
+      }
+    },
+    {
+      "id": "g01",
+      "note": "일본어 제목 공식 MV (歌ってみた 커버·라이브 영상은 아님)",
+      "song": {
+        "title": "夜に駆ける",
+        "artist": "YOASOBI",
+        "lengthMs": 261000,
+        "aliases": ["Racing into the Night"],
+        "officialChannelIds": ["UCda39bf6a567637f7905fb0"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000092",
+          "title": "YOASOBI「夜に駆ける」Official Music Video",
+          "channelId": "UCda39bf6a567637f7905fb0",
+          "channelTitle": "YOASOBI",
+          "durationSec": 266
+        },
+        {
+          "videoId": "mv000000093",
+          "title": "夜に駆ける / YOASOBI 歌ってみた",
+          "channelId": "UC552fc9d3c20875e751d0b9",
+          "channelTitle": "歌い手",
+          "durationSec": 261
+        },
+        {
+          "videoId": "mv000000094",
+          "title": "YOASOBI - 夜に駆ける (ライブ映像)",
+          "channelId": "UCda39bf6a567637f7905fb0",
+          "channelTitle": "YOASOBI",
+          "durationSec": 291
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000092",
+        "kind": "official_mv"
+      }
+    },
+    {
+      "id": "g02",
+      "note": "일본어 제목 공식 MV (歌ってみた 커버·라이브 영상은 아님)",
+      "song": {
+        "title": "Lemon",
+        "artist": "米津玄師",
+        "lengthMs": 256000,
+        "officialChannelIds": ["UC131274d80cc9ccc11afbec"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000095",
+          "title": "米津玄師「Lemon」Official Music Video",
+          "channelId": "UC131274d80cc9ccc11afbec",
+          "channelTitle": "米津玄師",
+          "durationSec": 261
+        },
+        {
+          "videoId": "mv000000096",
+          "title": "Lemon / 米津玄師 歌ってみた",
+          "channelId": "UC552fc9d3c20875e751d0b9",
+          "channelTitle": "歌い手",
+          "durationSec": 256
+        },
+        {
+          "videoId": "mv000000097",
+          "title": "米津玄師 - Lemon (ライブ映像)",
+          "channelId": "UC131274d80cc9ccc11afbec",
+          "channelTitle": "米津玄師",
+          "durationSec": 286
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000095",
+        "kind": "official_mv"
+      }
+    },
+    {
+      "id": "g03",
+      "note": "일본어 제목 공식 MV (歌ってみた 커버·라이브 영상은 아님)",
+      "song": {
+        "title": "怪物",
+        "artist": "YOASOBI",
+        "lengthMs": 205000,
+        "aliases": ["Monster"],
+        "officialChannelIds": ["UCda39bf6a567637f7905fb0"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000098",
+          "title": "YOASOBI「怪物」Official Music Video",
+          "channelId": "UCda39bf6a567637f7905fb0",
+          "channelTitle": "YOASOBI",
+          "durationSec": 210
+        },
+        {
+          "videoId": "mv000000099",
+          "title": "怪物 / YOASOBI 歌ってみた",
+          "channelId": "UC552fc9d3c20875e751d0b9",
+          "channelTitle": "歌い手",
+          "durationSec": 205
+        },
+        {
+          "videoId": "mv000000100",
+          "title": "YOASOBI - 怪物 (ライブ映像)",
+          "channelId": "UCda39bf6a567637f7905fb0",
+          "channelTitle": "YOASOBI",
+          "durationSec": 235
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000098",
+        "kind": "official_mv"
+      }
+    },
+    {
+      "id": "h01",
+      "note": "피처링이 붙은 공식 음원, 반주판은 아님",
+      "song": {
+        "title": "Sprinter",
+        "artist": "Dave",
+        "lengthMs": 229000,
+        "officialChannelIds": ["UCb11f7b8b3a408dfb88335e"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000101",
+          "title": "Dave & Central Cee - Sprinter (Official Audio)",
+          "channelId": "UCb11f7b8b3a408dfb88335e",
+          "channelTitle": "Dave",
+          "durationSec": 230
+        },
+        {
+          "videoId": "mv000000102",
+          "title": "Sprinter (Instrumental)",
+          "channelId": "UC46cefac1cebd7aa33e2a3e",
+          "channelTitle": "Beat Maker",
+          "durationSec": 229
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000101",
+        "kind": "official_audio"
+      }
+    },
+    {
+      "id": "h02",
+      "note": "피처링이 붙은 공식 음원, 반주판은 아님",
+      "song": {
+        "title": "Stay",
+        "artist": "The Kid LAROI",
+        "lengthMs": 141000,
+        "officialChannelIds": ["UC371ca6c592c80e98df7d7b"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000103",
+          "title": "The Kid LAROI, Justin Bieber - STAY (Official Audio)",
+          "channelId": "UC371ca6c592c80e98df7d7b",
+          "channelTitle": "The Kid LAROI",
+          "durationSec": 142
+        },
+        {
+          "videoId": "mv000000104",
+          "title": "Stay (Instrumental)",
+          "channelId": "UC46cefac1cebd7aa33e2a3e",
+          "channelTitle": "Beat Maker",
+          "durationSec": 141
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000103",
+        "kind": "official_audio"
+      }
+    },
+    {
+      "id": "h03",
+      "note": "피처링이 붙은 공식 음원, 반주판은 아님",
+      "song": {
+        "title": "Peaches",
+        "artist": "Justin Bieber",
+        "lengthMs": 198000,
+        "officialChannelIds": ["UC1981dc7b5b3903fbc2bb6c"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000105",
+          "title": "Justin Bieber - Peaches ft. Daniel Caesar, Giveon (Official Audio)",
+          "channelId": "UC1981dc7b5b3903fbc2bb6c",
+          "channelTitle": "Justin Bieber",
+          "durationSec": 199
+        },
+        {
+          "videoId": "mv000000106",
+          "title": "Peaches (Instrumental)",
+          "channelId": "UC46cefac1cebd7aa33e2a3e",
+          "channelTitle": "Beat Maker",
+          "durationSec": 198
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000105",
+        "kind": "official_audio"
+      }
+    },
+    {
+      "id": "i01",
+      "note": "곡 제목의 Live는 라이브 신호가 아님",
+      "song": {
+        "title": "Live Forever",
+        "artist": "Oasis",
+        "lengthMs": 276000,
+        "officialChannelIds": ["UC55ecd51a2410f49c09855d"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000107",
+          "title": "Live Forever",
+          "channelId": "UC6b3bad39e7101e7a31e266",
+          "channelTitle": "Oasis - Topic",
+          "durationSec": 277,
+          "description": "Provided to YouTube by Label\n\nLive Forever · Oasis"
+        },
+        {
+          "videoId": "mv000000108",
+          "title": "Oasis - Live Forever (Live at Maine Road)",
+          "channelId": "UC55ecd51a2410f49c09855d",
+          "channelTitle": "Oasis",
+          "durationSec": 300
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000107",
+        "kind": "official_audio"
+      }
+    },
+    {
+      "id": "i02",
+      "note": "곡 제목의 Cover는 커버 신호가 아님",
+      "song": {
+        "title": "Cover Me",
+        "artist": "Bruce Springsteen",
+        "lengthMs": 207000,
+        "officialChannelIds": ["UC03fa82b86a4850da666164"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000109",
+          "title": "Cover Me",
+          "channelId": "UC4ab5be19f6fdcbce98917b",
+          "channelTitle": "Bruce Springsteen - Topic",
+          "durationSec": 207,
+          "description": "Provided to YouTube by Label\n\nCover Me · Bruce Springsteen"
+        },
+        {
+          "videoId": "mv000000110",
+          "title": "Cover Me (cover) - acoustic",
+          "channelId": "UCa2823d857521afeadbc187",
+          "channelTitle": "Guitar Kid",
+          "durationSec": 200
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000109",
+        "kind": "official_audio"
+      }
+    },
+    {
+      "id": "i03",
+      "note": "티저·쇼츠·60초 미만은 연결하지 않음",
+      "song": {
+        "title": "Butter",
+        "artist": "BTS",
+        "lengthMs": 164000,
+        "officialChannelIds": ["UCb04d6d0b0536a1c4935e7a"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000111",
+          "title": "BTS - Butter Official Teaser",
+          "channelId": "UCb04d6d0b0536a1c4935e7a",
+          "channelTitle": "BTS",
+          "durationSec": 30
+        },
+        {
+          "videoId": "mv000000112",
+          "title": "Butter #shorts",
+          "channelId": "UCb04d6d0b0536a1c4935e7a",
+          "channelTitle": "BTS",
+          "durationSec": 15
+        }
+      ],
+      "expect": {
+        "videoId": null
+      }
+    },
+    {
+      "id": "i04",
+      "note": "반주(Inst.)·노래방판만 있으면 연결 안 함",
+      "song": {
+        "title": "OMG",
+        "artist": "NewJeans",
+        "lengthMs": 212000,
+        "artistAliases": ["뉴진스"],
+        "officialChannelIds": ["UCdba10c31a8bbd51cf421eb"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000113",
+          "title": "NewJeans - OMG (Inst.)",
+          "channelId": "UCdba10c31a8bbd51cf421eb",
+          "channelTitle": "NewJeans",
+          "durationSec": 212
+        },
+        {
+          "videoId": "mv000000114",
+          "title": "OMG 노래방 MR",
+          "channelId": "UCe45b36c32d27194705088e",
+          "channelTitle": "노래방TV",
+          "durationSec": 213
+        }
+      ],
+      "expect": {
+        "videoId": null
+      }
+    },
+    {
+      "id": "i05",
+      "note": "다른 가수의 Topic(같은 제목)은 커버라서 아님, 원곡 Topic을 연결",
+      "song": {
+        "title": "Hallelujah",
+        "artist": "Leonard Cohen",
+        "lengthMs": 279000,
+        "officialChannelIds": ["UC34cef98f7b2cb1ca9aed72"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000115",
+          "title": "Hallelujah",
+          "channelId": "UCa2e58257c12fcb913c24dc",
+          "channelTitle": "Jeff Buckley - Topic",
+          "durationSec": 413,
+          "description": "Provided to YouTube by Label\n\nHallelujah · Jeff Buckley"
+        },
+        {
+          "videoId": "mv000000116",
+          "title": "Hallelujah",
+          "channelId": "UC97175d9726bc210ed972d2",
+          "channelTitle": "Leonard Cohen - Topic",
+          "durationSec": 280,
+          "description": "Provided to YouTube by Label\n\nHallelujah · Leonard Cohen"
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000116",
+        "kind": "official_audio"
+      }
+    },
+    {
+      "id": "i06",
+      "note": "제목이 다른 곡(같은 가수)은 후보가 아님",
+      "song": {
+        "title": "Shape of You",
+        "artist": "Ed Sheeran",
+        "lengthMs": 234000,
+        "officialChannelIds": ["UCb74c6a7dfecafffb5d5c7a"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000117",
+          "title": "Perfect",
+          "channelId": "UCe47adcef5df93a2e8897f0",
+          "channelTitle": "Ed Sheeran - Topic",
+          "durationSec": 263,
+          "description": "Provided to YouTube by Label\n\nPerfect · Ed Sheeran"
+        },
+        {
+          "videoId": "mv000000118",
+          "title": "Ed Sheeran - Castle on the Hill [Official Audio]",
+          "channelId": "UCb74c6a7dfecafffb5d5c7a",
+          "channelTitle": "Ed Sheeran",
+          "durationSec": 261
+        }
+      ],
+      "expect": {
+        "videoId": null
+      }
+    },
+    {
+      "id": "i07",
+      "note": "공식 채널이라도 비하인드·인터뷰는 아님, MV를 연결",
+      "song": {
+        "title": "Bad Romance",
+        "artist": "Lady Gaga",
+        "lengthMs": 294000,
+        "officialChannelIds": ["UCc8f09c22cd777f37359888"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000119",
+          "title": "Lady Gaga - Bad Romance (Behind The Scenes)",
+          "channelId": "UCc8f09c22cd777f37359888",
+          "channelTitle": "Lady Gaga",
+          "durationSec": 420
+        },
+        {
+          "videoId": "mv000000120",
+          "title": "Lady Gaga - Bad Romance (Official Music Video)",
+          "channelId": "UCc8f09c22cd777f37359888",
+          "channelTitle": "Lady Gaga",
+          "durationSec": 308
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000120",
+        "kind": "official_mv"
+      }
+    },
+    {
+      "id": "i08",
+      "note": "짧은 제목: Up (Sped Up)은 리믹스라 기본 조건에서 아님, 원곡 Topic",
+      "song": {
+        "title": "Up",
+        "artist": "Cardi B",
+        "lengthMs": 156000,
+        "officialChannelIds": ["UC02e238bb01ae8e93b85328"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000121",
+          "title": "Cardi B - Up (Sped Up)",
+          "channelId": "UCa1c587ce2eb4c89e91a812",
+          "channelTitle": "Speed Songs",
+          "durationSec": 120
+        },
+        {
+          "videoId": "mv000000122",
+          "title": "Up",
+          "channelId": "UCd8ceb2d05a02cb1f651e3d",
+          "channelTitle": "Cardi B - Topic",
+          "durationSec": 156,
+          "description": "Provided to YouTube by Label\n\nUp · Cardi B"
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000122",
+        "kind": "official_audio"
+      }
+    },
+    {
+      "id": "t01",
+      "note": "남의 채널이 Provided to YouTube by 설명을 베껴 올린 영상은 공식 음원이 아님, 진짜 Topic을 연결",
+      "song": {
+        "title": "Hey Ya!",
+        "artist": "Outkast",
+        "lengthMs": 235000,
+        "officialChannelIds": ["UC9f802f67272d4420bae1ae"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000123",
+          "title": "Hey Ya!",
+          "channelId": "UC1ce5cd81d5b40f265f2ebe",
+          "channelTitle": "Music Archive 2000s",
+          "durationSec": 236,
+          "description": "Provided to YouTube by Arista\n\nHey Ya! · Outkast"
+        },
+        {
+          "videoId": "mv000000124",
+          "title": "Hey Ya!",
+          "channelId": "UC65d9dfc8ba5767b8573897",
+          "channelTitle": "Outkast - Topic",
+          "durationSec": 235,
+          "description": "Provided to YouTube by Label\n\nHey Ya! · Outkast"
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000124",
+        "kind": "official_audio"
+      }
+    },
+    {
+      "id": "t02",
+      "note": "Topic 채널의 (Live) 곡은 라이브라서 기본 조건에서 아님, 공식 MV를 연결",
+      "song": {
+        "title": "Purple Rain",
+        "artist": "Prince",
+        "lengthMs": 521000,
+        "officialChannelIds": ["UC05e86f5e40380d3ae83a06"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000125",
+          "title": "Purple Rain (Live)",
+          "channelId": "UC9aa8a3045a5a7c08667461",
+          "channelTitle": "Prince - Topic",
+          "durationSec": 540,
+          "description": "Provided to YouTube by Label\n\nPurple Rain (Live) · Prince"
+        },
+        {
+          "videoId": "mv000000126",
+          "title": "Prince - Purple Rain (Official Music Video)",
+          "channelId": "UC05e86f5e40380d3ae83a06",
+          "channelTitle": "Prince",
+          "durationSec": 525
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000126",
+        "kind": "official_mv"
+      }
+    },
+    {
+      "id": "t03",
+      "note": "공식 채널의 sped up은 리믹스, 원곡 Topic을 연결",
+      "song": {
+        "title": "Heat Waves",
+        "artist": "Glass Animals",
+        "lengthMs": 239000,
+        "officialChannelIds": ["UC384228f8b9fa99d740227f"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000127",
+          "title": "Glass Animals - Heat Waves (Sped Up)",
+          "channelId": "UC384228f8b9fa99d740227f",
+          "channelTitle": "Glass Animals",
+          "durationSec": 190
+        },
+        {
+          "videoId": "mv000000128",
+          "title": "Heat Waves",
+          "channelId": "UC3f3deff67a12fec8cd979e",
+          "channelTitle": "Glass Animals - Topic",
+          "durationSec": 239,
+          "description": "Provided to YouTube by Label\n\nHeat Waves · Glass Animals"
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000128",
+        "kind": "official_audio"
+      }
+    },
+    {
+      "id": "t04",
+      "note": "공식 채널이라도 Acoustic·Japanese ver.만 있으면 연결 안 함",
+      "song": {
+        "title": "Stay With Me",
+        "artist": "Sam Smith",
+        "lengthMs": 172000,
+        "officialChannelIds": ["UC87f848b300003a08a453f6"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000129",
+          "title": "Sam Smith - Stay With Me (Acoustic Version)",
+          "channelId": "UC87f848b300003a08a453f6",
+          "channelTitle": "Sam Smith",
+          "durationSec": 180
+        },
+        {
+          "videoId": "mv000000130",
+          "title": "Stay With Me (Japanese ver.)",
+          "channelId": "UC87f848b300003a08a453f6",
+          "channelTitle": "Sam Smith",
+          "durationSec": 172
+        }
+      ],
+      "expect": {
+        "videoId": null
+      }
+    },
+    {
+      "id": "t05",
+      "note": "'제목 - 아티스트' 순서의 공식 MV",
+      "song": {
+        "title": "Someone Like You",
+        "artist": "Adele",
+        "lengthMs": 285000,
+        "officialChannelIds": ["UCa04fa672ed3097939028b6"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000131",
+          "title": "Someone Like You - Adele (Official Music Video)",
+          "channelId": "UCa04fa672ed3097939028b6",
+          "channelTitle": "Adele",
+          "durationSec": 290
+        },
+        {
+          "videoId": "mv000000132",
+          "title": "Someone Like You (Karaoke)",
+          "channelId": "UCa427b49d1a98ff3f6aa67c",
+          "channelTitle": "Sing King",
+          "durationSec": 285
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000131",
+        "kind": "official_mv"
+      }
+    },
+    {
+      "id": "t06",
+      "note": "공식 채널을 모르는 곡: 그 아티스트의 Topic은 공식 음원",
+      "song": {
+        "title": "Mr. Brightside",
+        "artist": "The Killers",
+        "lengthMs": 222000,
+        "officialChannelIds": []
+      },
+      "videos": [
+        {
+          "videoId": "mv000000133",
+          "title": "The Killers - Mr. Brightside (Live at Glastonbury)",
+          "channelId": "UC35c6d91b02062cc42489dd",
+          "channelTitle": "BBC Music",
+          "durationSec": 240
+        },
+        {
+          "videoId": "mv000000134",
+          "title": "Mr. Brightside",
+          "channelId": "UCe147e6c61ea1bf3c7f115b",
+          "channelTitle": "The Killers - Topic",
+          "durationSec": 223,
+          "description": "Provided to YouTube by Label\n\nMr. Brightside · The Killers"
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000134",
+        "kind": "official_audio"
+      }
+    },
+    {
+      "id": "t07",
+      "note": "공식 채널을 모르는 곡: 음반사 채널의 공식 음원이 맞음(규칙은 아티스트와 무관한 채널을 커버로 봐서 못 고름 — 규칙의 한계)",
+      "song": {
+        "title": "Sandstorm",
+        "artist": "Darude",
+        "lengthMs": 225000,
+        "officialChannelIds": []
+      },
+      "videos": [
+        {
+          "videoId": "mv000000135",
+          "title": "Darude - Sandstorm (Official Audio)",
+          "channelId": "UC5993f56cebcad7f39fe510",
+          "channelTitle": "16 Inch Records",
+          "durationSec": 226
+        },
+        {
+          "videoId": "mv000000136",
+          "title": "Darude - Sandstorm (Official Audio)",
+          "channelId": "UC921efe888a0fe241142d1d",
+          "channelTitle": "Trance Classics",
+          "durationSec": 226
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000135",
+        "kind": "official_audio"
+      }
+    },
+    {
+      "id": "t08",
+      "note": "Topic이지만 Extended Mix는 리믹스, 공식 MV를 연결",
+      "song": {
+        "title": "Strobe",
+        "artist": "deadmau5",
+        "lengthMs": 634000,
+        "officialChannelIds": ["UCbc05283198cdbbe5caea24"]
+      },
+      "videos": [
+        {
+          "videoId": "mv000000137",
+          "title": "Strobe (Extended Mix)",
+          "channelId": "UCafb63b34b44e80d051ee30",
+          "channelTitle": "deadmau5 - Topic",
+          "durationSec": 1100,
+          "description": "Provided to YouTube by Label\n\nStrobe (Extended Mix) · deadmau5"
+        },
+        {
+          "videoId": "mv000000138",
+          "title": "deadmau5 - Strobe (Official Video)",
+          "channelId": "UCbc05283198cdbbe5caea24",
+          "channelTitle": "deadmau5",
+          "durationSec": 630
+        }
+      ],
+      "expect": {
+        "videoId": "mv000000138",
+        "kind": "official_mv"
+      }
+    }
+  ]
+}
