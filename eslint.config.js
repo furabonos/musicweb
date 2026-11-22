@@ -91,7 +91,12 @@ const GLOBAL_OBJECT_MESSAGE =
   '전역 객체(globalThis·global)를 직접 쓰지 않습니다. 비밀값·설정은 functions/src/config/secrets.ts 등 config/에서 읽고, 외부 호출은 functions/src/adapters/의 함수를 쓰세요.';
 
 /** functions 묶음별 제한 규칙을 만든다. 같은 규칙을 두 블록에 나눠 쓰면 덮어쓰므로 한 번에 만든다. */
-function functionsRules({ process: banProcess, network: banNetwork, youtubeWrite = 'ban' }) {
+function functionsRules({
+  process: banProcess,
+  network: banNetwork,
+  youtubeWrite = 'ban',
+  ytExports = 'ban',
+}) {
   // globalThis·global을 통째로 막는다: const g = globalThis; g.process / g.fetch 같은 우회 방지.
   const globalsBan = [
     {
@@ -146,10 +151,13 @@ function functionsRules({ process: banProcess, network: banNetwork, youtubeWrite
   if (youtubeWrite !== 'allow') {
     // 네트워크가 열린 곳(adapters)은 기본 주소를 따로 둔 경로 조각까지 막는다.
     const yt = youtubeWriteBan(youtubeWrite, { fragments: !banNetwork });
-    syntaxBan.push(...yt.syntax, {
-      selector: 'Literal[value=/ytExports/], TemplateElement[value.raw=/ytExports/]',
-      message: YT_EXPORTS_MESSAGE,
-    });
+    syntaxBan.push(...yt.syntax);
+    if (ytExports === 'ban') {
+      syntaxBan.push({
+        selector: 'Literal[value=/ytExports/], TemplateElement[value.raw=/ytExports/]',
+        message: YT_EXPORTS_MESSAGE,
+      });
+    }
     // 네트워크 금지 묶음은 googleapis를 이미 막으므로 같은 이름을 두 번 넣지 않는다.
     if (!banNetwork) {
       importPaths.push(...yt.paths);
@@ -229,8 +237,19 @@ export default tseslint.config(
   // YouTube 재생목록 쓰기는 adapters/youtube-write.ts에서만, youtube-read.ts는 GET 읽기만.
   {
     files: ['functions/src/**/*.ts'],
-    ignores: ['functions/src/config/**', 'functions/src/adapters/**', ...FUNCTIONS_TEST_FILES],
+    ignores: [
+      'functions/src/config/**',
+      'functions/src/adapters/**',
+      'functions/src/jobs/purge.ts',
+      ...FUNCTIONS_TEST_FILES,
+    ],
     rules: functionsRules({ process: true, network: true }),
+  },
+  {
+    // 30일 정리(T11, D-028)는 만든 지 30일 지난 ytExports 기록을 지운다. 예외는 이 파일 전체에 걸리므로
+    // 지우기 말고 쓰기를 넣지 않는다(리뷰로 확인). 다른 금지(process·네트워크·YouTube 쓰기)는 그대로다.
+    files: ['functions/src/jobs/purge.ts'],
+    rules: functionsRules({ process: true, network: true, ytExports: 'allow' }),
   },
   {
     files: ['functions/src/config/**/*.ts'],

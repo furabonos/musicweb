@@ -6,4 +6,4 @@ export { health } from './api/health.js';
 export { account } from './api/account.js';
 export { admin } from './api/admin.js';
 export { playlists } from './api/playlists.js';
-export { ingestNightly } from './jobs/schedules.js';
+export { ingestNightly, purgeNightly, refreshNightly } from './jobs/schedules.js';

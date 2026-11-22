@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { RecordingCandidate } from '../adapters/musicbrainz.js';
 import { buildEvent } from '../core/events.js';
-import { errName, MAX_FAILS, nextArtistState, pickRecording } from './ingest.js';
+import { errName } from '../core/jobErrors.js';
+import { MAX_FAILS, nextArtistState, pickRecording } from './ingest.js';
 
 describe('nextArtistState: 연속 실패', () => {
   it(`연속 ${MAX_FAILS}번 실패하면 failed가 되고, 그때 한 번만 becameFailed`, () => {

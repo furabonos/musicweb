@@ -188,7 +188,7 @@
     - integration — YouTube 할당량 소진·출처 장애는 아티스트 실패로 세지 않고 작업을 멈춤, 실행 시간 마감, 이어서 보기, 같은 게시 시각, 이미 연결된 영상 건너뛰기, 대기열 하루 50명
     - unit `functions/src/adapters/youtube-read.test.ts` — 응답 해석, 호출 전 단위 사용, 50개씩, 검색 100단위+검색 한도, 키가 기록에 없음
 
-- [ ] **T11 30일 재확인과 정리 작업** — SPEC 3.1, 4.4 / 스킬 `youtube-policy`
+- [x] **T11 30일 재확인과 정리 작업** — SPEC 3.1, 4.4 / 스킬 `youtube-policy`
   - 의존: T10
   - 산출물:
     - `jobs/refresh.ts`: 25일 넘은 연결 재확인. 없어지거나 비공개·퍼가기 불가면 `gone` + YouTube 필드 삭제
@@ -221,6 +221,7 @@
 - [ ] **T13 추천 파이프라인** — SPEC 4.3
   - 의존: T08, T11, T12
   - 산출물: `core/recommend.ts` — 기준 곡 확정 → 후보 모으기 → 곡 목록으로 걸러 내기 → (부족 시) 조회 순서 → AI 고르기·정렬·이유(화면 언어)
+  - 주의(D-028): 곡의 영상은 `core/catalog.ts`의 `recommendableLinks`로만 고른다(25일 넘게 확인 못 한 연결 제외)
   - 주의(D-024): 기준 곡은 ListenBrainz `searchRecording`으로 대표 MBID를 먼저 찾는다. 사용자 요청 함수는 여러 인스턴스로 늘어나 출처별 초당 1회 합계를 넘을 수 있으므로, 음악 데이터 호출을 최대 인스턴스 1개인 함수로 모으거나 결과를 캐시한다. Last.fm은 실제 키로 응답 헤더(Cache-Control)를 확인하고 녹화본으로 바꾼다
   - 완료 기준:
     - unit `functions/src/core/recommend.test.ts` (가짜 어댑터)
@@ -237,6 +238,7 @@
     - 화면 `/`: 검색창, 결과, 곡별 이유, 빼기·바꾸기
     - 상단 언어 버튼(en 기본, ko), `locales/{en,ko}.json`, 곡 정보 출처 표시
     - 로그인 전 단계에서는 관리자만 만들기 허용(D-015)
+    - 주의(D-028): `playlists.items[].videoId`도 YouTube 데이터다. 공유 재생목록은 오래 남으므로 곡(songId)만 저장하고 열 때 `recommendableLinks`로 영상을 고르거나, 정리 작업(`jobs/purge.ts`)에 넣는다
   - 완료 기준:
     - integration `functions/src/api/playlists.int.test.ts`
       - 만들기 → 저장 → 공유 문서 생성
@@ -341,6 +343,7 @@
   - 산출물:
     - 화면: 긴급 정지 3종, 한도 설정, 사용량, 수집 대상 관리·수동 재실행, 연결 고치기·막기(→ 시험 문제 추가 PR), 사용자 차단, 테스트 사용자 관리(최대 100)
     - 해당 관리자 callable들
+    - 주의(D-028): 아티스트를 추가·고칠 때 `lastScannedAt: null`과 함께, 채널 ID를 넣으면 `ytVerifiedAt`(지금 시각)도 넣는다. 없으면 재확인·정리 조회에 걸리지 않아 채널 정보가 30일을 넘겨 남는다
   - 완료 기준:
     - integration `functions/src/api/admin.int.test.ts`(확장) — 모든 관리자 callable이 비관리자에게 거부되고, 성공 시 `adminAudit`·운영 일지·`admin_change` 이벤트 기록(D-023: 관리자 함수에 `ACTOR_HASH_KEY` 연결)
     - integration — 차단된 계정은 만들기 거부, 테스트 사용자 101번째 등록 거부
