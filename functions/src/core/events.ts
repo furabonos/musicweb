@@ -49,6 +49,8 @@ export const EXTERNAL_OPS = [
   'search.list',
   'llm.parseRequest',
   'llm.judgeLink',
+  'llm.candidates',
+  'llm.pick',
 ] as const;
 export type ExternalOp = (typeof EXTERNAL_OPS)[number];
 

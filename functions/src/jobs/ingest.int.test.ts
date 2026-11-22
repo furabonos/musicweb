@@ -134,6 +134,8 @@ describe('수집 작업 (에뮬레이터, 가짜 YouTube·음악 데이터)', ()
       const at = (await db.doc(`artists/${mbid}`).get()).get('ytVerifiedAt') as { toDate(): Date };
       expect(Date.now() - at.toDate().getTime()).toBeLessThan(60_000);
     }
+    // 곡 문서에는 이름 찾기용 키(추천의 Last.fm·AI 후보, T13)
+    expect((await db.doc(`songs/${KARMA_MBID}`).get()).get('key')).toBe('radiohead|karma police');
     expect((await db.collection('ingestQueue').get()).size).toBe(0);
     expect(world.count('query.wikidata.org')).toBe(1);
 
