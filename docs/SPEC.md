@@ -272,9 +272,9 @@ PC 웹만 지원한다(최소 너비 1024px 기준). 모바일 화면은 고려�
 | `users/{uid}/usage/{yyyy-mm-dd}`                    | playlists, searches, exports                                                                                                                             | 본인                                      |
 | `ytExports/{id}`                                    | ownerUid, youtubePlaylistId, itemCount, createdAt (이 앱이 만든 YouTube 재생목록 목록, 30일 뒤 삭제 D-028)                                               | 본인                                      |
 | `secrets_oauth/{uid}`                               | 암호화한 YouTube 연결 정보                                                                                                                               | **없음** (서버만)                         |
-| `usage/{yyyy-mm-dd}`                                | ytUnits, ytSearchUser, ytSearchJob, aiCostMicroUsd, exports, autoIssues, autoFixes, musicDataCalls (D-020, D-024)                                        | 관리자                                    |
+| `usage/{yyyy-mm-dd}`                                | ytUnits, ytSearchUser, ytSearchJob, aiCostMicroUsd, exports, autoIssues, autoFixes, musicDataCalls, linkChecks (D-020, D-024, D-033)                     | 관리자                                    |
 | `usage/{yyyy-mm-dd}/reservations/{id}`              | 예약 기록(uid는 정산 후 지움), service, user, settled                                                                                                    | 없음 (서버만)                             |
-| `config/runtime`                                    | killSwitches{create, ingest, autoIssue}, limits{...}                                                                                                     | 누구나(안내 문구용), 쓰기는 관리자 함수만 |
+| `config/runtime`                                    | killSwitches{create, ingest, autoIssue}, limits{...}, youtubeOpenLink(direct·fallback, D-033)                                                            | 누구나(안내 문구용), 쓰기는 관리자 함수만 |
 | `events/{id}`                                       | type, at, actorHash, attrs, outcome, durationMs                                                                                                          | 없음 (서버만)                             |
 | `metrics/{yyyy-mm-dd}`, `metrics/current`           | 현황판 수치와 계산 방법                                                                                                                                  | 누구나                                    |
 | `opsLog/{id}`                                       | at, kind, message(정제됨), links[]                                                                                                                       | 누구나                                    |
@@ -320,18 +320,19 @@ firestore.rules, firebase.json
 
 ### 6.3 한도 초기값 (관리자 화면에서 변경)
 
-| 항목                            | 값                                                   |
-| ------------------------------- | ---------------------------------------------------- |
-| 사용자별 하루 재생목록 만들기   | 10회                                                 |
-| 사용자별 하루 검색 사용         | 3회                                                  |
-| 사용자별 생성 간격              | 10초에 1회                                           |
-| 서비스 하루 AI 비용             | $1                                                   |
-| 서비스 하루 검색                | 사용자 요청 80회 + 야간 작업 20회 (YouTube 한도 100) |
-| 서비스 하루 YouTube 단위        | 9,000 (한도 10,000에서 1,000 여유)                   |
-| 서비스 하루 내 계정에 넣기      | 5개 (재생목록당 최대 30곡)                           |
-| 하루 자동 이슈 / 자동 수정 실행 | 5개 / 3회                                            |
-| 서비스 하루 음악 데이터 요청    | 20,000회 (무료, 폭주 방지용, D-024)                  |
-| 월 예산 알림                    | $10 (Functions 예산 정지 함께)                       |
+| 항목                                     | 값                                                   |
+| ---------------------------------------- | ---------------------------------------------------- |
+| 사용자별 하루 재생목록 만들기            | 10회                                                 |
+| 사용자별 하루 검색 사용                  | 3회                                                  |
+| 사용자별 생성 간격                       | 10초에 1회                                           |
+| 서비스 하루 AI 비용                      | $1                                                   |
+| 서비스 하루 검색                         | 사용자 요청 80회 + 야간 작업 20회 (YouTube 한도 100) |
+| 서비스 하루 YouTube 단위                 | 9,000 (한도 10,000에서 1,000 여유)                   |
+| 서비스 하루 내 계정에 넣기               | 5개 (재생목록당 최대 30곡)                           |
+| 하루 자동 이슈 / 자동 수정 실행          | 5개 / 3회                                            |
+| 서비스 하루 음악 데이터 요청             | 20,000회 (무료, 폭주 방지용, D-024)                  |
+| 서비스 하루 "YouTube에서 열기" 링크 확인 | 5회 (매일 1회 + 여유, 헤더만, D-033)                 |
+| 월 예산 알림                             | $10 (Functions 예산 정지 함께)                       |
 
 날짜 경계는 YouTube 한도와 맞춰 태평양 시간 자정이다.
 

@@ -15,7 +15,8 @@ import type { CallerAuth } from '../core/auth.js';
 import type { EventSink } from '../core/events.js';
 import { enqueueArtist } from '../core/ingestQueue.js';
 import { parseRequest } from '../core/parseRequest.js';
-import { createPlaylist, savePlaylist, updatePlaylist } from '../core/playlists.js';
+import { createPlaylist, getPlaylist, savePlaylist, updatePlaylist } from '../core/playlists.js';
+import { readRuntimeConfig, RuntimeConfigError } from '../core/runtimeConfig.js';
 import { recommend, type RecommendPorts } from '../core/recommend.js';
 import { firestoreRecommendPorts } from '../core/recommendPorts.js';
 import { fakeLlm, fakeMusicAndYt } from '../dev/fakeWorld.js';
@@ -47,6 +48,7 @@ const updateInput = z.strictObject({
   position: z.number().int().min(0).max(99),
 });
 const saveInput = z.strictObject({ id: playlistId });
+const getInput = z.strictObject({ id: playlistId });
 
 function parseInput<S extends z.ZodType>(schema: S, data: unknown): z.infer<S> {
   const parsed = schema.safeParse(data);
@@ -152,6 +154,40 @@ export const playlists = {
     handle(async () => {
       const uid = requireUid(req.auth);
       return savePlaylist({ db: getFirestore() }, uid, parseInput(saveInput, req.data));
+    }),
+  ),
+  /** 재생목록 열기(`/p/:id`). 저장된 것은 로그인 없이. 화면이 "YouTube에서 열기" 방식도 같이 받는다. */
+  get: onCall((req) =>
+    handle(async () => {
+      const { id } = parseInput(getInput, req.data);
+      const db = getFirestore();
+      const [playlist, openLink] = await Promise.all([
+        getPlaylist(db, req.auth?.uid ?? null, id),
+        openLinkMode(db),
+      ]);
+      return { ...playlist, openLink };
+    }),
+  ),
+};
+
+/**
+ * "YouTube에서 열기" 방식. 설정 문서가 깨졌으면 곡별 링크(fallback)로 답한다:
+ * 부가 정보 때문에 공유 화면 전체가 오류가 되지 않게, 그리고 곡별 링크는 항상 동작하므로.
+ */
+async function openLinkMode(db: Firestore) {
+  try {
+    return (await readRuntimeConfig(db)).youtubeOpenLink;
+  } catch (err) {
+    if (err instanceof RuntimeConfigError) return 'fallback' as const;
+    throw err;
+  }
+}
+
+/** 화면용 공개 설정(로그인 불필요): "YouTube에서 열기" 방식(D-006). */
+export const site = {
+  config: onCall(() =>
+    handle(async () => {
+      return { openLink: await openLinkMode(getFirestore()) };
     }),
   ),
 };

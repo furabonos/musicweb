@@ -40,6 +40,19 @@ export class ApiError extends Error {
   }
 }
 
+export type OpenLinkMode = 'direct' | 'fallback';
+
+/** 공유 재생목록(`/p/:id`). 검색 문장은 없다. */
+export interface SharedPlaylist {
+  id: string;
+  title: string;
+  seed: { artist: string; title: string };
+  items: PlayableItem[];
+  locale: Locale;
+  state: 'draft' | 'saved';
+  openLink: OpenLinkMode;
+}
+
 export interface SignedInUser {
   uid: string;
 }
@@ -58,4 +71,8 @@ export interface MusicwebApi {
   save(id: string): Promise<{ id: string; state: 'saved' }>;
   /** 플레이어 오류 101·150(퍼가기 불가)을 기록한다(embed_blocked). 실패해도 재생은 계속. */
   reportEmbedBlocked(code: 101 | 150): Promise<void>;
+  /** 재생목록 열기. 없거나 볼 수 없으면 ApiError('not-found') */
+  getPlaylist(id: string): Promise<SharedPlaylist>;
+  /** "YouTube에서 열기" 방식(D-006) */
+  siteConfig(): Promise<{ openLink: OpenLinkMode }>;
 }

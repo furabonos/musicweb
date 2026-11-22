@@ -12,6 +12,8 @@ import { createJudge, createLlm, firestoreLlmBudget } from '../adapters/llm.js';
 import { runIngest } from './ingest.js';
 import { runPurge } from './purge.js';
 import { runRefresh } from './refresh.js';
+import { createOpenLinkChecker, firestoreOpenLinkBudget } from '../adapters/youtube-openlink.js';
+import { firestoreLinkHealthPorts, runLinkHealth } from './linkHealth.js';
 
 /**
  * 예약 작업 (SPEC 4.4). 태평양 시간 기준, YouTube 할당 초기화(자정) 뒤에 차례로 돈다:
@@ -96,6 +98,29 @@ export const purgeNightly = onSchedule(
       events: firestoreEventSink(db, secrets.ACTOR_HASH_KEY.value()),
       lastfmCache: firestoreLastfmCache(db),
     });
+  },
+);
+
+/**
+ * "YouTube에서 열기" 링크 매일 확인 (T16, D-006). 정리(02:00) 뒤 04:00.
+ * 외부 요청 1번(헤더만)이고 하루 상한(linkChecks)을 따른다. 긴급 정지 스위치 대상은 아니다(돈이 들지 않음).
+ */
+export const linkHealthNightly = onSchedule(
+  {
+    schedule: 'every day 04:00',
+    timeZone: 'America/Los_Angeles',
+    maxInstances: 1,
+    timeoutSeconds: 60,
+    retryCount: 0,
+    secrets: [secrets.ACTOR_HASH_KEY],
+  },
+  async () => {
+    const db = getFirestore();
+    const events = firestoreEventSink(db, secrets.ACTOR_HASH_KEY.value());
+    const checker = createOpenLinkChecker({ events, budget: firestoreOpenLinkBudget(db) });
+    await runLinkHealth(
+      firestoreLinkHealthPorts(db, { check: (ids) => checker.check(ids), events }),
+    );
   },
 );
 

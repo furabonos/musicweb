@@ -313,3 +313,67 @@ describe('playlists-update / playlists-save', () => {
     });
   });
 });
+
+describe('playlists-get / site-config (T16)', () => {
+  it('저장 전에는 소유자만, 저장 뒤에는 로그인 없이 열림. 영상은 지금 곡 목록에서, 검색 문장은 없음', async () => {
+    const a = await googleSignIn(ADMIN);
+    const b = await googleSignIn('other@example.com');
+    const { id } = await createOk(a.token);
+
+    expect((await callFunction('playlists-get', { id })).error?.status).toBe('NOT_FOUND');
+    expect((await callFunction('playlists-get', { id }, b.token)).error?.status).toBe('NOT_FOUND');
+    const own = (await callFunction('playlists-get', { id }, a.token)).result as {
+      state: string;
+      items: Item[];
+    };
+    expect(own.state).toBe('draft');
+
+    await callFunction('playlists-save', { id }, a.token);
+    const r = await callFunction('playlists-get', { id });
+    expect(r.error).toBeUndefined();
+    const shared = r.result as {
+      state: string;
+      seed: { title: string };
+      items: Item[];
+      openLink: string;
+    };
+    expect(shared).toMatchObject({ state: 'saved', seed: { title: 'Doja' }, openLink: 'direct' });
+    expect(shared.items).toHaveLength(10);
+    expect(shared.items.every((i) => i.videoId?.startsWith('demoVid'))).toBe(true);
+    expect(JSON.stringify(r.result)).not.toContain(REQUEST);
+  });
+
+  it('곡 목록에서 연결이 사라진 곡은 videoId null', async () => {
+    const { token } = await googleSignIn(ADMIN);
+    const { id, items } = await createOk(token);
+    await callFunction('playlists-save', { id }, token);
+    const gone = DEMO_SONGS.find((s) => s.mbid === items[0]?.songId);
+    await db.doc(`songs/${gone?.mbid}/links/${gone?.videoId}`).update({ status: 'gone' });
+    const shared = (await callFunction('playlists-get', { id })).result as { items: Item[] };
+    expect(shared.items[0]?.videoId).toBeNull();
+  });
+
+  it('없는 재생목록·잘못된 id는 거부', async () => {
+    expect((await callFunction('playlists-get', { id: 'nope' })).error?.status).toBe('NOT_FOUND');
+    expect((await callFunction('playlists-get', { id: '../x' })).error?.status).toBe(
+      'INVALID_ARGUMENT',
+    );
+  });
+
+  it('site-config는 로그인 없이 "YouTube에서 열기" 방식을 알려 줌', async () => {
+    expect((await callFunction('site-config', {})).result).toEqual({ openLink: 'direct' });
+    await db.doc('config/runtime').set({ youtubeOpenLink: 'fallback' });
+    expect((await callFunction('site-config', {})).result).toEqual({ openLink: 'fallback' });
+  });
+
+  it('설정 문서가 깨져도 공유 화면은 열리고 곡별 링크(fallback)로 답함', async () => {
+    const { token } = await googleSignIn(ADMIN);
+    const { id } = await createOk(token);
+    await callFunction('playlists-save', { id }, token);
+    await db.doc('config/runtime').set({ unknownField: 1 });
+    const r = await callFunction('playlists-get', { id });
+    expect(r.error).toBeUndefined();
+    expect((r.result as { openLink: string }).openLink).toBe('fallback');
+    expect((await callFunction('site-config', {})).result).toEqual({ openLink: 'fallback' });
+  });
+});

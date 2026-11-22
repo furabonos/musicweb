@@ -29,6 +29,7 @@ export const EXTERNAL_TARGETS = [
   'lastfm',
   'llm',
   'github',
+  'youtube_link',
 ] as const;
 
 /** 외부 호출 종류. 어댑터를 추가하면 여기에 그 호출 이름을 더한다(자유 문자열을 받지 않기 위함). */
@@ -51,6 +52,7 @@ export const EXTERNAL_OPS = [
   'llm.judgeLink',
   'llm.candidates',
   'llm.pick',
+  'watch_videos.check',
 ] as const;
 export type ExternalOp = (typeof EXTERNAL_OPS)[number];
 

@@ -46,3 +46,11 @@ describe('parseRuntimeConfig', () => {
     );
   });
 });
+
+describe('youtubeOpenLink (T16, D-006)', () => {
+  it('기본은 direct, fallback 저장 값을 읽고, 다른 값은 거부', () => {
+    expect(parseRuntimeConfig(undefined).youtubeOpenLink).toBe('direct');
+    expect(parseRuntimeConfig({ youtubeOpenLink: 'fallback' }).youtubeOpenLink).toBe('fallback');
+    expect(() => parseRuntimeConfig({ youtubeOpenLink: 'off' })).toThrow(RuntimeConfigError);
+  });
+});

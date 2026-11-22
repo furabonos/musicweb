@@ -5,6 +5,11 @@ initializeApp();
 export { health } from './api/health.js';
 export { account } from './api/account.js';
 export { admin } from './api/admin.js';
-export { playlists } from './api/playlists.js';
+export { playlists, site } from './api/playlists.js';
 export { playback } from './api/playback.js';
-export { ingestNightly, purgeNightly, refreshNightly } from './jobs/schedules.js';
+export {
+  ingestNightly,
+  linkHealthNightly,
+  purgeNightly,
+  refreshNightly,
+} from './jobs/schedules.js';

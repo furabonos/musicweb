@@ -67,6 +67,89 @@ export async function seedDemoCatalog(host = '127.0.0.1:8080', verifiedAt = new 
   return DEMO_SONGS.length;
 }
 
+/** e2e용: 재생목록 문서와 비공개 문서(검색 문장)를 직접 넣는다. items는 가짜 곡 목록의 순서 번호. */
+export async function seedPlaylist(
+  opts: { id: string; state: 'draft' | 'saved'; songs: number[]; privateText: string },
+  host = '127.0.0.1:8080',
+) {
+  const name = (path: string) =>
+    `projects/${EMULATOR_PROJECT}/databases/(default)/documents/${path}`;
+  const seed = DEMO_SONGS[0];
+  const items = opts.songs.map((n) => {
+    const s = DEMO_SONGS[n];
+    if (!s) throw new Error(`가짜 곡 ${n}번이 없습니다.`);
+    return {
+      mapValue: {
+        fields: {
+          songId: str(s.mbid),
+          artist: str(s.artist),
+          title: str(s.title),
+          reason: str(`Demo reason for ${s.title}`),
+        },
+      },
+    };
+  });
+  const no = { booleanValue: false };
+  const writes = [
+    {
+      update: {
+        name: name(`playlists/${opts.id}`),
+        fields: {
+          ownerUid: str('e2e-owner'),
+          title: str(`${seed?.title} — ${seed?.artist}`),
+          seed: {
+            mapValue: {
+              fields: {
+                songId: str(seed?.mbid ?? ''),
+                artist: str(seed?.artist ?? ''),
+                title: str(seed?.title ?? ''),
+              },
+            },
+          },
+          items: { arrayValue: { values: items } },
+          include: { mapValue: { fields: { live: no, cover: no, remix: no } } },
+          locale: str('en'),
+          state: str(opts.state),
+        },
+      },
+    },
+    {
+      update: {
+        name: name(`playlists/${opts.id}/private/request`),
+        fields: { text: str(opts.privateText) },
+      },
+    },
+  ];
+  await commit(host, writes);
+}
+
+/** e2e용: config/runtime의 필드를 바꾼다(다른 필드는 그대로). */
+export async function setRuntime(
+  fields: { youtubeOpenLink?: 'direct' | 'fallback' },
+  host = '127.0.0.1:8080',
+) {
+  const doc: Record<string, unknown> = {};
+  if (fields.youtubeOpenLink) doc.youtubeOpenLink = str(fields.youtubeOpenLink);
+  await commit(host, [
+    {
+      update: {
+        name: `projects/${EMULATOR_PROJECT}/databases/(default)/documents/config/runtime`,
+        fields: doc,
+      },
+      updateMask: { fieldPaths: Object.keys(doc) },
+    },
+  ]);
+}
+
+async function commit(host: string, writes: unknown[]) {
+  const res = await fetch(`${base(host)}:commit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer owner' },
+    body: JSON.stringify({ writes }),
+  });
+  if (!res.ok) throw new Error(`에뮬레이터 쓰기 실패: ${res.status} ${await res.text()}`);
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const host = process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8080';
   const n = await seedDemoCatalog(host);
