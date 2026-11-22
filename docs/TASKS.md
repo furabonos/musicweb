@@ -234,7 +234,7 @@
     - unit — 라이브·커버·리믹스는 요청 조건이 있을 때만 포함
   - 결과(D-030): 추천 흐름·포트·조회 저장, 수집의 AI 판정 연결까지 했다. **남은 것**: Last.fm 실제 응답 헤더 확인·녹화(실제 키 필요, T23 전), 여러 인스턴스의 초당 1회(T14 callable `maxInstances: 1`), 장르 채우기(필요해질 때)
 
-- [ ] **T14 핵심 흐름 화면과 재생목록 만들기 함수** — SPEC 1.3, 4.8, 4.13
+- [x] **T14 핵심 흐름 화면과 재생목록 만들기 함수** — SPEC 1.3, 4.8, 4.13
   - 의존: T06, T13
   - 산출물:
     - callable `playlists.create`, `playlists.update`(빼기·바꾸기), `playlists.save`
@@ -258,6 +258,7 @@
 
 - [ ] **T15 사이트 재생** — SPEC 4.5 / 스킬 `youtube-policy`
   - 의존: T14
+  - 주의(D-031): 영상 ID는 `playlists-create`/`playlists-update` 응답의 `items[].videoId`에 있다(재생목록 문서에는 없음). `videoId`가 null인 곡은 건너뛴다. 결과 카드(`apps/web/src/App.tsx`) 왼쪽에 플레이어를 넣는다(시안 B)
   - 산출물: `apps/web/src/player/` — IFrame API 로딩, 다음 곡 자동 진행, 101/150 건너뛰기 + `embed_blocked` 이벤트, `MusicService` 인터페이스의 YouTube 구현
   - 완료 기준:
     - unit `apps/web/src/player/*.test.ts` (가짜 YT 객체)
@@ -276,6 +277,7 @@
     - `packages/shared/src/youtubeLink.ts`(링크 생성, 곡 수 상한으로 나누기)
     - 대체 화면(곡별 링크 목록)과 안내 문구, `/p/:id` 화면
     - `jobs/linkHealth.ts`(매일 303·`list=` 확인)
+    - 주의(D-031): 저장한 재생목록 문서에는 영상 ID가 없다. `/p/:id`는 곡 ID로 지금 재생할 수 있는 영상을 골라야 한다(`recommendableLinks`와 같은 규칙: active·25일 안 확인·`include` 조건). 로그인 없이 읽으므로 callable(`playlists-get` 등)로 고르거나, 클라이언트가 `songs/{id}/links`(active만 읽힘)를 읽되 25일 기준을 같게 맞춘다. 저장 후 화면이 보여 주는 공유 주소(`/p/{id}`)가 이때 열린다
   - 완료 기준:
     - unit `packages/shared/src/youtubeLink.test.ts` — ID 형식 검증, 상한 초과 시 여러 링크, 빈 목록 거부
     - unit `functions/src/jobs/linkHealth.test.ts` — 303+`list=TL`이면 정상, 그 외면 `config/runtime.youtubeOpenLink=fallback`으로 바꾸고 이벤트
@@ -363,7 +365,8 @@
   - 산출물:
     - functions 배포 묶음 확인: esbuild가 `@musicweb/shared`를 묶고, `workspace:` 개발 의존성이 Cloud Build 설치를 깨지 않게 한다(D-027). 손으로 만든 YouTube 응답을 실제 녹화본으로 바꾼다(T10)
     - Firebase 프로젝트(Blaze), 월 예산 알림 $10, Functions 예산 정지, App Check(reCAPTCHA Enterprise) 강제
-    - Secret Manager 등록, 예약 작업 등록
+    - Secret Manager 등록, 예약 작업 등록. `playlists-create`는 `ANTHROPIC_API_KEY`·`YOUTUBE_API_KEY`·`LASTFM_API_KEY`·`ACTOR_HASH_KEY`를 연결하므로(D-031) Last.fm 키를 안 쓰더라도 비밀값은 만들어 둬야 배포된다(코드는 값이 비면 Last.fm 없이 동작하지만, Secret Manager가 빈 값을 받는지는 배포 때 확인)
+    - 화면 설정 `apps/web/.env.local`(`.env.example` 참고, `VITE_USE_EMULATORS`는 비움)
     - `.github/workflows/deploy.yml`(main 합침 시), `docs/OPERATIONS.md`(복구·키 교체·긴급 정지 절차)
   - 완료 기준:
     - `*.web.app` 주소 접속, `/status`에 실제 데이터 표시
@@ -376,7 +379,7 @@
   - 산출물:
     - Google 로그인 UI, 만들기 로그인 필수, 한도 안내(남은 횟수·초기화 시각)
     - 10초 간격 제한, `/me`(내 재생목록, 계정·데이터 삭제)
-    - D-015 해제
+    - D-015 해제: `functions/src/api/playlists.ts`의 `create`에서 `requireAdmin`을 로그인 확인으로 바꾼다. 10초 간격은 한도 확인(`consume`)과 같은 자리(AI 호출 전)에 넣는다(D-031)
   - 완료 기준:
     - integration `functions/src/api/playlists.int.test.ts`(확장)
       - 사용자 A 11번째 만들기 거부, 같은 시각 B는 성공

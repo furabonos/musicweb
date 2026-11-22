@@ -261,27 +261,27 @@ PC 웹만 지원한다(최소 너비 1024px 기준). 모바일 화면은 고려�
 
 클라이언트가 직접 쓰는 컬렉션은 없다. **모든 쓰기는 Cloud Functions를 거친다.** 보안 규칙은 기본 전부 거부이고, 아래의 읽기만 연다.
 
-| 컬렉션                                              | 내용                                                                                                                   | 클라이언트 읽기                           |
-| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `songs/{songId}`                                    | mbid, artist, artistMbid, title, key(이름 비교 키, D-030), releaseYear, genres[](나중), source, updatedAt              | 누구나                                    |
-| `songs/{songId}/links/{videoId}`                    | videoId, kind, status, linkedBy, ytTitle, channelId, embeddable, madeForKids, durationSec, verifiedAt                  | 누구나 (`active`만)                       |
-| `artists/{artistId}`                                | name, mbid, channelId, uploadsPlaylistId, ytVerifiedAt, status, lastSeenPublishedAt, lastScannedAt, failCount, addedBy | 관리자                                    |
-| `playlists/{id}`                                    | ownerUid, title, items[{songId, videoId, reason}], locale, createdAt, state                                            | `saved`는 누구나, `draft`는 소유자        |
-| `playlists/{id}/private/request`                    | 검색 문장 원문, 해석 결과                                                                                              | 소유자만                                  |
-| `users/{uid}`                                       | createdAt, consentAt, blocked, exportTester                                                                            | 본인                                      |
-| `users/{uid}/usage/{yyyy-mm-dd}`                    | playlists, searches, exports                                                                                           | 본인                                      |
-| `ytExports/{id}`                                    | ownerUid, youtubePlaylistId, itemCount, createdAt (이 앱이 만든 YouTube 재생목록 목록, 30일 뒤 삭제 D-028)             | 본인                                      |
-| `secrets_oauth/{uid}`                               | 암호화한 YouTube 연결 정보                                                                                             | **없음** (서버만)                         |
-| `usage/{yyyy-mm-dd}`                                | ytUnits, ytSearchUser, ytSearchJob, aiCostMicroUsd, exports, autoIssues, autoFixes, musicDataCalls (D-020, D-024)      | 관리자                                    |
-| `usage/{yyyy-mm-dd}/reservations/{id}`              | 예약 기록(uid는 정산 후 지움), service, user, settled                                                                  | 없음 (서버만)                             |
-| `config/runtime`                                    | killSwitches{create, ingest, autoIssue}, limits{...}                                                                   | 누구나(안내 문구용), 쓰기는 관리자 함수만 |
-| `events/{id}`                                       | type, at, actorHash, attrs, outcome, durationMs                                                                        | 없음 (서버만)                             |
-| `metrics/{yyyy-mm-dd}`, `metrics/current`           | 현황판 수치와 계산 방법                                                                                                | 누구나                                    |
-| `opsLog/{id}`                                       | at, kind, message(정제됨), links[]                                                                                     | 누구나                                    |
-| `adminAudit/{id}`                                   | adminUid, at, action, before, after                                                                                    | 관리자                                    |
-| `issueFingerprints/{fp}`                            | issueNumber, firstSeen, lastSeen, count                                                                                | 없음                                      |
-| `ingestQueue/{artistMbid}`, `ingestQueueDays/{day}` | 사용자가 찾은 아티스트 대기열(mbid, name, queuedAt — 누가 찾았는지 없음), 하루 개수                                    | 없음 (서버만)                             |
-| `lastfmCache/{sha256}`, `lastfmCache/_meta`         | Last.fm 응답 캐시(body, bytes, storedAt, expiresAt), 전체 크기 totalBytes. HTTP 캐시 기간만, 100MB 상한                | 없음 (서버만)                             |
+| 컬렉션                                              | 내용                                                                                                                                                     | 클라이언트 읽기                           |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `songs/{songId}`                                    | mbid, artist, artistMbid, title, key(이름 비교 키, D-030), releaseYear, genres[](나중), source, updatedAt                                                | 누구나                                    |
+| `songs/{songId}/links/{videoId}`                    | videoId, kind, status, linkedBy, ytTitle, channelId, embeddable, madeForKids, durationSec, verifiedAt                                                    | 누구나 (`active`만)                       |
+| `artists/{artistId}`                                | name, mbid, channelId, uploadsPlaylistId, ytVerifiedAt, status, lastSeenPublishedAt, lastScannedAt, failCount, addedBy                                   | 관리자                                    |
+| `playlists/{id}`                                    | ownerUid, title, seed, items[{songId, artist, title, reason}], include, locale, createdAt, state (영상 ID는 저장하지 않고 열 때 곡 목록에서 고름, D-031) | `saved`는 누구나, `draft`는 소유자        |
+| `playlists/{id}/private/request`                    | 검색 문장 원문, 해석 결과, 바꾸기용 예비 곡(spares)                                                                                                      | 소유자만                                  |
+| `users/{uid}`                                       | createdAt, consentAt, blocked, exportTester                                                                                                              | 본인                                      |
+| `users/{uid}/usage/{yyyy-mm-dd}`                    | playlists, searches, exports                                                                                                                             | 본인                                      |
+| `ytExports/{id}`                                    | ownerUid, youtubePlaylistId, itemCount, createdAt (이 앱이 만든 YouTube 재생목록 목록, 30일 뒤 삭제 D-028)                                               | 본인                                      |
+| `secrets_oauth/{uid}`                               | 암호화한 YouTube 연결 정보                                                                                                                               | **없음** (서버만)                         |
+| `usage/{yyyy-mm-dd}`                                | ytUnits, ytSearchUser, ytSearchJob, aiCostMicroUsd, exports, autoIssues, autoFixes, musicDataCalls (D-020, D-024)                                        | 관리자                                    |
+| `usage/{yyyy-mm-dd}/reservations/{id}`              | 예약 기록(uid는 정산 후 지움), service, user, settled                                                                                                    | 없음 (서버만)                             |
+| `config/runtime`                                    | killSwitches{create, ingest, autoIssue}, limits{...}                                                                                                     | 누구나(안내 문구용), 쓰기는 관리자 함수만 |
+| `events/{id}`                                       | type, at, actorHash, attrs, outcome, durationMs                                                                                                          | 없음 (서버만)                             |
+| `metrics/{yyyy-mm-dd}`, `metrics/current`           | 현황판 수치와 계산 방법                                                                                                                                  | 누구나                                    |
+| `opsLog/{id}`                                       | at, kind, message(정제됨), links[]                                                                                                                       | 누구나                                    |
+| `adminAudit/{id}`                                   | adminUid, at, action, before, after                                                                                                                      | 관리자                                    |
+| `issueFingerprints/{fp}`                            | issueNumber, firstSeen, lastSeen, count                                                                                                                  | 없음                                      |
+| `ingestQueue/{artistMbid}`, `ingestQueueDays/{day}` | 사용자가 찾은 아티스트 대기열(mbid, name, queuedAt — 누가 찾았는지 없음), 하루 개수                                                                      | 없음 (서버만)                             |
+| `lastfmCache/{sha256}`, `lastfmCache/_meta`         | Last.fm 응답 캐시(body, bytes, storedAt, expiresAt), 전체 크기 totalBytes. HTTP 캐시 기간만, 100MB 상한                                                  | 없음 (서버만)                             |
 
 - 관리자 판별: 서버 함수는 `ADMIN_EMAILS`(확인된 Google 이메일)를 직접 확인한다. 보안 규칙용으로 서버가 사용자 정의 클레임 `admin: true`를 붙이고(로그인 직후 `account-syncClaims`, 관리자 함수 호출 때), 규칙은 `request.auth.token.admin == true`를 확인한다(D-022).
 - 시험 문제·기준 점수는 저장소 `evals/`에 둔다 (Firestore 아님).
@@ -346,22 +346,24 @@ firestore.rules, firebase.json
 
 ## 8. 환경 변수
 
-| 이름                                     | 위치                                                                            | 용도                                                                                |
-| ---------------------------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `ANTHROPIC_API_KEY`                      | Secret Manager (`defineSecret`), GitHub Secrets(자동 수정·시험)                 | AI                                                                                  |
-| `YOUTUBE_API_KEY`                        | Secret Manager                                                                  | YouTube 읽기                                                                        |
-| `LASTFM_API_KEY`                         | Secret Manager                                                                  | Last.fm                                                                             |
-| `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET` | Secret Manager                                                                  | 내 계정에 넣기 권한                                                                 |
-| `TOKEN_ENC_KEY`                          | Secret Manager                                                                  | 연결 정보 암호화 키 목록 `"v2:<base64 32바이트>,v1:<…>"` (첫 항목이 현재 키, D-018) |
-| `ACTOR_HASH_KEY`                         | Secret Manager                                                                  | 이벤트 로그 사용자 해시                                                             |
-| `GITHUB_ISSUE_TOKEN`                     | Secret Manager                                                                  | 자동 이슈·GitHub 수치 (권한: 해당 저장소 issues/PR 읽기·이슈 쓰기만)                |
-| `ADMIN_EMAILS`                           | Functions 매개변수(`defineList`, `.env`에는 JSON 배열, 배포 질문에는 쉼표 목록) | 관리자 목록 (D-022)                                                                 |
-| `MB_CONTACT`                             | Functions 매개변수                                                              | MusicBrainz User-Agent 연락처                                                       |
-| `VITE_FIREBASE_*`                        | `apps/web/.env.local` (공개 설정값, 비밀 아님)                                  | Firebase 웹 설정                                                                    |
-| `VITE_RECAPTCHA_SITE_KEY`                | `apps/web/.env.local`                                                           | App Check                                                                           |
-| `FIREBASE_SERVICE_ACCOUNT`               | GitHub Secrets                                                                  | 배포                                                                                |
+| 이름                                     | 위치                                                                            | 용도                                                                                                          |
+| ---------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY`                      | Secret Manager (`defineSecret`), GitHub Secrets(자동 수정·시험)                 | AI                                                                                                            |
+| `YOUTUBE_API_KEY`                        | Secret Manager                                                                  | YouTube 읽기                                                                                                  |
+| `LASTFM_API_KEY`                         | Secret Manager                                                                  | Last.fm                                                                                                       |
+| `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET` | Secret Manager                                                                  | 내 계정에 넣기 권한                                                                                           |
+| `TOKEN_ENC_KEY`                          | Secret Manager                                                                  | 연결 정보 암호화 키 목록 `"v2:<base64 32바이트>,v1:<…>"` (첫 항목이 현재 키, D-018)                           |
+| `ACTOR_HASH_KEY`                         | Secret Manager                                                                  | 이벤트 로그 사용자 해시                                                                                       |
+| `GITHUB_ISSUE_TOKEN`                     | Secret Manager                                                                  | 자동 이슈·GitHub 수치 (권한: 해당 저장소 issues/PR 읽기·이슈 쓰기만)                                          |
+| `ADMIN_EMAILS`                           | Functions 매개변수(`defineList`, `.env`에는 JSON 배열, 배포 질문에는 쉼표 목록) | 관리자 목록 (D-022)                                                                                           |
+| `MB_CONTACT`                             | Functions 매개변수                                                              | MusicBrainz User-Agent 연락처                                                                                 |
+| `MUSICWEB_FAKE_EXTERNAL`                 | `functions/.env.demo-musicweb`(`tools/emulator-env.sh`가 만듦)                  | `true`면 가짜 AI·음악 데이터·YouTube. Functions 에뮬레이터 + `demo-` 프로젝트에서만 효과(D-031)               |
+| `VITE_FIREBASE_*`                        | `apps/web/.env.local` (공개 설정값, 비밀 아님)                                  | Firebase 웹 설정                                                                                              |
+| `VITE_RECAPTCHA_SITE_KEY`                | `apps/web/.env.local`                                                           | App Check                                                                                                     |
+| `VITE_USE_EMULATORS`                     | `apps/web/.env.local` 또는 `dev:emulators` 스크립트                             | `true`면 로컬 에뮬레이터에 붙음. 개발 서버에서만 효과, 배포 빌드에서는 비움(`scan:bundle`이 흔적 검사, D-031) |
+| `FIREBASE_SERVICE_ACCOUNT`               | GitHub Secrets                                                                  | 배포                                                                                                          |
 
-비밀값은 저장소에 두지 않는다. 로컬 에뮬레이터용 값은 `functions/.secret.local`에 둔다(gitignore). 에뮬레이터용 매개변수(`ADMIN_EMAILS`, `MB_CONTACT`)는 `tools/emulator-env.sh`가 `functions/.env.demo-musicweb`(gitignore)에 만든다.
+비밀값은 저장소에 두지 않는다. 로컬 에뮬레이터용 값은 `functions/.secret.local`에 둔다(gitignore). 에뮬레이터용 매개변수(`ADMIN_EMAILS`, `MB_CONTACT`, `MUSICWEB_FAKE_EXTERNAL`)는 `tools/emulator-env.sh`가 `functions/.env.demo-musicweb`(gitignore)에 만든다.
 
 ## 9. 나중에 할 기능
 

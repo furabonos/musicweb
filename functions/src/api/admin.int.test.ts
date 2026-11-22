@@ -212,10 +212,13 @@ describe('관리자 callable: 성공과 기록', () => {
 });
 
 describe('긴급 정지가 바로 적용된다', () => {
-  it('create를 끈 직후 재생목록 만들기(스텁)가 거부되고, 다시 켜면 된다', async () => {
+  it('create를 끈 직후 재생목록 만들기가 거부되고, 다시 켜면 된다', async () => {
+    // 만들기는 D-015로 관리자만. 곡 목록이 비어 있어 결과는 seed_not_found지만, 거부(오류)가 아니면 통과다.
     const admin = await googleSignIn(ADMIN);
-    const user = await googleSignIn('user@example.com');
-    expect((await call('playlists-create', {}, user.token)).result).toEqual({ stub: true });
+    const input = { text: 'songs like Doja by Central Cee', locale: 'en' };
+    const before = await call('playlists-create', input, admin.token);
+    expect(before.error).toBeUndefined();
+    expect(before.result).toEqual({ ok: false, reason: 'seed_not_found' });
 
     const off = await call(
       'admin-setKillSwitch',
@@ -223,13 +226,13 @@ describe('긴급 정지가 바로 적용된다', () => {
       admin.token,
     );
     expect(off.error).toBeUndefined();
-    const blocked = await call('playlists-create', {}, user.token);
+    const blocked = await call('playlists-create', input, admin.token);
     expect(blocked.error?.status).toBe('UNAVAILABLE');
     expect(blocked.error?.details).toEqual({ reason: 'killSwitch', feature: 'create' });
 
     const on = await call('admin-setKillSwitch', { feature: 'create', enabled: true }, admin.token);
     expect(on.error).toBeUndefined();
-    expect((await call('playlists-create', {}, user.token)).result).toEqual({ stub: true });
+    expect((await call('playlists-create', input, admin.token)).error).toBeUndefined();
   });
 });
 

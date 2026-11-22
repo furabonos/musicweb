@@ -100,7 +100,7 @@ export interface RecommendItem {
 export type RecommendResult =
   | {
       ok: true;
-      seed: { songId: string; artist: string; title: string };
+      seed: { songId: string; artistMbid: string | null; artist: string; title: string };
       items: RecommendItem[];
       /** 요청 수보다 적을 때만. 이유 코드는 화면이 언어에 맞게 풀어 쓴다. */
       shortfall: { requested: number; got: number; reason: 'not_enough_playable' } | null;
@@ -123,6 +123,8 @@ export async function recommend(
   ports: RecommendPorts,
   req: ParsedRequest,
   user: { uid: string },
+  /** spares: 요청 수 밖에 더 고를 예비 곡 수(바꾸기용, D-031). 조회·검색은 요청 수(req.count)까지만 한다. */
+  opts: { spares?: number } = {},
 ): Promise<RecommendResult> {
   const now = (ports.now ?? (() => new Date()))();
   const L = RECOMMEND_LIMITS;
@@ -256,10 +258,15 @@ export async function recommend(
 
   // 5. AI가 목록 안에서 고르고 정렬
   const pool = playable.sort((a, b) => b.c.score - a.c.score).slice(0, L.maxPickPool);
-  const items = await aiPick(ports, seed, req, pool, user.uid);
+  const items = await aiPick(ports, seed, req, req.count + (opts.spares ?? 0), pool, user.uid);
   return {
     ok: true,
-    seed: { songId: seed.songId, artist: seed.artist, title: seed.title },
+    seed: {
+      songId: seed.songId,
+      artistMbid: seed.artistMbid,
+      artist: seed.artist,
+      title: seed.title,
+    },
     items,
     shortfall:
       items.length < req.count
@@ -551,6 +558,7 @@ async function aiPick(
   ports: RecommendPorts,
   seed: Seed,
   req: ParsedRequest,
+  pickCount: number,
   pool: { c: Candidate; song: SongDoc; link: PlayableLink }[],
   uid: string,
 ): Promise<RecommendItem[]> {
@@ -576,7 +584,7 @@ async function aiPick(
       system: PICK_SYSTEM,
       input: {
         seed: { artist: seed.artist, title: seed.title },
-        count: req.count,
+        count: pickCount,
         locale: req.locale,
         candidates: pool.map((p, i) => ({
           id: ids[i],
@@ -602,7 +610,7 @@ async function aiPick(
         additionalProperties: false,
       },
       // 곡마다 id + 한 줄 이유(한국어 120자는 토큰이 더 듦). 잘리면 고른 것 전체가 사라지므로 넉넉히.
-      maxTokens: 400 + req.count * 160,
+      maxTokens: 400 + pickCount * 160,
       actorUid: uid,
     });
   } catch (err) {
@@ -619,7 +627,7 @@ async function aiPick(
   let outside = 0;
   let dropped = 0;
   for (const p of Array.isArray(picks) ? picks : []) {
-    if (chosen.length >= req.count) break;
+    if (chosen.length >= pickCount) break;
     const id = (p as { id?: unknown } | null)?.id;
     const idx = typeof id === 'string' ? ids.indexOf(id) : -1;
     const entry = pool[idx];
@@ -635,7 +643,7 @@ async function aiPick(
     chosen.push(item(entry, cleanReason((p as { reason?: unknown }).reason)));
   }
   // AI가 모자라게 골랐거나 실패: 점수 순으로 채운다(이유 없음)
-  for (let i = 0; i < pool.length && chosen.length < req.count; i++) {
+  for (let i = 0; i < pool.length && chosen.length < pickCount; i++) {
     const entry = pool[i];
     if (entry && !used.has(i)) {
       used.add(i);

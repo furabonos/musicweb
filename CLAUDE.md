@@ -31,7 +31,9 @@ pnpm 10(`npm i -g pnpm@10`, Node 26에는 corepack이 없음). 에뮬레이터�
 - 보안 규칙: `pnpm test:rules` (Firestore·Storage 에뮬레이터 띄움 → `tests/rules/*.test.ts` 실행 → 종료)
 - 음악 데이터 녹화 응답 다시 받기: `node --experimental-strip-types tools/record-music-fixtures.ts [파일 이름]` (실제 공개 API에 요청, 초당 1회 이하)
 - 요청 해석 실제 모델 시험: `ANTHROPIC_API_KEY=… pnpm eval:parse` (실제 AI 호출 — 돈이 들므로 사용자 승인 후. 결과는 `evals/parse/baseline.json`)
-- 아직 없음: `pnpm test:e2e`(T14), `pnpm eval`(T17). 생기면 이 절을 고친다.
+- e2e: `pnpm test:e2e` (functions 빌드 → 에뮬레이터(가짜 AI·음악 데이터, D-031) → 화면 개발 서버 → `apps/web/e2e/*.spec.ts`, Playwright). 처음 한 번 `pnpm --filter web exec playwright install chromium`
+- 화면을 가짜 데이터로 직접 보기: `pnpm emulators` → 다른 창에서 `pnpm emulators:seed`(가짜 곡 16곡) → `pnpm --filter web dev:emulators` (관리자 admin@example.com으로 로그인, Auth 에뮬레이터 창에서 입력)
+- 아직 없음: `pnpm eval`(T17). 생기면 이 절을 고친다.
 
 ## 아키텍처 규칙 (SPEC 6.2 요약, 위반은 lint·테스트·규칙이 막는다)
 

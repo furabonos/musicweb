@@ -54,6 +54,23 @@ describe('scanBundle', () => {
     ]);
   });
 
+  it('Firebase Auth SDK의 오류 코드 INVALID_OAUTH_CLIENT_ID는 비밀값 이름이 아니다(정확히 그 이름만 예외)', () => {
+    write('assets/sdk.js', 'var e={INVALID_OAUTH_CLIENT_ID:`invalid-oauth-client-id`};');
+    expect(scanBundle(dir, { allowedValues: [] })).toEqual([]);
+    write('assets/b.js', 'X_INVALID_OAUTH_CLIENT_ID; VITE_OAUTH_CLIENT_ID; OAUTH_CLIENT_ID');
+    expect(scanBundle(dir, { allowedValues: [] })).toEqual([
+      { file: 'assets/b.js', kind: '서버 비밀값 이름 OAUTH_CLIENT_ID' },
+    ]);
+  });
+
+  it('에뮬레이터·e2e 전용 코드(로그인 도우미·에뮬레이터 주소)가 있으면 실패', () => {
+    write('assets/a.js', 'window.__musicwebE2E={};connect("http://127.0.0.1:9099")');
+    expect(scanBundle(dir, { allowedValues: [] }).map((f) => f.kind)).toEqual([
+      '에뮬레이터 전용 코드 __musicwebE2E (VITE_USE_EMULATORS를 비우고 빌드)',
+      '에뮬레이터 전용 코드 127.0.0.1:9099 (VITE_USE_EMULATORS를 비우고 빌드)',
+    ]);
+  });
+
   it('VITE_ 같은 접두어가 붙은 서버 비밀값 이름도 잡는다', () => {
     write('assets/a.js', 'const x = import.meta.env.VITE_LASTFM_API_KEY;');
     expect(scanBundle(dir, { allowedValues: [] }).map((f) => f.kind)).toEqual([

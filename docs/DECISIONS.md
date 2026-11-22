@@ -446,3 +446,50 @@
   - Last.fm 실제 응답 헤더(Cache-Control) 확인과 녹화는 실제 키가 필요해 미뤘다(사용자가 실제 외부 호출 보류, T23 전).
   - 곡 장르(`genres`)는 추천에 쓰지 않아(비슷함은 ListenBrainz·AI가 판단) 채우지 않았다.
 - **이유**: SPEC 4.3의 순서와 "목록 밖 곡은 코드가 버린다"를 지킨다. 출처 하나가 죽어도 결과가 나오게 하고, 비용·한도는 요청 하나가 서비스 전체를 막지 않는 쪽으로 정했다.
+
+## D-031 핵심 흐름 화면과 재생목록 함수, 에뮬레이터 가짜 외부 서비스 (T14, 2026-11-22)
+
+- **화면 디자인**: 시안 3개(포스터·심야 라디오·스타트업) 중 사용자가 고른 B "Late Night FM"으로 만든다.
+  - 어두운 바탕(#0E0F13)과 호박색 강조(#FFB020)를 쓰고, 버튼과 검색창은 알약 모양이다.
+  - 글꼴은 Space Grotesk와 JetBrains Mono다. `@fontsource` 패키지로 사이트에 같이 싣는다. Google Fonts 주소를 부르지 않으므로 방문자 접속 정보가 글꼴 때문에 밖으로 나가지 않는다.
+  - 문구는 `apps/web/src/locales/{en,ko}.json`에 둔다. 두 파일의 키와 자리표시가 같아야 한다(단위 테스트).
+- **callable 세 개**:
+  - `playlists-create`: 로그인 기능(T24) 전까지는 관리자만 쓸 수 있다(D-015).
+  - `playlists-update`(빼기·바꾸기)와 `playlists-save`: 로그인한 소유자만 쓸 수 있고, 저장하기 전(draft)에만 고칠 수 있다.
+- **만들기 순서**: 긴급 정지와 사용자 하루 한도(`consume`) → 요청 해석 → 추천 → 저장.
+  - 한도는 AI를 부르기 전에 확인한다(D-029). AI가 해석에 실패해도 1회로 센다. AI 비용은 이미 썼기 때문이다.
+  - 빈 문장과 200자 초과는 AI를 부르지 않고 거부되므로 한도에서 빼지 않는다(리뷰 지적).
+  - 10초 간격 제한은 T24에서 넣는다.
+- **재생목록 문서에 영상 ID를 저장하지 않는다(D-028의 선택지)**:
+  - 저장하는 것은 `items[{songId, artist, title, reason}]`, `include`, `seed`다.
+  - 화면에 돌려줄 때마다 `recommendableLinks`로 지금 재생할 수 있는 영상을 고른다.
+  - 공유 재생목록이 30일을 넘겨 남아도 YouTube 데이터가 같이 남지 않는다. 그 대신 곡 목록에서 연결이 사라진 곡은 "지금은 재생할 수 없음"으로 보인다.
+  - SPEC 5장의 `items[].videoId`를 이에 맞게 고쳤다.
+- **바꾸기용 예비 곡**:
+  - 만들 때 요청 수 + 5곡을 AI에게 한 번에 고르게 한다(`recommend(…, { spares: 5 })`). 앞의 곡은 재생목록에, 나머지는 비공개 문서(`private/request.spares`, 소유자만 읽음)에 둔다.
+  - 조회·검색은 요청 수까지만 한다. 예비 곡은 남는 후보에서만 채운다. 예비 곡 때문에 YouTube 검색 한도를 쓰지 않기 위함이다(리뷰 지적).
+  - 바꾸기는 예비 곡 중 목록에 없고 지금 재생할 수 있는 첫 곡을 쓴다. 다 쓰면 `noSpare`로 거부한다.
+  - 재생 가능 여부는 트랜잭션 전에 한 번에 조회한다. 트랜잭션이 문서를 잡는 동안 조회를 반복하지 않게 하기 위함이다.
+  - 바꿀 때마다 추천을 다시 돌리지 않으려는 것이다. AI 고르기 출력이 5곡분 늘어난다.
+- **기록**: 빼기·바꾸기는 위치만 이벤트(`song_removed`, `song_replaced`)로 남긴다. 한도·긴급 정지로 막히면 `limit_reached`, `kill_switch_blocked`를 남긴다. 검색 문장은 비공개 문서에만 둔다.
+- **동시 실행**: 만들기 함수는 `maxInstances: 1`, `concurrency: 1`로 둔다. 음악 데이터의 초당 1회 줄(D-024)과 조회 저장의 중복 확인(D-030)이 인스턴스 하나 안에서만 맞기 때문이다. 동시에 들어온 요청은 줄을 선다.
+- **에뮬레이터 가짜 외부 서비스**:
+  - 가짜 AI·음악 데이터·YouTube(`functions/src/dev/fakeWorld.ts`)는 세 조건이 모두 맞을 때만 쓴다.
+    1. Functions 에뮬레이터 안이다.
+    2. 프로젝트 ID가 `demo-`로 시작한다.
+    3. `tools/emulator-env.sh`가 만든 `MUSICWEB_FAKE_EXTERNAL=true`가 있다.
+  - 실제 배포에서는 켜질 수 없다(`config/runtimeEnv.ts`, 단위 테스트).
+  - 가짜 곡 목록 16곡은 `packages/shared/src/demo/catalog.ts`(`@musicweb/shared/demo`)에 있다. 운영 화면 묶음에 들어가지 않게 공용 패키지 기본 입구에서는 내보내지 않는다.
+  - 화면을 직접 볼 때 쓰는 명령: `pnpm emulators` + `pnpm emulators:seed` + `pnpm --filter web dev:emulators`.
+  - e2e는 에뮬레이터 모드 화면에만 생기는 로그인 도우미(`window.__musicwebE2E`)로 Google 로그인을 흉내 낸다.
+    - 이 코드는 `import.meta.env.DEV && VITE_USE_EMULATORS === 'true'`일 때만 들어간다. 운영 빌드에서는 `VITE_USE_EMULATORS=true`로 빌드해도 빠진다(확인함).
+    - `scan:bundle`은 도우미 이름과 에뮬레이터 주소가 빌드에 있으면 실패한다(리뷰 지적).
+  - 가짜 외부 서비스 코드(`dev/fakeWorld.ts`, 가짜 곡 16곡)는 함수 묶음에 실린다. 실행할 때 위 세 조건으로만 막는다. 크기가 작아 동적 import로 빼지 않았다.
+  - 가짜 모드에서는 비밀값을 읽지 않는다. `functions/.secret.local` 없이도 에뮬레이터에서 만들기가 돈다.
+- **화면 빌드 검사 예외 하나**: Firebase Auth SDK의 오류 코드 `INVALID_OAUTH_CLIENT_ID`가 서버 비밀값 이름 `OAUTH_CLIENT_ID`에 걸렸다. 그래서 정확히 그 식별자만 예외로 두었다(`KNOWN_LIBRARY_IDENTIFIERS`). `VITE_OAUTH_CLIENT_ID` 같은 다른 형태는 계속 잡는다(테스트).
+- **e2e**: Playwright(Chromium)를 쓴다. `pnpm test:e2e`가 에뮬레이터를 띄우고 화면 개발 서버를 에뮬레이터 모드로 띄운 뒤 `apps/web/e2e/*.spec.ts`를 실행한다. 테스트마다 Firestore를 비우고 가짜 곡을 다시 넣는다.
+- **넘긴 것**:
+  - 플레이어는 T15에서 만든다. 결과 카드에는 아직 플레이어가 없다.
+  - `/p/:id` 화면은 T16에서 만든다. 저장 뒤 보여 주는 공유 주소는 아직 열리지 않는다.
+  - 로그인 화면 다듬기, 한도 안내, 10초 간격은 T24에서 한다.
+- **이유**: SPEC 1.3의 흐름(요청 → 결과 → 빼기·바꾸기 → 저장)을 실제 서버 함수로 처음부터 끝까지 시험하되, 테스트와 화면 확인이 실제 AI·외부 API를 부르지 않게 하기 위함이다(사용자가 실제 외부 호출을 보류함). 영상 ID를 오래 남는 문서에서 빼서 30일 규칙을 저장 구조로 지킨다.
