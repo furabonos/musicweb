@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { SUPPORTED_LOCALES, type Locale } from '@musicweb/shared';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { SUPPORTED_LOCALES, type Locale, type MusicService } from '@musicweb/shared';
 import {
   ApiError,
   type CreateFailReason,
@@ -10,6 +10,7 @@ import {
   type UnsupportedCode,
 } from './api';
 import { useI18n, type MessageKey } from './i18n';
+import { Player, type PlayerHandle } from './player/Player';
 
 /** 검색창 글자 수 상한. 서버(parseRequest)와 같게 코드 포인트로 센다. */
 export const MAX_REQUEST_CHARS = 200;
@@ -59,7 +60,7 @@ function errorMessage(err: unknown, locale: Locale): Message {
   return { key: 'errors.generic' };
 }
 
-export function App({ api }: { api: MusicwebApi }) {
+export function App({ api, music }: { api: MusicwebApi; music: MusicService<HTMLElement> }) {
   const { locale, setLocale, t } = useI18n();
   const [user, setUser] = useState<SignedInUser | null>(null);
   const [text, setText] = useState('');
@@ -70,6 +71,8 @@ export function App({ api }: { api: MusicwebApi }) {
   const [busyRow, setBusyRow] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [playing, setPlaying] = useState(-1);
+  const player = useRef<PlayerHandle>(null);
 
   useEffect(() => api.onUser(setUser), [api]);
 
@@ -90,6 +93,7 @@ export function App({ api }: { api: MusicwebApi }) {
       const r = await api.create(text, locale);
       if (r.ok) {
         setResult(r);
+        setPlaying(-1);
         setSavedId(null);
       } else {
         setFail(r.reason);
@@ -245,18 +249,30 @@ export function App({ api }: { api: MusicwebApi }) {
                   })}
                 </div>
               )}
-              <ol className="songs">
-                {result.items.map((item, i) => (
-                  <SongRow
-                    key={`${item.songId}-${i}`}
-                    item={item}
-                    n={i + 1}
-                    disabled={busyRow !== null || savedId !== null}
-                    onRemove={() => void edit('remove', i)}
-                    onReplace={() => void edit('replace', i)}
-                  />
-                ))}
-              </ol>
+              <div className="card-body">
+                <Player
+                  key={result.id}
+                  ref={player}
+                  items={result.items}
+                  service={music}
+                  onIndex={setPlaying}
+                  onEmbedBlocked={(code) => void api.reportEmbedBlocked(code).catch(() => {})}
+                />
+                <ol className="songs">
+                  {result.items.map((item, i) => (
+                    <SongRow
+                      key={`${item.songId}-${i}`}
+                      item={item}
+                      n={i + 1}
+                      playing={i === playing}
+                      disabled={busyRow !== null || savedId !== null}
+                      onPlay={() => player.current?.playAt(i)}
+                      onRemove={() => void edit('remove', i)}
+                      onReplace={() => void edit('replace', i)}
+                    />
+                  ))}
+                </ol>
+              </div>
               <div className="card-foot">
                 {savedId ? (
                   <p className="share" role="status">
@@ -295,15 +311,25 @@ export function App({ api }: { api: MusicwebApi }) {
 function SongRow(props: {
   item: PlayableItem;
   n: number;
+  playing: boolean;
   disabled: boolean;
+  onPlay(): void;
   onRemove(): void;
   onReplace(): void;
 }) {
   const { t } = useI18n();
   const { item } = props;
   return (
-    <li className="song">
-      <span className="song-n">{String(props.n).padStart(2, '0')}</span>
+    <li className="song" aria-current={props.playing ? 'true' : undefined}>
+      <button
+        type="button"
+        className="song-n"
+        aria-label={t('results.play', { title: item.title })}
+        disabled={!item.videoId}
+        onClick={props.onPlay}
+      >
+        {String(props.n).padStart(2, '0')}
+      </button>
       <div className="song-main">
         <div className="song-title">
           {item.title}

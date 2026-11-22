@@ -49,5 +49,12 @@
   "errors.generic": "Something went wrong. Please try again.",
   "footer.privacy": "Privacy",
   "footer.terms": "Terms",
-  "footer.status": "Status"
+  "footer.status": "Status",
+  "player.label": "YouTube player",
+  "player.previous": "Previous song",
+  "player.next": "Next song",
+  "player.nowPlaying": "NOW SPINNING · {n}/{total}",
+  "player.source": "Videos play from YouTube. Press play in the player to start.",
+  "player.loadFailed": "The YouTube player couldn't load. Check your connection and refresh.",
+  "results.play": "Play {title}"
 }

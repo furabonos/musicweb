@@ -49,5 +49,12 @@
   "errors.generic": "문제가 생겼어요. 다시 시도해 주세요.",
   "footer.privacy": "개인정보 처리방침",
   "footer.terms": "이용약관",
-  "footer.status": "현황판"
+  "footer.status": "현황판",
+  "player.label": "YouTube 플레이어",
+  "player.previous": "이전 곡",
+  "player.next": "다음 곡",
+  "player.nowPlaying": "지금 재생 · {n}/{total}",
+  "player.source": "영상은 YouTube에서 재생돼요. 플레이어의 재생 버튼을 눌러 시작하세요.",
+  "player.loadFailed": "YouTube 플레이어를 불러오지 못했어요. 연결을 확인하고 새로고침해 주세요.",
+  "results.play": "{title} 재생"
 }

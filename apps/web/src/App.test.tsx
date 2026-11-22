@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { MusicService, PlayerEvents } from '@musicweb/shared';
 import { ApiError, type CreateResult, type MusicwebApi, type PlayableItem } from './api';
 import { App, countChars, MAX_REQUEST_CHARS } from './App';
 import { I18nProvider } from './i18n';
@@ -31,7 +32,28 @@ const ok = (items: PlayableItem[], over: Partial<Extract<CreateResult, { ok: tru
     ...over,
   }) as CreateResult;
 
+/** 가짜 재생 서비스: 플레이어 호출을 기록하고, 테스트가 곡 끝·오류를 일으킬 수 있게 한다. */
+function fakeMusic() {
+  const calls: string[] = [];
+  let events: PlayerEvents | null = null;
+  const service: MusicService<HTMLElement> = {
+    name: 'youtube',
+    mount: async (_el, ev) => {
+      events = ev;
+      return {
+        cue: (id) => calls.push(`cue:${id}`),
+        play: (id) => calls.push(`play:${id}`),
+        destroy: () => calls.push('destroy'),
+      };
+    },
+  };
+  return { service, calls, events: () => events };
+}
+
+let music = fakeMusic();
+
 function fakeApi(over: Partial<MusicwebApi> = {}, signedIn = true) {
+  music = fakeMusic();
   const api: MusicwebApi = {
     onUser: (cb) => {
       cb(signedIn ? { uid: 'u1' } : null);
@@ -42,11 +64,12 @@ function fakeApi(over: Partial<MusicwebApi> = {}, signedIn = true) {
     create: vi.fn(async () => ok([1, 2, 3].map((n) => item(n)))),
     update: vi.fn(async () => ({ items: [item(1), item(3)] })),
     save: vi.fn(async () => ({ id: 'pl1', state: 'saved' as const })),
+    reportEmbedBlocked: vi.fn(async () => {}),
     ...over,
   };
   render(
     <I18nProvider>
-      <App api={api} />
+      <App api={api} music={music.service} />
     </I18nProvider>,
   );
   return api;
@@ -190,5 +213,90 @@ describe('만들기 결과', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Swap Title 1 for another song' }));
     });
     expect(screen.getByRole('alert').textContent).toBe('No more songs to swap in.');
+  });
+});
+
+describe('재생 (가짜 플레이어)', () => {
+  it('결과가 나오면 첫 곡을 올려만 두고, 곡 번호를 누르면 그 곡을 재생', async () => {
+    fakeApi();
+    await ask();
+    await waitFor(() => expect(music.calls).toEqual(['cue:vid1']));
+    fireEvent.click(screen.getByRole('button', { name: 'Play Title 2' }));
+    expect(music.calls).toEqual(['cue:vid1', 'play:vid2']);
+    expect(screen.getAllByRole('listitem')[1]?.getAttribute('aria-current')).toBe('true');
+    expect(screen.getByRole('region', { name: 'YouTube player' })).toBeTruthy();
+  });
+
+  it('오류 150이면 기록을 보내고 다음 곡으로', async () => {
+    const api = fakeApi();
+    await ask();
+    await waitFor(() => expect(music.calls).toEqual(['cue:vid1']));
+    fireEvent.click(screen.getByRole('button', { name: 'Play Title 1' }));
+    act(() => music.events()?.onError(150));
+    expect(api.reportEmbedBlocked).toHaveBeenCalledWith(150);
+    expect(music.calls.at(-1)).toMatch(/^(play|cue):vid2$/);
+  });
+
+  it('재생할 수 없는 곡은 재생 버튼이 잠김', async () => {
+    fakeApi({ create: async () => ok([item(1), item(2, { videoId: null })]) });
+    await ask();
+    expect(screen.getByRole('button', { name: 'Play Title 2' })).toHaveProperty('disabled', true);
+  });
+});
+
+describe('플레이어 정리', () => {
+  it('새 결과가 오면 이전 플레이어를 지우고 새로 만든다, 강조도 초기화', async () => {
+    let n = 0;
+    fakeApi({
+      create: async () => ok([item(1), item(2)], { id: `pl${++n}` }),
+    });
+    await ask();
+    await waitFor(() => expect(music.calls).toEqual(['cue:vid1']));
+    fireEvent.click(screen.getByRole('button', { name: 'Play Title 2' }));
+    await ask();
+    await waitFor(() =>
+      expect(music.calls).toEqual(['cue:vid1', 'play:vid2', 'destroy', 'cue:vid1']),
+    );
+    expect(screen.getAllByRole('listitem')[1]?.getAttribute('aria-current')).toBeNull();
+  });
+
+  it('플레이어가 준비되기 전에 화면에서 빠지면, 늦게 준비돼도 바로 지운다', async () => {
+    const calls: string[] = [];
+    let ready: (() => void) | null = null;
+    const slow: MusicService<HTMLElement> = {
+      name: 'youtube',
+      mount: () =>
+        new Promise((resolve) => {
+          ready = () =>
+            resolve({
+              cue: (id) => calls.push(`cue:${id}`),
+              play: (id) => calls.push(`play:${id}`),
+              destroy: () => calls.push('destroy'),
+            });
+        }),
+    };
+    const api = {
+      onUser: (cb: (u: { uid: string }) => void) => {
+        cb({ uid: 'u1' });
+        return () => {};
+      },
+      signIn: async () => {},
+      signOut: async () => {},
+      create: async () => ok([item(1)]),
+      update: async () => ({ items: [] }),
+      save: async () => ({ id: 'pl1', state: 'saved' as const }),
+      reportEmbedBlocked: async () => {},
+    } as MusicwebApi;
+    const { unmount } = render(
+      <I18nProvider>
+        <App api={api} music={slow} />
+      </I18nProvider>,
+    );
+    await ask();
+    unmount();
+    await act(async () => {
+      (ready as (() => void) | null)?.();
+    });
+    expect(calls).toEqual(['destroy']);
   });
 });

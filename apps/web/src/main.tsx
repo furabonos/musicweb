@@ -7,14 +7,16 @@ import './styles.css';
 import { App } from './App';
 import { createFirebaseApi } from './firebaseApi';
 import { I18nProvider } from './i18n';
+import { createYouTubeService } from './player/youtube';
 
 const root = document.getElementById('root');
 if (!root) throw new Error('#root element not found');
 const api = createFirebaseApi();
+const music = createYouTubeService();
 createRoot(root).render(
   <StrictMode>
     <I18nProvider>
-      <App api={api} />
+      <App api={api} music={music} />
     </I18nProvider>
   </StrictMode>,
 );
