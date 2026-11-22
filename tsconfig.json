@@ -8,8 +8,10 @@
   "include": [
     "tests/**/*.ts",
     "tools/**/*.ts",
+    "evals/**/*.ts",
     "vitest.config.ts",
     "vitest.int.config.ts",
-    "vitest.rules.config.ts"
+    "vitest.rules.config.ts",
+    "vitest.eval.config.ts"
   ]
 }

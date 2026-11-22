@@ -1,0 +1,10 @@
+{
+  "_note": "실제 모델(claude-haiku-5-5) 정확도. 아직 측정하지 않음 — ANTHROPIC_API_KEY를 넣고 `pnpm eval:parse`로 잰 뒤 이 파일을 고친다(사용자 결정, T12).",
+  "model": "claude-haiku-5-5",
+  "measured": false,
+  "measuredAt": null,
+  "cases": 20,
+  "passed": null,
+  "accuracy": null,
+  "failedIds": []
+}

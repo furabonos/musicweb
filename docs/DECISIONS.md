@@ -383,3 +383,34 @@
 - **색인**: `links` (status, verifiedAt) 복합 색인을 컬렉션·컬렉션 그룹 둘 다, `links.verifiedAt` 컬렉션 그룹 단일 필드 색인. `artists.ytVerifiedAt`·`ytExports.createdAt`은 자동 단일 필드 색인.
 - **남은 것**: 재생목록 문서(`playlists.items[].videoId`, T14)도 YouTube 영상 ID다. 저장된 공유 재생목록은 오래 남으므로, T14에서 영상 ID를 곡(songId)으로만 저장하고 열 때 `recommendableLinks`로 고르거나, 이 정리 작업에 넣어야 한다(TASKS T14에 적어 둠).
 - **이유**: 개발자 정책의 30일 조항(D-004)을 작업 하나가 실패해도 지키게 하려고 재확인과 정리를 나누고, 정리는 외부 의존 없이 항상 돌게 했다.
+
+## D-029 AI 호출 어댑터와 요청 해석 (T12, 2026-11-22)
+
+- **SDK**: `@anthropic-ai/sdk`(1.12.0)를 `adapters/llm.ts`에서만 쓴다(lint가 adapters 밖의 `@anthropic-ai/*`를 막음). 모델 `claude-haiku-5-5`(D-014).
+- **주입 방어(SPEC 6.2)**:
+  - 지시문은 고정된 `system`에만 둔다. 사용자 입력·외부 글은 user 메시지의 `<data>…</data>` 안에 JSON으로만 넣는다. `<`·`>`는 JSON 유니코드 이스케이프(`\u003c`·`\u003e`)로 바꿔 입력이 `</data>`로 구역을 닫은 척하지 못하게 한다.
+  - `tools`를 보내지 않고 `output_config.format`(JSON 스키마) 구조화 출력만 받는다. 요청 본문에 tools가 없음을 테스트로 확인한다.
+  - 받은 값은 호출한 쪽이 zod `strictObject`로 다시 검사한다. 정의 안 된 필드나 형식 오류는 해석 실패. 곡 수는 코드가 기본 10, 범위 5~30으로 맞춘다. 그래서 모델이 주입에 넘어가도 결과의 형식·범위는 바뀌지 않는다.
+- **비용**: 보내기 전에 최대치를 `aiCostMicroUsd`로 예약하고(`withBudget`), 응답의 usage로 정산한다.
+  - 최대치는 입력 글자 수×2 토큰과 `max_tokens` 전부로 잡는다. 가격은 $0.10 / $0.50 per MTok(10만 토큰 이하 기준, 2026-11).
+  - 상태 코드가 있는 4xx(429 제외)는 처리 전에 거절된 것이라 0으로 정산한다. 시간 초과·연결 끊김·5xx·429는 서버가 이미 처리했거나 재시도로 두 번 과금됐을 수 있어 예약한 최대치로 정산한다(막는 쪽, 리뷰 지적). 거절·길이 초과·JSON 아님은 usage로 정산하고 null을 돌려준다.
+  - 최대치에는 구조화 출력 스키마 길이도 넣는다(스키마도 입력 토큰으로 과금).
+  - 사용자별 AI 한도는 아직 없고, 서비스 하루 $1만 건다. 사용자 요청은 검색·재생목록 한도가 먼저 막는다.
+- **설정**:
+  - `thinking: disabled`: 짧은 추출이라 비용·지연을 줄인다. 기본 effort(medium)에서 허용된다.
+  - `maxRetries: 1`, 시간 제한 20초. 주소는 `https://api.anthropic.com`으로 고정한다(환경 변수 `ANTHROPIC_BASE_URL`로 키가 다른 곳에 가지 않게).
+  - 실제 API가 이 요청 형식(`thinking: disabled` + `output_config.format`)을 받는지는 아직 실제로 호출해 보지 않았다(가짜 서버로만 확인). 실제 측정(T17) 또는 T13 전에 사용자 승인을 받아 한 번 확인한다.
+  - 이벤트에는 대상·호출 종류·비용·상태 코드만 남긴다(문장 원문 없음).
+- **요청 해석 `core/parseRequest.ts`**:
+  - 입력은 200자(코드 포인트) 이하만 받는다. 빈 문장과 초과는 AI를 부르지 않고 `request_parse_failed`(`empty`/`too_long`)로 끝낸다.
+  - 출력은 `{seed|null, count, include{live,cover,remix}, locale, unsupported[]}`이다. `locale`은 화면 언어를 그대로 쓴다.
+  - 1단계 밖의 조건(연도·분위기·제외 아티스트·장르·기타)은 자유 글이 아니라 **종류 코드**로만 받는다. 모델 출력의 글이 화면에 그대로 나가지 않게 하기 위함이다.
+  - 기준 곡이 없어도(seed null) 해석은 성공으로 돌려준다. SPEC 4.2 출력 형식 그대로이고, 기준 곡을 못 찾았을 때 "다시 묻기"는 T13·T14가 판단한다.
+- **곡 연결 판정 `createJudge`**:
+  - 스키마의 `enum`을 후보 id로 제한하고 null도 허용한다.
+  - 모델이 낸 문자열은 그대로 넘긴다. 후보 밖이면 `decideLink`가 `ai_invalid_choice`로 거절한다(두 번째 검사).
+  - **수집 작업에 연결하는 것은 T13으로 미룬다.** 지금 `decideLink`는 judge 오류를 그대로 던지므로, AI 한도 초과가 수집 전체를 멈추지 않게 감싸는 처리와 함께 붙여야 한다(TASKS T13).
+- **시험 `evals/parse/`**:
+  - 20문항(한·영 10개씩), 채점기 `score.ts`(+unit 테스트), 실제 모델 실행 `pnpm eval:parse`(`vitest.eval.config.ts`)를 만들었다. 키가 없으면 실행이 실패하고, 몰래 건너뛰지 않는다.
+  - **실제 측정은 사용자 결정으로 미뤘다**(`baseline.json`의 `measured: false`). T17에서 잰다. 이 시험 실행은 Firestore 한도(`withBudget`)를 거치지 않고 사용한 비용만 합산해 결과에 적는다(사람이 직접 돌리는 도구라서).
+- **이유**: SPEC 6.2 "입력과 외부 글의 지시문을 명령으로 취급하지 않는다"를 모델의 순응에 맡기지 않는다. 도구 없음, 데이터 구역, 출력 재검사라는 코드 구조로 지키기 위함이다.

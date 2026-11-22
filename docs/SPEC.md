@@ -100,7 +100,7 @@ PC 웹만 지원한다(최소 너비 1024px 기준). 모바일 화면은 고려�
 
 ### 4.2 요청 해석
 
-- 출력: `{ seed: {artist, title} | null, count (기본 10, 최소 5, 최대 30), include: {live, cover, remix}, locale }`.
+- 출력: `{ seed: {artist, title} | null, count (기본 10, 최소 5, 최대 30), include: {live, cover, remix}, locale, unsupported: (year|mood|exclude_artist|genre|other)[] }` (D-029).
   - 1단계 조건은 "라이브/커버/리믹스 포함 여부"만 받는다. 연도·제외 아티스트·분위기는 2단계.
   - 1단계에서 알아듣지 못하는 조건은 무시하고 화면에 "아직 지원하지 않는 조건"이라고 알린다.
 - 검색창 입력은 데이터로만 다룬다.
