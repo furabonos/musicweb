@@ -2,13 +2,13 @@
   "_note": "시험 기준 점수(T17, D-034). `pnpm eval`이 이보다 (허용 폭을 넘어) 낮으면 실패한다. `EVAL_UPDATE_BASELINE=1`로 다시 쓴다.",
   "suites": {
     "parse": {
-      "score": 0.9,
+      "score": 0.95,
       "cases": 20,
-      "passed": 18,
-      "failedIds": ["ko-02", "ko-03"],
+      "passed": 19,
+      "failedIds": ["en-09"],
       "tolerance": 0.05,
       "llm": "claude-code-cli (구독, claude-haiku-5-5)",
-      "measuredAt": "2026-11-22T14:42:08.887Z"
+      "measuredAt": "2026-11-22T15:45:07.006Z"
     },
     "recommend": {
       "cases": 20,
