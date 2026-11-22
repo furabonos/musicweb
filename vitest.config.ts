@@ -13,6 +13,7 @@ export default defineConfig({
             'functions/src/**/*.test.ts',
             'packages/*/src/**/*.test.ts',
             'tools/**/*.test.ts',
+            'evals/**/*.test.ts',
           ],
           exclude: ['**/*.int.test.ts', '**/node_modules/**'],
         },

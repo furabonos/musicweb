@@ -47,6 +47,8 @@ export const EXTERNAL_OPS = [
   'playlistItems.list',
   'videos.list',
   'search.list',
+  'llm.parseRequest',
+  'llm.judgeLink',
 ] as const;
 export type ExternalOp = (typeof EXTERNAL_OPS)[number];
 
