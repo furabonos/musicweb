@@ -236,7 +236,8 @@ export default tseslint.config(
   //   adapters/:        process 금지 (네트워크 허용)
   // YouTube 재생목록 쓰기는 adapters/youtube-write.ts에서만, youtube-read.ts는 GET 읽기만.
   {
-    files: ['functions/src/**/*.ts'],
+    // evals의 두 채점기는 매일 시험(jobs/dailyEval.ts)으로 함수 묶음에 들어가므로 같은 제한을 건다(D-034).
+    files: ['functions/src/**/*.ts', 'evals/matching/score.ts', 'evals/parse/score.ts'],
     ignores: [
       'functions/src/config/**',
       'functions/src/adapters/**',

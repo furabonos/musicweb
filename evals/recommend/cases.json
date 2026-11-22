@@ -1,0 +1,1425 @@
+{
+  "_note": "추천 시험 문제(T17). 기준 곡마다 같은 장르의 어울리는 곡 6개(fits)와 멀리 떨어진 장르의 미끼 6개를 섞은 후보(비슷한 곡 출처 순서: 미끼가 먼저). 점수 = AI가 고른 5곡 중 어울리는 곡 비율. 후보는 손으로 만든 것이고, 실제 ListenBrainz 녹화본은 나중에(T23 이후) 보강한다.",
+  "cases": [
+    {
+      "id": "r01",
+      "genre": "altrock",
+      "seed": {
+        "artist": "Radiohead",
+        "title": "Karma Police"
+      },
+      "count": 5,
+      "pool": [
+        {
+          "artist": "Don Omar",
+          "title": "Danza Kuduro",
+          "fits": false
+        },
+        {
+          "artist": "Radiohead",
+          "title": "No Surprises",
+          "fits": true
+        },
+        {
+          "artist": "J Balvin",
+          "title": "Mi Gente",
+          "fits": false
+        },
+        {
+          "artist": "Muse",
+          "title": "Unintended",
+          "fits": true
+        },
+        {
+          "artist": "Johnny Cash",
+          "title": "Ring of Fire",
+          "fits": false
+        },
+        {
+          "artist": "Coldplay",
+          "title": "Trouble",
+          "fits": true
+        },
+        {
+          "artist": "Patsy Cline",
+          "title": "Crazy",
+          "fits": false
+        },
+        {
+          "artist": "Jeff Buckley",
+          "title": "Lover, You Should've Come Over",
+          "fits": true
+        },
+        {
+          "artist": "Swedish House Mafia",
+          "title": "Don't You Worry Child",
+          "fits": false
+        },
+        {
+          "artist": "Travis",
+          "title": "Why Does It Always Rain on Me?",
+          "fits": true
+        },
+        {
+          "artist": "David Guetta",
+          "title": "Titanium",
+          "fits": false
+        },
+        {
+          "artist": "Radiohead",
+          "title": "Paranoid Android",
+          "fits": true
+        }
+      ]
+    },
+    {
+      "id": "r02",
+      "genre": "ukrap",
+      "seed": {
+        "artist": "Central Cee",
+        "title": "Doja"
+      },
+      "count": 5,
+      "pool": [
+        {
+          "artist": "Erik Satie",
+          "title": "Gymnopédie No. 1",
+          "fits": false
+        },
+        {
+          "artist": "Dave",
+          "title": "Clash",
+          "fits": true
+        },
+        {
+          "artist": "Frédéric Chopin",
+          "title": "Nocturne in E-flat major, Op. 9 No. 2",
+          "fits": false
+        },
+        {
+          "artist": "AJ Tracey",
+          "title": "Ladbroke Grove",
+          "fits": true
+        },
+        {
+          "artist": "Johnny Cash",
+          "title": "Ring of Fire",
+          "fits": false
+        },
+        {
+          "artist": "Headie One",
+          "title": "Only You Freestyle",
+          "fits": true
+        },
+        {
+          "artist": "Patsy Cline",
+          "title": "Crazy",
+          "fits": false
+        },
+        {
+          "artist": "Stormzy",
+          "title": "Vossi Bop",
+          "fits": true
+        },
+        {
+          "artist": "Antônio Carlos Jobim",
+          "title": "Desafinado",
+          "fits": false
+        },
+        {
+          "artist": "Tion Wayne",
+          "title": "Body",
+          "fits": true
+        },
+        {
+          "artist": "João Gilberto",
+          "title": "Chega de Saudade",
+          "fits": false
+        },
+        {
+          "artist": "Digga D",
+          "title": "Woi",
+          "fits": true
+        }
+      ]
+    },
+    {
+      "id": "r03",
+      "genre": "kpop",
+      "seed": {
+        "artist": "NewJeans",
+        "title": "Hype Boy"
+      },
+      "count": 5,
+      "pool": [
+        {
+          "artist": "Slayer",
+          "title": "Raining Blood",
+          "fits": false
+        },
+        {
+          "artist": "IVE",
+          "title": "Love Dive",
+          "fits": true
+        },
+        {
+          "artist": "Megadeth",
+          "title": "Holy Wars... The Punishment Due",
+          "fits": false
+        },
+        {
+          "artist": "LE SSERAFIM",
+          "title": "ANTIFRAGILE",
+          "fits": true
+        },
+        {
+          "artist": "Miles Davis",
+          "title": "So What",
+          "fits": false
+        },
+        {
+          "artist": "aespa",
+          "title": "Next Level",
+          "fits": true
+        },
+        {
+          "artist": "John Coltrane",
+          "title": "Giant Steps",
+          "fits": false
+        },
+        {
+          "artist": "NewJeans",
+          "title": "Ditto",
+          "fits": true
+        },
+        {
+          "artist": "Johnny Cash",
+          "title": "Ring of Fire",
+          "fits": false
+        },
+        {
+          "artist": "(G)I-DLE",
+          "title": "Queencard",
+          "fits": true
+        },
+        {
+          "artist": "Patsy Cline",
+          "title": "Crazy",
+          "fits": false
+        },
+        {
+          "artist": "STAYC",
+          "title": "ASAP",
+          "fits": true
+        }
+      ]
+    },
+    {
+      "id": "r04",
+      "genre": "synthpop",
+      "seed": {
+        "artist": "a-ha",
+        "title": "Take On Me"
+      },
+      "count": 5,
+      "pool": [
+        {
+          "artist": "Slayer",
+          "title": "Raining Blood",
+          "fits": false
+        },
+        {
+          "artist": "Tears for Fears",
+          "title": "Everybody Wants to Rule the World",
+          "fits": true
+        },
+        {
+          "artist": "Megadeth",
+          "title": "Holy Wars... The Punishment Due",
+          "fits": false
+        },
+        {
+          "artist": "Duran Duran",
+          "title": "Hungry Like the Wolf",
+          "fits": true
+        },
+        {
+          "artist": "Nas",
+          "title": "N.Y. State of Mind",
+          "fits": false
+        },
+        {
+          "artist": "Depeche Mode",
+          "title": "Just Can't Get Enough",
+          "fits": true
+        },
+        {
+          "artist": "Wu-Tang Clan",
+          "title": "C.R.E.A.M.",
+          "fits": false
+        },
+        {
+          "artist": "Pet Shop Boys",
+          "title": "West End Girls",
+          "fits": true
+        },
+        {
+          "artist": "Antônio Carlos Jobim",
+          "title": "Desafinado",
+          "fits": false
+        },
+        {
+          "artist": "Eurythmics",
+          "title": "Sweet Dreams (Are Made of This)",
+          "fits": true
+        },
+        {
+          "artist": "João Gilberto",
+          "title": "Chega de Saudade",
+          "fits": false
+        },
+        {
+          "artist": "Human League",
+          "title": "Don't You Want Me",
+          "fits": true
+        }
+      ]
+    },
+    {
+      "id": "r05",
+      "genre": "jazz",
+      "seed": {
+        "artist": "The Dave Brubeck Quartet",
+        "title": "Take Five"
+      },
+      "count": 5,
+      "pool": [
+        {
+          "artist": "Swedish House Mafia",
+          "title": "Don't You Worry Child",
+          "fits": false
+        },
+        {
+          "artist": "Miles Davis",
+          "title": "So What",
+          "fits": true
+        },
+        {
+          "artist": "David Guetta",
+          "title": "Titanium",
+          "fits": false
+        },
+        {
+          "artist": "John Coltrane",
+          "title": "Giant Steps",
+          "fits": true
+        },
+        {
+          "artist": "Slayer",
+          "title": "Raining Blood",
+          "fits": false
+        },
+        {
+          "artist": "Bill Evans",
+          "title": "Waltz for Debby",
+          "fits": true
+        },
+        {
+          "artist": "Megadeth",
+          "title": "Holy Wars... The Punishment Due",
+          "fits": false
+        },
+        {
+          "artist": "Thelonious Monk",
+          "title": "'Round Midnight",
+          "fits": true
+        },
+        {
+          "artist": "IVE",
+          "title": "Love Dive",
+          "fits": false
+        },
+        {
+          "artist": "Cannonball Adderley",
+          "title": "Autumn Leaves",
+          "fits": true
+        },
+        {
+          "artist": "LE SSERAFIM",
+          "title": "ANTIFRAGILE",
+          "fits": false
+        },
+        {
+          "artist": "Herbie Hancock",
+          "title": "Cantaloupe Island",
+          "fits": true
+        }
+      ]
+    },
+    {
+      "id": "r06",
+      "genre": "classical",
+      "seed": {
+        "artist": "Claude Debussy",
+        "title": "Clair de lune"
+      },
+      "count": 5,
+      "pool": [
+        {
+          "artist": "Dave",
+          "title": "Clash",
+          "fits": false
+        },
+        {
+          "artist": "Erik Satie",
+          "title": "Gymnopédie No. 1",
+          "fits": true
+        },
+        {
+          "artist": "AJ Tracey",
+          "title": "Ladbroke Grove",
+          "fits": false
+        },
+        {
+          "artist": "Frédéric Chopin",
+          "title": "Nocturne in E-flat major, Op. 9 No. 2",
+          "fits": true
+        },
+        {
+          "artist": "Slayer",
+          "title": "Raining Blood",
+          "fits": false
+        },
+        {
+          "artist": "Maurice Ravel",
+          "title": "Pavane pour une infante défunte",
+          "fits": true
+        },
+        {
+          "artist": "Megadeth",
+          "title": "Holy Wars... The Punishment Due",
+          "fits": false
+        },
+        {
+          "artist": "Ludwig van Beethoven",
+          "title": "Moonlight Sonata",
+          "fits": true
+        },
+        {
+          "artist": "Don Omar",
+          "title": "Danza Kuduro",
+          "fits": false
+        },
+        {
+          "artist": "Johann Sebastian Bach",
+          "title": "Air on the G String",
+          "fits": true
+        },
+        {
+          "artist": "J Balvin",
+          "title": "Mi Gente",
+          "fits": false
+        },
+        {
+          "artist": "Gabriel Fauré",
+          "title": "Pavane",
+          "fits": true
+        }
+      ]
+    },
+    {
+      "id": "r07",
+      "genre": "country",
+      "seed": {
+        "artist": "Dolly Parton",
+        "title": "Jolene"
+      },
+      "count": 5,
+      "pool": [
+        {
+          "artist": "Swedish House Mafia",
+          "title": "Don't You Worry Child",
+          "fits": false
+        },
+        {
+          "artist": "Johnny Cash",
+          "title": "Ring of Fire",
+          "fits": true
+        },
+        {
+          "artist": "David Guetta",
+          "title": "Titanium",
+          "fits": false
+        },
+        {
+          "artist": "Patsy Cline",
+          "title": "Crazy",
+          "fits": true
+        },
+        {
+          "artist": "Dave",
+          "title": "Clash",
+          "fits": false
+        },
+        {
+          "artist": "Willie Nelson",
+          "title": "On the Road Again",
+          "fits": true
+        },
+        {
+          "artist": "AJ Tracey",
+          "title": "Ladbroke Grove",
+          "fits": false
+        },
+        {
+          "artist": "Loretta Lynn",
+          "title": "Coal Miner's Daughter",
+          "fits": true
+        },
+        {
+          "artist": "IVE",
+          "title": "Love Dive",
+          "fits": false
+        },
+        {
+          "artist": "Kenny Rogers",
+          "title": "The Gambler",
+          "fits": true
+        },
+        {
+          "artist": "LE SSERAFIM",
+          "title": "ANTIFRAGILE",
+          "fits": false
+        },
+        {
+          "artist": "Tammy Wynette",
+          "title": "Stand by Your Man",
+          "fits": true
+        }
+      ]
+    },
+    {
+      "id": "r08",
+      "genre": "edm",
+      "seed": {
+        "artist": "Avicii",
+        "title": "Levels"
+      },
+      "count": 5,
+      "pool": [
+        {
+          "artist": "Miles Davis",
+          "title": "So What",
+          "fits": false
+        },
+        {
+          "artist": "Swedish House Mafia",
+          "title": "Don't You Worry Child",
+          "fits": true
+        },
+        {
+          "artist": "John Coltrane",
+          "title": "Giant Steps",
+          "fits": false
+        },
+        {
+          "artist": "David Guetta",
+          "title": "Titanium",
+          "fits": true
+        },
+        {
+          "artist": "Johnny Cash",
+          "title": "Ring of Fire",
+          "fits": false
+        },
+        {
+          "artist": "Calvin Harris",
+          "title": "Feel So Close",
+          "fits": true
+        },
+        {
+          "artist": "Patsy Cline",
+          "title": "Crazy",
+          "fits": false
+        },
+        {
+          "artist": "Martin Garrix",
+          "title": "Animals",
+          "fits": true
+        },
+        {
+          "artist": "Erik Satie",
+          "title": "Gymnopédie No. 1",
+          "fits": false
+        },
+        {
+          "artist": "Alesso",
+          "title": "Heroes (we could be)",
+          "fits": true
+        },
+        {
+          "artist": "Frédéric Chopin",
+          "title": "Nocturne in E-flat major, Op. 9 No. 2",
+          "fits": false
+        },
+        {
+          "artist": "Zedd",
+          "title": "Clarity",
+          "fits": true
+        }
+      ]
+    },
+    {
+      "id": "r09",
+      "genre": "metal",
+      "seed": {
+        "artist": "Metallica",
+        "title": "Master of Puppets"
+      },
+      "count": 5,
+      "pool": [
+        {
+          "artist": "Antônio Carlos Jobim",
+          "title": "Desafinado",
+          "fits": false
+        },
+        {
+          "artist": "Slayer",
+          "title": "Raining Blood",
+          "fits": true
+        },
+        {
+          "artist": "João Gilberto",
+          "title": "Chega de Saudade",
+          "fits": false
+        },
+        {
+          "artist": "Megadeth",
+          "title": "Holy Wars... The Punishment Due",
+          "fits": true
+        },
+        {
+          "artist": "IVE",
+          "title": "Love Dive",
+          "fits": false
+        },
+        {
+          "artist": "Iron Maiden",
+          "title": "The Trooper",
+          "fits": true
+        },
+        {
+          "artist": "LE SSERAFIM",
+          "title": "ANTIFRAGILE",
+          "fits": false
+        },
+        {
+          "artist": "Pantera",
+          "title": "Walk",
+          "fits": true
+        },
+        {
+          "artist": "Donna Summer",
+          "title": "I Feel Love",
+          "fits": false
+        },
+        {
+          "artist": "Black Sabbath",
+          "title": "Paranoid",
+          "fits": true
+        },
+        {
+          "artist": "Chic",
+          "title": "Le Freak",
+          "fits": false
+        },
+        {
+          "artist": "Judas Priest",
+          "title": "Painkiller",
+          "fits": true
+        }
+      ]
+    },
+    {
+      "id": "r10",
+      "genre": "reggaeton",
+      "seed": {
+        "artist": "Daddy Yankee",
+        "title": "Gasolina"
+      },
+      "count": 5,
+      "pool": [
+        {
+          "artist": "Erik Satie",
+          "title": "Gymnopédie No. 1",
+          "fits": false
+        },
+        {
+          "artist": "Don Omar",
+          "title": "Danza Kuduro",
+          "fits": true
+        },
+        {
+          "artist": "Frédéric Chopin",
+          "title": "Nocturne in E-flat major, Op. 9 No. 2",
+          "fits": false
+        },
+        {
+          "artist": "J Balvin",
+          "title": "Mi Gente",
+          "fits": true
+        },
+        {
+          "artist": "Pearl Jam",
+          "title": "Alive",
+          "fits": false
+        },
+        {
+          "artist": "Bad Bunny",
+          "title": "Tití Me Preguntó",
+          "fits": true
+        },
+        {
+          "artist": "Soundgarden",
+          "title": "Black Hole Sun",
+          "fits": false
+        },
+        {
+          "artist": "Wisin & Yandel",
+          "title": "Rakata",
+          "fits": true
+        },
+        {
+          "artist": "Fleet Foxes",
+          "title": "White Winter Hymnal",
+          "fits": false
+        },
+        {
+          "artist": "Nicky Jam",
+          "title": "El Perdón",
+          "fits": true
+        },
+        {
+          "artist": "Iron & Wine",
+          "title": "Naked as We Came",
+          "fits": false
+        },
+        {
+          "artist": "Ozuna",
+          "title": "Taki Taki",
+          "fits": true
+        }
+      ]
+    },
+    {
+      "id": "r11",
+      "genre": "jpop",
+      "seed": {
+        "artist": "YOASOBI",
+        "title": "夜に駆ける"
+      },
+      "count": 5,
+      "pool": [
+        {
+          "artist": "Johnny Cash",
+          "title": "Ring of Fire",
+          "fits": false
+        },
+        {
+          "artist": "米津玄師",
+          "title": "Lemon",
+          "fits": true
+        },
+        {
+          "artist": "Patsy Cline",
+          "title": "Crazy",
+          "fits": false
+        },
+        {
+          "artist": "Official髭男dism",
+          "title": "Pretender",
+          "fits": true
+        },
+        {
+          "artist": "Slayer",
+          "title": "Raining Blood",
+          "fits": false
+        },
+        {
+          "artist": "King Gnu",
+          "title": "白日",
+          "fits": true
+        },
+        {
+          "artist": "Megadeth",
+          "title": "Holy Wars... The Punishment Due",
+          "fits": false
+        },
+        {
+          "artist": "Aimer",
+          "title": "残響散歌",
+          "fits": true
+        },
+        {
+          "artist": "Nas",
+          "title": "N.Y. State of Mind",
+          "fits": false
+        },
+        {
+          "artist": "Ado",
+          "title": "うっせぇわ",
+          "fits": true
+        },
+        {
+          "artist": "Wu-Tang Clan",
+          "title": "C.R.E.A.M.",
+          "fits": false
+        },
+        {
+          "artist": "LiSA",
+          "title": "紅蓮華",
+          "fits": true
+        }
+      ]
+    },
+    {
+      "id": "r12",
+      "genre": "indiefolk",
+      "seed": {
+        "artist": "Bon Iver",
+        "title": "Holocene"
+      },
+      "count": 5,
+      "pool": [
+        {
+          "artist": "Swedish House Mafia",
+          "title": "Don't You Worry Child",
+          "fits": false
+        },
+        {
+          "artist": "Fleet Foxes",
+          "title": "White Winter Hymnal",
+          "fits": true
+        },
+        {
+          "artist": "David Guetta",
+          "title": "Titanium",
+          "fits": false
+        },
+        {
+          "artist": "Iron & Wine",
+          "title": "Naked as We Came",
+          "fits": true
+        },
+        {
+          "artist": "Don Omar",
+          "title": "Danza Kuduro",
+          "fits": false
+        },
+        {
+          "artist": "Sufjan Stevens",
+          "title": "Chicago",
+          "fits": true
+        },
+        {
+          "artist": "J Balvin",
+          "title": "Mi Gente",
+          "fits": false
+        },
+        {
+          "artist": "José González",
+          "title": "Heartbeats",
+          "fits": true
+        },
+        {
+          "artist": "Slayer",
+          "title": "Raining Blood",
+          "fits": false
+        },
+        {
+          "artist": "Phoebe Bridgers",
+          "title": "Motion Sickness",
+          "fits": true
+        },
+        {
+          "artist": "Megadeth",
+          "title": "Holy Wars... The Punishment Due",
+          "fits": false
+        },
+        {
+          "artist": "The Tallest Man on Earth",
+          "title": "The Gardener",
+          "fits": true
+        }
+      ]
+    },
+    {
+      "id": "r13",
+      "genre": "rnb",
+      "seed": {
+        "artist": "Childish Gambino",
+        "title": "Redbone"
+      },
+      "count": 5,
+      "pool": [
+        {
+          "artist": "Slayer",
+          "title": "Raining Blood",
+          "fits": false
+        },
+        {
+          "artist": "Frank Ocean",
+          "title": "Thinkin Bout You",
+          "fits": true
+        },
+        {
+          "artist": "Megadeth",
+          "title": "Holy Wars... The Punishment Due",
+          "fits": false
+        },
+        {
+          "artist": "SZA",
+          "title": "The Weekend",
+          "fits": true
+        },
+        {
+          "artist": "Johnny Cash",
+          "title": "Ring of Fire",
+          "fits": false
+        },
+        {
+          "artist": "Daniel Caesar",
+          "title": "Get You",
+          "fits": true
+        },
+        {
+          "artist": "Patsy Cline",
+          "title": "Crazy",
+          "fits": false
+        },
+        {
+          "artist": "H.E.R.",
+          "title": "Focus",
+          "fits": true
+        },
+        {
+          "artist": "The Offspring",
+          "title": "Self Esteem",
+          "fits": false
+        },
+        {
+          "artist": "Khalid",
+          "title": "Location",
+          "fits": true
+        },
+        {
+          "artist": "Blink-182",
+          "title": "All the Small Things",
+          "fits": false
+        },
+        {
+          "artist": "Steve Lacy",
+          "title": "Dark Red",
+          "fits": true
+        }
+      ]
+    },
+    {
+      "id": "r14",
+      "genre": "grunge",
+      "seed": {
+        "artist": "Nirvana",
+        "title": "Smells Like Teen Spirit"
+      },
+      "count": 5,
+      "pool": [
+        {
+          "artist": "Donna Summer",
+          "title": "I Feel Love",
+          "fits": false
+        },
+        {
+          "artist": "Pearl Jam",
+          "title": "Alive",
+          "fits": true
+        },
+        {
+          "artist": "Chic",
+          "title": "Le Freak",
+          "fits": false
+        },
+        {
+          "artist": "Soundgarden",
+          "title": "Black Hole Sun",
+          "fits": true
+        },
+        {
+          "artist": "Antônio Carlos Jobim",
+          "title": "Desafinado",
+          "fits": false
+        },
+        {
+          "artist": "Alice in Chains",
+          "title": "Man in the Box",
+          "fits": true
+        },
+        {
+          "artist": "João Gilberto",
+          "title": "Chega de Saudade",
+          "fits": false
+        },
+        {
+          "artist": "Stone Temple Pilots",
+          "title": "Plush",
+          "fits": true
+        },
+        {
+          "artist": "IVE",
+          "title": "Love Dive",
+          "fits": false
+        },
+        {
+          "artist": "Mudhoney",
+          "title": "Touch Me I'm Sick",
+          "fits": true
+        },
+        {
+          "artist": "LE SSERAFIM",
+          "title": "ANTIFRAGILE",
+          "fits": false
+        },
+        {
+          "artist": "Nirvana",
+          "title": "Come as You Are",
+          "fits": true
+        }
+      ]
+    },
+    {
+      "id": "r15",
+      "genre": "disco",
+      "seed": {
+        "artist": "Bee Gees",
+        "title": "Stayin' Alive"
+      },
+      "count": 5,
+      "pool": [
+        {
+          "artist": "Slayer",
+          "title": "Raining Blood",
+          "fits": false
+        },
+        {
+          "artist": "Donna Summer",
+          "title": "I Feel Love",
+          "fits": true
+        },
+        {
+          "artist": "Megadeth",
+          "title": "Holy Wars... The Punishment Due",
+          "fits": false
+        },
+        {
+          "artist": "Chic",
+          "title": "Le Freak",
+          "fits": true
+        },
+        {
+          "artist": "Pearl Jam",
+          "title": "Alive",
+          "fits": false
+        },
+        {
+          "artist": "Gloria Gaynor",
+          "title": "I Will Survive",
+          "fits": true
+        },
+        {
+          "artist": "Soundgarden",
+          "title": "Black Hole Sun",
+          "fits": false
+        },
+        {
+          "artist": "Earth, Wind & Fire",
+          "title": "September",
+          "fits": true
+        },
+        {
+          "artist": "Fleet Foxes",
+          "title": "White Winter Hymnal",
+          "fits": false
+        },
+        {
+          "artist": "Sister Sledge",
+          "title": "We Are Family",
+          "fits": true
+        },
+        {
+          "artist": "Iron & Wine",
+          "title": "Naked as We Came",
+          "fits": false
+        },
+        {
+          "artist": "Village People",
+          "title": "Y.M.C.A.",
+          "fits": true
+        }
+      ]
+    },
+    {
+      "id": "r16",
+      "genre": "punk",
+      "seed": {
+        "artist": "Green Day",
+        "title": "Basket Case"
+      },
+      "count": 5,
+      "pool": [
+        {
+          "artist": "Erik Satie",
+          "title": "Gymnopédie No. 1",
+          "fits": false
+        },
+        {
+          "artist": "The Offspring",
+          "title": "Self Esteem",
+          "fits": true
+        },
+        {
+          "artist": "Frédéric Chopin",
+          "title": "Nocturne in E-flat major, Op. 9 No. 2",
+          "fits": false
+        },
+        {
+          "artist": "Blink-182",
+          "title": "All the Small Things",
+          "fits": true
+        },
+        {
+          "artist": "Antônio Carlos Jobim",
+          "title": "Desafinado",
+          "fits": false
+        },
+        {
+          "artist": "Ramones",
+          "title": "Blitzkrieg Bop",
+          "fits": true
+        },
+        {
+          "artist": "João Gilberto",
+          "title": "Chega de Saudade",
+          "fits": false
+        },
+        {
+          "artist": "Sum 41",
+          "title": "Fat Lip",
+          "fits": true
+        },
+        {
+          "artist": "Frank Ocean",
+          "title": "Thinkin Bout You",
+          "fits": false
+        },
+        {
+          "artist": "Rancid",
+          "title": "Time Bomb",
+          "fits": true
+        },
+        {
+          "artist": "SZA",
+          "title": "The Weekend",
+          "fits": false
+        },
+        {
+          "artist": "NOFX",
+          "title": "Linoleum",
+          "fits": true
+        }
+      ]
+    },
+    {
+      "id": "r17",
+      "genre": "90srap",
+      "seed": {
+        "artist": "The Notorious B.I.G.",
+        "title": "Juicy"
+      },
+      "count": 5,
+      "pool": [
+        {
+          "artist": "Erik Satie",
+          "title": "Gymnopédie No. 1",
+          "fits": false
+        },
+        {
+          "artist": "Nas",
+          "title": "N.Y. State of Mind",
+          "fits": true
+        },
+        {
+          "artist": "Frédéric Chopin",
+          "title": "Nocturne in E-flat major, Op. 9 No. 2",
+          "fits": false
+        },
+        {
+          "artist": "Wu-Tang Clan",
+          "title": "C.R.E.A.M.",
+          "fits": true
+        },
+        {
+          "artist": "Johnny Cash",
+          "title": "Ring of Fire",
+          "fits": false
+        },
+        {
+          "artist": "2Pac",
+          "title": "California Love",
+          "fits": true
+        },
+        {
+          "artist": "Patsy Cline",
+          "title": "Crazy",
+          "fits": false
+        },
+        {
+          "artist": "Mobb Deep",
+          "title": "Shook Ones, Pt. II",
+          "fits": true
+        },
+        {
+          "artist": "Tears for Fears",
+          "title": "Everybody Wants to Rule the World",
+          "fits": false
+        },
+        {
+          "artist": "A Tribe Called Quest",
+          "title": "Electric Relaxation",
+          "fits": true
+        },
+        {
+          "artist": "Duran Duran",
+          "title": "Hungry Like the Wolf",
+          "fits": false
+        },
+        {
+          "artist": "Dr. Dre",
+          "title": "Still D.R.E.",
+          "fits": true
+        }
+      ]
+    },
+    {
+      "id": "r18",
+      "genre": "bossa",
+      "seed": {
+        "artist": "Stan Getz & João Gilberto",
+        "title": "The Girl from Ipanema"
+      },
+      "count": 5,
+      "pool": [
+        {
+          "artist": "Slayer",
+          "title": "Raining Blood",
+          "fits": false
+        },
+        {
+          "artist": "Antônio Carlos Jobim",
+          "title": "Desafinado",
+          "fits": true
+        },
+        {
+          "artist": "Megadeth",
+          "title": "Holy Wars... The Punishment Due",
+          "fits": false
+        },
+        {
+          "artist": "João Gilberto",
+          "title": "Chega de Saudade",
+          "fits": true
+        },
+        {
+          "artist": "The Offspring",
+          "title": "Self Esteem",
+          "fits": false
+        },
+        {
+          "artist": "Astrud Gilberto",
+          "title": "Corcovado",
+          "fits": true
+        },
+        {
+          "artist": "Blink-182",
+          "title": "All the Small Things",
+          "fits": false
+        },
+        {
+          "artist": "Elis Regina",
+          "title": "Águas de Março",
+          "fits": true
+        },
+        {
+          "artist": "Swedish House Mafia",
+          "title": "Don't You Worry Child",
+          "fits": false
+        },
+        {
+          "artist": "Sérgio Mendes",
+          "title": "Mas Que Nada",
+          "fits": true
+        },
+        {
+          "artist": "David Guetta",
+          "title": "Titanium",
+          "fits": false
+        },
+        {
+          "artist": "Marcos Valle",
+          "title": "Samba de Verão",
+          "fits": true
+        }
+      ]
+    },
+    {
+      "id": "r19",
+      "genre": "britpop",
+      "seed": {
+        "artist": "Oasis",
+        "title": "Wonderwall"
+      },
+      "count": 5,
+      "pool": [
+        {
+          "artist": "Don Omar",
+          "title": "Danza Kuduro",
+          "fits": false
+        },
+        {
+          "artist": "Blur",
+          "title": "Song 2",
+          "fits": true
+        },
+        {
+          "artist": "J Balvin",
+          "title": "Mi Gente",
+          "fits": false
+        },
+        {
+          "artist": "Pulp",
+          "title": "Common People",
+          "fits": true
+        },
+        {
+          "artist": "Erik Satie",
+          "title": "Gymnopédie No. 1",
+          "fits": false
+        },
+        {
+          "artist": "Suede",
+          "title": "Animal Nitrate",
+          "fits": true
+        },
+        {
+          "artist": "Frédéric Chopin",
+          "title": "Nocturne in E-flat major, Op. 9 No. 2",
+          "fits": false
+        },
+        {
+          "artist": "The Verve",
+          "title": "Bitter Sweet Symphony",
+          "fits": true
+        },
+        {
+          "artist": "Nas",
+          "title": "N.Y. State of Mind",
+          "fits": false
+        },
+        {
+          "artist": "Oasis",
+          "title": "Don't Look Back in Anger",
+          "fits": true
+        },
+        {
+          "artist": "Wu-Tang Clan",
+          "title": "C.R.E.A.M.",
+          "fits": false
+        },
+        {
+          "artist": "Supergrass",
+          "title": "Alright",
+          "fits": true
+        }
+      ]
+    },
+    {
+      "id": "r20",
+      "genre": "soul",
+      "seed": {
+        "artist": "Aretha Franklin",
+        "title": "Respect"
+      },
+      "count": 5,
+      "pool": [
+        {
+          "artist": "Slayer",
+          "title": "Raining Blood",
+          "fits": false
+        },
+        {
+          "artist": "Otis Redding",
+          "title": "(Sittin' On) The Dock of the Bay",
+          "fits": true
+        },
+        {
+          "artist": "Megadeth",
+          "title": "Holy Wars... The Punishment Due",
+          "fits": false
+        },
+        {
+          "artist": "Marvin Gaye",
+          "title": "What's Going On",
+          "fits": true
+        },
+        {
+          "artist": "Swedish House Mafia",
+          "title": "Don't You Worry Child",
+          "fits": false
+        },
+        {
+          "artist": "Al Green",
+          "title": "Let's Stay Together",
+          "fits": true
+        },
+        {
+          "artist": "David Guetta",
+          "title": "Titanium",
+          "fits": false
+        },
+        {
+          "artist": "Sam Cooke",
+          "title": "A Change Is Gonna Come",
+          "fits": true
+        },
+        {
+          "artist": "The Offspring",
+          "title": "Self Esteem",
+          "fits": false
+        },
+        {
+          "artist": "Etta James",
+          "title": "At Last",
+          "fits": true
+        },
+        {
+          "artist": "Blink-182",
+          "title": "All the Small Things",
+          "fits": false
+        },
+        {
+          "artist": "Bill Withers",
+          "title": "Ain't No Sunshine",
+          "fits": true
+        }
+      ]
+    }
+  ]
+}

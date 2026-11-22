@@ -8,12 +8,13 @@ import { MB_CONTACT, secrets } from '../config/secrets.js';
 import { firestoreEventSink } from '../core/events.js';
 import { errName } from '../core/jobErrors.js';
 import { firestoreLastfmCache } from '../adapters/lastfm.js';
-import { createJudge, createLlm, firestoreLlmBudget } from '../adapters/llm.js';
+import { createJudge, createLlm, firestoreLlmBudget, LlmConfigError } from '../adapters/llm.js';
 import { runIngest } from './ingest.js';
 import { runPurge } from './purge.js';
 import { runRefresh } from './refresh.js';
 import { createOpenLinkChecker, firestoreOpenLinkBudget } from '../adapters/youtube-openlink.js';
 import { firestoreLinkHealthPorts, runLinkHealth } from './linkHealth.js';
+import { runDailyEval } from './dailyEval.js';
 
 /**
  * 예약 작업 (SPEC 4.4). 태평양 시간 기준, YouTube 할당 초기화(자정) 뒤에 차례로 돈다:
@@ -121,6 +122,42 @@ export const linkHealthNightly = onSchedule(
     await runLinkHealth(
       firestoreLinkHealthPorts(db, { check: (ids) => checker.check(ids), events }),
     );
+  },
+);
+
+/**
+ * 매일 시험 (T17, D-034). 05:00. 곡 연결 규칙 시험은 항상, 요청 해석 시험은 AI 키가 있을 때만(서비스 하루 비용 상한 안).
+ */
+export const dailyEvalNightly = onSchedule(
+  {
+    schedule: 'every day 05:00',
+    timeZone: 'America/Los_Angeles',
+    maxInstances: 1,
+    timeoutSeconds: 300,
+    retryCount: 0,
+    secrets: [secrets.ACTOR_HASH_KEY, secrets.ANTHROPIC_API_KEY],
+  },
+  async () => {
+    const db = getFirestore();
+    const events = firestoreEventSink(db, secrets.ACTOR_HASH_KEY.value());
+    let llm = null;
+    try {
+      llm = createLlm({
+        apiKey: secrets.ANTHROPIC_API_KEY.value(),
+        events,
+        budget: firestoreLlmBudget(db),
+      });
+    } catch (err) {
+      // 키가 없으면(사용자가 아직 API 키를 정하지 않음, D-034) AI 시험은 건너뛴다. 그 밖의 오류는 기록한다.
+      if (!(err instanceof LlmConfigError)) {
+        await events.record({
+          type: 'error',
+          attrs: { code: errName(err), where: 'dailyEval.llm_setup' },
+          outcome: 'error',
+        });
+      }
+    }
+    await runDailyEval({ db, events, llm });
   },
 );
 
