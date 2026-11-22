@@ -263,7 +263,7 @@ PC 웹만 지원한다(최소 너비 1024px 기준). 모바일 화면은 고려�
 
 | 컬렉션                                              | 내용                                                                                                                   | 클라이언트 읽기                           |
 | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `songs/{songId}`                                    | mbid, artist, artistMbid, title, releaseYear, genres[](T13에서 채움), source, updatedAt                                | 누구나                                    |
+| `songs/{songId}`                                    | mbid, artist, artistMbid, title, key(이름 비교 키, D-030), releaseYear, genres[](나중), source, updatedAt              | 누구나                                    |
 | `songs/{songId}/links/{videoId}`                    | videoId, kind, status, linkedBy, ytTitle, channelId, embeddable, madeForKids, durationSec, verifiedAt                  | 누구나 (`active`만)                       |
 | `artists/{artistId}`                                | name, mbid, channelId, uploadsPlaylistId, ytVerifiedAt, status, lastSeenPublishedAt, lastScannedAt, failCount, addedBy | 관리자                                    |
 | `playlists/{id}`                                    | ownerUid, title, items[{songId, videoId, reason}], locale, createdAt, state                                            | `saved`는 누구나, `draft`는 소유자        |

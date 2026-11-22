@@ -4,6 +4,7 @@ import {
   costMicroUsd,
   createJudge,
   createLlm,
+  JudgeNoOutputError,
   dataMessage,
   LLM_MODEL,
   LlmCallError,
@@ -236,14 +237,22 @@ describe('createJudge — 곡 연결 판정', () => {
     expect(body).not.toHaveProperty('tools');
   });
 
-  it.each([
-    ['null', '{"choice":null}', null],
-    ['형식 오류', '{"pick":"vidA0000001"}', null],
-    ['JSON 아님', 'vidA0000001', null],
-  ])('%s → choice null', async (_l, text, expected) => {
-    const { llm } = setup({ body: message(text) });
-    expect(await createJudge(llm)(input)).toEqual({ choice: expected });
+  it('"맞는 것 없음"(null) → choice null', async () => {
+    const { llm } = setup({ body: message('{"choice":null}') });
+    expect(await createJudge(llm)(input)).toEqual({ choice: null });
   });
+
+  it.each([
+    ['형식 오류', message('{"pick":"vidA0000001"}')],
+    ['JSON 아님', message('vidA0000001')],
+    ['거절', message('', { stop_reason: 'refusal', content: [] })],
+  ])(
+    '응답 없음(%s)은 "맞는 것 없음"과 구분해 던짐 → 수집이 pending_ai로 남김',
+    async (_l, body) => {
+      const { llm } = setup({ body });
+      await expect(createJudge(llm)(input)).rejects.toBeInstanceOf(JudgeNoOutputError);
+    },
+  );
 
   it('후보가 없으면 AI를 부르지 않음', async () => {
     const { llm, api } = setup({ body: message('{}') });

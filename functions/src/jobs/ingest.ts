@@ -3,10 +3,13 @@ import {
   compareKey,
   decideLink,
   splitArtistTitle,
+  type Decision,
+  type SongRef,
   type Include,
   type Judge,
   type VideoCandidate,
 } from '@musicweb/shared';
+import { JudgeNoOutputError, LlmCallError } from '../adapters/llm.js';
 import type { createMusicBrainz, RecordingCandidate } from '../adapters/musicbrainz.js';
 import type { createWikidata } from '../adapters/wikidata.js';
 import { SourceUnavailableError } from '../adapters/music-http.js';
@@ -14,6 +17,7 @@ import type { VideoDetail, YouTubeRead } from '../adapters/youtube-read.js';
 import { BudgetExceededError } from '../core/budget.js';
 import type { EventSink } from '../core/events.js';
 import { errName, isOutage } from '../core/jobErrors.js';
+import { songKey } from '../core/catalog.js';
 import { addOpsLog } from '../core/opsLog.js';
 import { assertEnabled, KillSwitchError, type ServiceCounter } from '../core/runtimeConfig.js';
 
@@ -144,6 +148,8 @@ export async function runIngest(deps: IngestDeps): Promise<IngestSummary> {
     });
   }
 
+  // AI 판정: 한 번 실패하면 이번 실행에서는 끈다(linkVideo)
+  const judgeState: { judge: Judge | undefined } = { judge: deps.judge };
   const snap = await db
     .collection('artists')
     .where('status', '==', 'active')
@@ -159,7 +165,7 @@ export async function runIngest(deps: IngestDeps): Promise<IngestSummary> {
     const artist = doc.data() as ArtistDoc;
     summary.artists++;
     try {
-      const r = await ingestArtist(deps, doc.ref, artist, limits, pastDeadline);
+      const r = await ingestArtist(deps, judgeState, doc.ref, artist, limits, pastDeadline);
       summary.videosSeen += r.videosSeen;
       summary.linksActive += r.linksActive;
       summary.linksPending += r.linksPending;
@@ -250,6 +256,7 @@ export async function runIngest(deps: IngestDeps): Promise<IngestSummary> {
 
 async function ingestArtist(
   deps: IngestDeps,
+  judgeState: { judge: Judge | undefined },
   ref: FirebaseFirestore.DocumentReference,
   artist: ArtistDoc,
   limits: typeof DEFAULT_LIMITS,
@@ -330,7 +337,7 @@ async function ingestArtist(
     if (!item) continue;
     const video = details.get(item.videoId);
     if (video) {
-      const r = await linkVideo(deps, artist, channelId, video, now());
+      const r = await linkVideo(deps, judgeState, artist, channelId, video, now());
       if (r === 'active') linksActive++;
       if (r === 'pending_ai') linksPending++;
     }
@@ -357,6 +364,7 @@ async function ingestArtist(
 /** 영상 하나를 그 아티스트의 곡(MusicBrainz 녹음)에 연결한다. */
 async function linkVideo(
   deps: IngestDeps,
+  judgeState: { judge: Judge | undefined },
   artist: ArtistDoc,
   channelId: string,
   video: VideoDetail,
@@ -388,16 +396,18 @@ async function linkVideo(
     description: video.description,
     durationSec: video.durationSec,
   };
-  const decision = await decideLink(
-    {
-      title: recording.title,
-      artist: artist.name,
-      lengthMs: recording.lengthMs,
-      officialChannelIds: [channelId],
-    },
+  const song = {
+    title: recording.title,
+    artist: artist.name,
+    lengthMs: recording.lengthMs,
+    officialChannelIds: [channelId],
+  };
+  const decision = await decideWithJudge(
+    song,
     [candidate],
     INGEST_INCLUDE,
-    deps.judge,
+    judgeState,
+    deps.events,
   );
   if (decision.status !== 'active' && decision.status !== 'pending_ai') return 'skipped';
 
@@ -413,6 +423,8 @@ async function linkVideo(
       artist: recording.artist,
       artistMbid: artist.mbid,
       title: recording.title,
+      // 이름으로 찾기용(추천의 Last.fm·AI 후보, T13)
+      key: songKey(recording.artist, recording.title),
       releaseYear: recording.firstReleaseYear,
       source: 'musicbrainz',
       updatedAt: FieldValue.serverTimestamp(),
@@ -433,6 +445,39 @@ async function linkVideo(
   });
   await batch.commit();
   return decision.status;
+}
+
+/**
+ * 곡 연결 규칙 + AI 판정. AI 판정이 실패하면(AI 한도 초과·AI 장애 등) 작업을 멈추지 않는다:
+ * 기록하고, 이번 실행에서는 AI를 더 부르지 않으며(judgeState.judge를 끔) 이 연결은 pending_ai로 남긴다(D-030).
+ */
+export async function decideWithJudge(
+  song: SongRef,
+  candidates: VideoCandidate[],
+  include: Include,
+  judgeState: { judge: Judge | undefined },
+  events: EventSink,
+): Promise<Decision> {
+  if (!judgeState.judge) return decideLink(song, candidates, include);
+  try {
+    return await decideLink(song, candidates, include, judgeState.judge);
+  } catch (err) {
+    // AI 쪽 오류만(한도·긴급 정지·AI 호출 실패·응답 없음). 그 밖의 오류는 프로그램 오류라 그대로 던진다.
+    if (
+      !(err instanceof BudgetExceededError) &&
+      !(err instanceof KillSwitchError) &&
+      !(err instanceof LlmCallError) &&
+      !(err instanceof JudgeNoOutputError)
+    )
+      throw err;
+    judgeState.judge = undefined;
+    await events.record({
+      type: 'error',
+      attrs: { code: errName(err), where: 'ingest.judge' },
+      outcome: 'error',
+    });
+    return decideLink(song, candidates, include);
+  }
 }
 
 /** MusicBrainz 후보 중 그 아티스트의, 제목이 맞는 녹음. 구분 설명(라이브 등)이 없는 것, 그다음 이른 연도를 고른다. */

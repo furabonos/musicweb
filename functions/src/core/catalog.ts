@@ -1,5 +1,5 @@
 import { Timestamp, type Firestore } from 'firebase-admin/firestore';
-import type { LinkKind } from '@musicweb/shared';
+import { compareKey, type LinkKind } from '@musicweb/shared';
 import { daysBefore, REFRESH_AFTER_DAYS } from './retention.js';
 
 /**
@@ -53,6 +53,27 @@ export function isRecommendable(
   return true;
 }
 
+/** 곡의 연결들 중 추천에 쓸 하나(우선순위 순). 없으면 null. */
+export function pickLink(
+  songId: string,
+  links: Record<string, unknown>[],
+  now: Date,
+  include: KindFilter = {},
+): PlayableLink | null {
+  const best = links
+    .filter((l) => isRecommendable(l, now, include))
+    .sort((a, b) => PRIORITY[a.kind as LinkKind] - PRIORITY[b.kind as LinkKind])[0];
+  if (!best) return null;
+  return {
+    songId,
+    videoId: best.videoId as string,
+    kind: best.kind as LinkKind,
+    embeddable: true,
+    madeForKids: best.madeForKids === true,
+    durationSec: typeof best.durationSec === 'number' ? best.durationSec : null,
+  };
+}
+
 /** 곡마다 추천에 쓸 연결 하나(없으면 빠짐). */
 export async function recommendableLinks(
   db: Firestore,
@@ -61,6 +82,21 @@ export async function recommendableLinks(
   include: KindFilter = {},
 ): Promise<Map<string, PlayableLink>> {
   const out = new Map<string, PlayableLink>();
+  const fresh = await freshLinks(db, songIds, now);
+  for (const [songId, links] of fresh) {
+    const best = pickLink(songId, links, now, include);
+    if (best) out.set(songId, best);
+  }
+  return out;
+}
+
+/** 곡마다 active이고 25일 안에 확인된 연결 문서들(종류는 거르지 않음). */
+export async function freshLinks(
+  db: Firestore,
+  songIds: string[],
+  now: Date,
+): Promise<Map<string, Record<string, unknown>[]>> {
+  const out = new Map<string, Record<string, unknown>[]>();
   const fresh = Timestamp.fromDate(daysBefore(now, REFRESH_AFTER_DAYS));
   for (const songId of new Set(songIds)) {
     const snap = await db
@@ -68,20 +104,81 @@ export async function recommendableLinks(
       .where('status', '==', 'active')
       .where('verifiedAt', '>', fresh)
       .get();
-    const best = snap.docs
-      .map((d) => d.data())
-      .filter((l) => isRecommendable(l, now, include))
-      .sort((a, b) => PRIORITY[a.kind as LinkKind] - PRIORITY[b.kind as LinkKind])[0];
-    if (best) {
-      out.set(songId, {
+    if (!snap.empty)
+      out.set(
         songId,
-        videoId: best.videoId as string,
-        kind: best.kind as LinkKind,
-        embeddable: true,
-        madeForKids: best.madeForKids === true,
-        durationSec: typeof best.durationSec === 'number' ? best.durationSec : null,
-      });
-    }
+        snap.docs.map((d) => d.data()),
+      );
   }
   return out;
+}
+
+/** 이름 비교 키: 아티스트|제목을 정규화(T09 compareKey). 곡 문서의 `key` 필드로 저장해 이름으로 찾는다(T13). */
+export const songKey = (artist: string, title: string) =>
+  `${compareKey(artist)}|${compareKey(title)}`;
+
+/** 곡 문서(음악 데이터 출처) */
+export interface SongDoc {
+  mbid: string;
+  artist: string;
+  artistMbid: string | null;
+  title: string;
+  releaseYear: number | null;
+}
+
+const toSong = (d: FirebaseFirestore.DocumentSnapshot): SongDoc | null => {
+  const v = d.data();
+  if (!v || typeof v.title !== 'string' || typeof v.artist !== 'string') return null;
+  return {
+    mbid: d.id,
+    artist: v.artist,
+    artistMbid: typeof v.artistMbid === 'string' ? v.artistMbid : null,
+    title: v.title,
+    releaseYear: typeof v.releaseYear === 'number' ? v.releaseYear : null,
+  };
+};
+
+const chunks = <T>(xs: T[], n: number) =>
+  Array.from({ length: Math.ceil(xs.length / n) }, (_, i) => xs.slice(i * n, i * n + n));
+
+/** 곡 목록 조회(추천용). Firestore `in`은 한 번에 30개까지라 나눠 묻는다. */
+export function firestoreSongs(db: Firestore) {
+  const col = db.collection('songs');
+  return {
+    async byIds(ids: string[]): Promise<Map<string, SongDoc>> {
+      const out = new Map<string, SongDoc>();
+      const unique = [...new Set(ids)].filter(Boolean);
+      if (!unique.length) return out;
+      const snaps = await db.getAll(...unique.map((id) => col.doc(id)));
+      for (const s of snaps) {
+        const song = s.exists ? toSong(s) : null;
+        if (song) out.set(song.mbid, song);
+      }
+      return out;
+    },
+    async byKeys(keys: string[]): Promise<Map<string, SongDoc>> {
+      const out = new Map<string, SongDoc>();
+      for (const part of chunks([...new Set(keys)], 30)) {
+        const snap = await col.where('key', 'in', part).get();
+        for (const d of snap.docs) {
+          const song = toSong(d);
+          const key = d.get('key') as string;
+          if (song && !out.has(key)) out.set(key, song);
+        }
+      }
+      return out;
+    },
+    /** 아티스트들의 곡(아티스트당 최대 perArtist곡) */
+    async byArtists(artistMbids: string[], perArtist: number): Promise<SongDoc[]> {
+      const out: SongDoc[] = [];
+      for (const a of [...new Set(artistMbids)]) {
+        const snap = await col.where('artistMbid', '==', a).limit(perArtist).get();
+        for (const d of snap.docs) {
+          const song = toSong(d);
+          if (song) out.push(song);
+        }
+      }
+      return out;
+    },
+  };
 }

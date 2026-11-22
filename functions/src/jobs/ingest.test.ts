@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { RecordingCandidate } from '../adapters/musicbrainz.js';
+import { JudgeNoOutputError } from '../adapters/llm.js';
+import { BudgetExceededError } from '../core/budget.js';
 import { buildEvent } from '../core/events.js';
 import { errName } from '../core/jobErrors.js';
-import { MAX_FAILS, nextArtistState, pickRecording } from './ingest.js';
+import { memoryEvents } from '../testing/music.js';
+import { decideWithJudge, MAX_FAILS, nextArtistState, pickRecording } from './ingest.js';
 
 describe('nextArtistState: 연속 실패', () => {
   it(`연속 ${MAX_FAILS}번 실패하면 failed가 되고, 그때 한 번만 becameFailed`, () => {
@@ -89,5 +92,71 @@ describe('errName: 이벤트 오류 코드', () => {
       ),
     ).not.toThrow();
     expect(errName('not an error')).toBe('unknown');
+  });
+});
+
+describe('decideWithJudge — AI 판정 실패는 수집을 멈추지 않음', () => {
+  const song = {
+    title: 'No Surprises',
+    artist: 'Radiohead',
+    lengthMs: 229_000,
+    officialChannelIds: ['UCq19-LqvG35A-30oyAiPiqA'],
+  };
+  // 같은 종류·같은 점수 두 개 → 애매함(AI 판정 대상)
+  const v = (videoId: string) => ({
+    videoId,
+    title: 'Radiohead - No Surprises (Official Video)',
+    channelId: 'UCq19-LqvG35A-30oyAiPiqA',
+    channelTitle: 'Radiohead',
+    description: '',
+    durationSec: 230,
+  });
+  const cands = [v('rhAmbig0001'), v('rhAmbig0002')];
+  const include = { live: true, remix: true, cover: false };
+
+  it('AI가 고르면 active(byAi)', async () => {
+    const state = { judge: async () => ({ choice: 'rhAmbig0002' }) };
+    const ev = memoryEvents();
+    const d = await decideWithJudge(song, cands, include, state, ev.sink);
+    expect(d).toMatchObject({ status: 'active', videoId: 'rhAmbig0002', byAi: true });
+  });
+
+  it('AI가 던지면(한도 초과 등) pending_ai로 남기고, 오류를 기록하고, 이번 실행에서는 AI를 끔', async () => {
+    let calls = 0;
+    const state: { judge: (() => Promise<{ choice: string | null }>) | undefined } = {
+      judge: async () => {
+        calls++;
+        throw new BudgetExceededError('service', 'aiCostMicroUsd', 1, 1, new Date());
+      },
+    };
+    const ev = memoryEvents();
+    expect((await decideWithJudge(song, cands, include, state, ev.sink)).status).toBe('pending_ai');
+    expect((await decideWithJudge(song, cands, include, state, ev.sink)).status).toBe('pending_ai');
+    expect(calls).toBe(1);
+    expect(state.judge).toBeUndefined();
+    expect(ev.events).toHaveLength(1);
+    expect(ev.events[0]).toMatchObject({ type: 'error', attrs: { where: 'ingest.judge' } });
+  });
+
+  it('AI 응답 없음(JudgeNoOutputError)도 pending_ai', async () => {
+    const state = {
+      judge: async (): Promise<{ choice: string | null }> => {
+        throw new JudgeNoOutputError();
+      },
+    };
+    expect((await decideWithJudge(song, cands, include, state, memoryEvents().sink)).status).toBe(
+      'pending_ai',
+    );
+  });
+
+  it('AI 쪽 오류가 아닌 오류(프로그램 오류)는 숨기지 않고 던짐', async () => {
+    const state = {
+      judge: async (): Promise<{ choice: string | null }> => {
+        throw new TypeError('bug');
+      },
+    };
+    await expect(decideWithJudge(song, cands, include, state, memoryEvents().sink)).rejects.toThrow(
+      'bug',
+    );
   });
 });

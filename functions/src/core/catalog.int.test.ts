@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { clearFirestore, DAY_MS, emulatorDb } from '../testing/emulator.js';
-import { recommendableLinks } from './catalog.js';
+import { firestoreSongs, recommendableLinks, songKey } from './catalog.js';
 
 const db = emulatorDb();
 const NOW = new Date();
@@ -43,5 +43,33 @@ describe('recommendableLinks — 추천 후보 조회', () => {
     await put('b', 'liveVideo01', 'live', 1);
     expect((await recommendableLinks(db, ['a', 'b'], NOW)).size).toBe(0);
     expect((await recommendableLinks(db, ['b'], NOW, { live: true })).get('b')?.kind).toBe('live');
+  });
+});
+
+describe('firestoreSongs — 추천용 곡 목록 조회', () => {
+  const song = (id: string, artist: string, title: string, artistMbid = 'artist-a') =>
+    db
+      .doc(`songs/${id}`)
+      .set({ mbid: id, artist, artistMbid, title, key: songKey(artist, title), releaseYear: 2000 });
+
+  it('id·이름 키·아티스트로 찾음 (in 30개 넘게 나눠 묻기 포함)', async () => {
+    await song('s1', 'Radiohead', 'Karma Police');
+    await song('s2', 'IU', '밤편지', 'artist-b');
+    for (let i = 0; i < 35; i++) await song(`x${i}`, 'Filler', `Song ${i}`, 'artist-c');
+    const s = firestoreSongs(db);
+    expect([...(await s.byIds(['s1', 'missing'])).keys()]).toEqual(['s1']);
+    const keys = [
+      songKey('radiohead', 'KARMA POLICE!'),
+      ...Array.from({ length: 35 }, (_, i) => songKey('Filler', `Song ${i}`)),
+    ];
+    const byKey = await s.byKeys(keys);
+    expect(byKey.get(songKey('Radiohead', 'Karma Police'))?.mbid).toBe('s1');
+    expect(byKey.size).toBe(36);
+    expect((await s.byArtists(['artist-b', 'artist-c'], 3)).map((x) => x.artistMbid)).toEqual([
+      'artist-b',
+      'artist-c',
+      'artist-c',
+      'artist-c',
+    ]);
   });
 });

@@ -33,6 +33,8 @@ export interface ParsedRequest {
 }
 
 export type ParseFailReason = 'empty' | 'too_long' | 'no_output' | 'schema_invalid';
+/** 추천(T13)이 남기는 해석 실패: 기준 곡이 없음 / 음악 데이터에서 못 찾음 */
+export type SeedFailReason = 'no_seed' | 'seed_not_found';
 export type ParseResult =
   { ok: true; value: ParsedRequest } | { ok: false; reason: ParseFailReason };
 

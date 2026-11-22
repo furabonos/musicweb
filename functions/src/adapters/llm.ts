@@ -20,7 +20,7 @@ export const LLM_MODEL = 'claude-haiku-5-5';
 export const PRICE_MICRO_USD_PER_TOKEN = { input: 0.1, output: 0.5 };
 const REQUEST_TIMEOUT_MS = 20_000;
 
-export type LlmOp = 'llm.parseRequest' | 'llm.judgeLink';
+export type LlmOp = 'llm.parseRequest' | 'llm.judgeLink' | 'llm.candidates' | 'llm.pick';
 
 export interface StructuredRequest {
   op: LlmOp;
@@ -62,6 +62,11 @@ export interface LlmDeps {
 
 export class LlmConfigError extends Error {
   override name = 'LlmConfigError';
+}
+
+/** AI 판정 응답이 없거나 형식이 틀림. 수집은 이 연결을 pending_ai로 남긴다. */
+export class JudgeNoOutputError extends Error {
+  override name = 'JudgeNoOutputError';
 }
 
 export class LlmCallError extends Error {
@@ -203,7 +208,9 @@ export function createJudge(llm: Llm): Judge {
       },
       maxTokens: 64,
     });
-    const choice = (out as { choice?: unknown } | null)?.choice;
+    // 출력이 없음(거절·길이 초과·형식 오류)은 "맞는 것 없음"(null)과 다르다: 던져서 pending_ai로 남게 한다(D-030)
+    if (!out || typeof out !== 'object' || !('choice' in out)) throw new JudgeNoOutputError();
+    const choice = (out as { choice?: unknown }).choice;
     return { choice: typeof choice === 'string' ? choice : null };
   };
 }
