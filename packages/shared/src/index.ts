@@ -10,3 +10,4 @@ export function resolveLocale(value: string | null | undefined): Locale {
 
 export * from './matching/index.js';
 export * from './musicService.js';
+export * from './youtubeLink.js';

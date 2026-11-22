@@ -26,4 +26,11 @@ test('요청 입력 → 10곡 표시 → 1곡 빼기 → 저장', async ({ page 
   const link = page.getByRole('link', { name: /\/p\/[A-Za-z0-9]+$/ });
   await expect(link).toBeVisible();
   await expect(page.getByRole('button', { name: /^Remove / }).first()).toBeDisabled();
+
+  // 공유 주소를 로그아웃한 다른 브라우저 상태로 열면 저장한 9곡이 보인다(T16)
+  const href = (await link.getAttribute('href')) ?? '';
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await page.goto(href);
+  await expect(page.getByRole('heading', { name: 'Shared set' })).toBeVisible();
+  await expect(page.locator('ol.songs > li')).toHaveCount(9);
 });

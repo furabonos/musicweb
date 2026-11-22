@@ -56,5 +56,13 @@
   "player.nowPlaying": "NOW SPINNING · {n}/{total}",
   "player.source": "Videos play from YouTube. Press play in the player to start.",
   "player.loadFailed": "The YouTube player couldn't load. Check your connection and refresh.",
-  "results.play": "Play {title}"
+  "results.play": "Play {title}",
+  "open.button": "Open in YouTube",
+  "open.part": "Open in YouTube ({n}/{total})",
+  "open.note": "YouTube won't keep the list it opens — save it there yourself.",
+  "open.fallbackTitle": "The one-click YouTube link isn't working right now. Open each song instead:",
+  "shared.title": "Shared set",
+  "shared.loading": "Loading the set…",
+  "shared.notFound": "This playlist doesn't exist or hasn't been shared.",
+  "shared.makeYourOwn": "Make your own set"
 }

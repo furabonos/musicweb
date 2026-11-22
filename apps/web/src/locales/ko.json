@@ -56,5 +56,13 @@
   "player.nowPlaying": "지금 재생 · {n}/{total}",
   "player.source": "영상은 YouTube에서 재생돼요. 플레이어의 재생 버튼을 눌러 시작하세요.",
   "player.loadFailed": "YouTube 플레이어를 불러오지 못했어요. 연결을 확인하고 새로고침해 주세요.",
-  "results.play": "{title} 재생"
+  "results.play": "{title} 재생",
+  "open.button": "YouTube에서 열기",
+  "open.part": "YouTube에서 열기 ({n}/{total})",
+  "open.note": "YouTube에서 열린 목록은 저장되지 않아요. YouTube에서 직접 저장하세요.",
+  "open.fallbackTitle": "지금은 한 번에 여는 YouTube 링크가 작동하지 않아요. 곡별로 열어 주세요:",
+  "shared.title": "공유된 재생목록",
+  "shared.loading": "재생목록을 불러오는 중…",
+  "shared.notFound": "없거나 공유되지 않은 재생목록이에요.",
+  "shared.makeYourOwn": "내 재생목록 만들기"
 }

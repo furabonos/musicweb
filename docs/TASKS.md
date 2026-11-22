@@ -271,7 +271,7 @@
       - 첫 재생은 클릭 전 시작하지 않음
       - 응답 헤더 Referrer-Policy가 referer를 막지 않음
 
-- [ ] **T16 YouTube에서 열기와 공유 주소** — SPEC 4.6
+- [x] **T16 YouTube에서 열기와 공유 주소** — SPEC 4.6
   - 의존: T14
   - 산출물:
     - `packages/shared/src/youtubeLink.ts`(링크 생성, 곡 수 상한으로 나누기)
@@ -368,7 +368,8 @@
     - Firebase 프로젝트(Blaze), 월 예산 알림 $10, Functions 예산 정지, App Check(reCAPTCHA Enterprise) 강제
     - Secret Manager 등록, 예약 작업 등록. `playlists-create`는 `ANTHROPIC_API_KEY`·`YOUTUBE_API_KEY`·`LASTFM_API_KEY`·`ACTOR_HASH_KEY`를 연결하므로(D-031) Last.fm 키를 안 쓰더라도 비밀값은 만들어 둬야 배포된다(코드는 값이 비면 Last.fm 없이 동작하지만, Secret Manager가 빈 값을 받는지는 배포 때 확인)
     - 실제 YouTube 플레이어로 재생·다음 곡·오류 건너뛰기를 손으로 한 번 확인(e2e는 가짜 플레이어, D-032)
-    - 모든 callable의 App Check 강제. 특히 로그인 없이 부르는 `playback-reportEmbedBlocked`(D-032)
+    - 모든 callable의 App Check 강제. 특히 로그인 없이 부르는 `playback-reportEmbedBlocked`(D-032), `playlists-get`, `site-config`(D-033)
+    - `linkHealthNightly`(04:00) 등록 후 운영 일지에 결과가 남는지 확인. 실제 YouTube가 303·`list=TL`을 주는지 그날 다시 확인(D-006, D-033)
     - 화면 설정 `apps/web/.env.local`(`.env.example` 참고, `VITE_USE_EMULATORS`는 비움)
     - `.github/workflows/deploy.yml`(main 합침 시), `docs/OPERATIONS.md`(복구·키 교체·긴급 정지 절차)
   - 완료 기준:

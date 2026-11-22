@@ -482,3 +482,35 @@ button:disabled {
 .footer a {
   color: var(--muted);
 }
+
+/* YouTube에서 열기 (T16) */
+.open-yt {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.open-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.open-buttons a {
+  text-decoration: none;
+}
+.open-note {
+  font-size: 13px;
+  color: var(--faint);
+  margin: 10px 0 0;
+}
+.open-list {
+  margin: 10px 0 0;
+  padding-left: 22px;
+  columns: 2;
+  font-size: 14px;
+}
+.open-list li {
+  margin-bottom: 6px;
+}
+a.btn-ghost {
+  text-decoration: none;
+}

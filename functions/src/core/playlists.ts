@@ -304,3 +304,44 @@ export async function savePlaylist(
   });
   return { id: input.id, state: 'saved' };
 }
+
+export interface SharedPlaylist {
+  id: string;
+  title: string;
+  seed: { artist: string; title: string };
+  items: PlayableItem[];
+  locale: Locale;
+  state: 'draft' | 'saved';
+}
+
+/**
+ * 재생목록 열기 (T16, `/p/:id`). 저장된 것은 누구나, draft는 소유자만(보안 규칙과 같은 기준).
+ * 없거나 볼 수 없으면 똑같이 notFound(남의 draft가 있는지 드러내지 않음).
+ * 검색 문장(비공개 문서)은 돌려주지 않는다. 영상은 지금 곡 목록에서 고른다(D-031).
+ */
+export async function getPlaylist(
+  db: Firestore,
+  uid: string | null,
+  id: string,
+  now = new Date(),
+): Promise<SharedPlaylist> {
+  const snap = await db.doc(`playlists/${id}`).get();
+  const d = snap.data() as
+    | (Partial<StoredPlaylist> & {
+        title?: string;
+        seed?: { artist?: string; title?: string };
+        locale?: Locale;
+      })
+    | undefined;
+  if (!d || (d.state !== 'saved' && (!uid || d.ownerUid !== uid)))
+    throw new PlaylistError('notFound');
+  const items = Array.isArray(d.items) ? d.items : [];
+  return {
+    id,
+    title: typeof d.title === 'string' ? d.title : '',
+    seed: { artist: d.seed?.artist ?? '', title: d.seed?.title ?? '' },
+    items: await resolveItems(db, items, d.include ?? NO_INCLUDE, now),
+    locale: d.locale === 'ko' ? 'ko' : 'en',
+    state: d.state === 'saved' ? 'saved' : 'draft',
+  };
+}

@@ -5,12 +5,15 @@ import {
   type CreateFailReason,
   type CreateResult,
   type MusicwebApi,
-  type PlayableItem,
   type SignedInUser,
+  type OpenLinkMode,
   type UnsupportedCode,
 } from './api';
 import { useI18n, type MessageKey } from './i18n';
+import { OpenInYouTube } from './OpenInYouTube';
 import { Player, type PlayerHandle } from './player/Player';
+import { SharedView } from './SharedView';
+import { SongRow } from './SongRow';
 
 /** 검색창 글자 수 상한. 서버(parseRequest)와 같게 코드 포인트로 센다. */
 export const MAX_REQUEST_CHARS = 200;
@@ -60,7 +63,21 @@ function errorMessage(err: unknown, locale: Locale): Message {
   return { key: 'errors.generic' };
 }
 
-export function App({ api, music }: { api: MusicwebApi; music: MusicService<HTMLElement> }) {
+/** `/p/{id}` 공유 주소면 그 id */
+export function sharedId(path: string): string | null {
+  return /^\/p\/([A-Za-z0-9]{1,64})\/?$/.exec(path)?.[1] ?? null;
+}
+
+export function App({
+  api,
+  music,
+  path = window.location.pathname,
+}: {
+  api: MusicwebApi;
+  music: MusicService<HTMLElement>;
+  path?: string;
+}) {
+  const shareId = sharedId(path);
   const { locale, setLocale, t } = useI18n();
   const [user, setUser] = useState<SignedInUser | null>(null);
   const [text, setText] = useState('');
@@ -74,7 +91,22 @@ export function App({ api, music }: { api: MusicwebApi; music: MusicService<HTML
   const [playing, setPlaying] = useState(-1);
   const player = useRef<PlayerHandle>(null);
 
+  const [openLink, setOpenLink] = useState<OpenLinkMode>('direct');
+
   useEffect(() => api.onUser(setUser), [api]);
+  useEffect(() => {
+    // 공유 화면은 playlists-get 응답에 방식이 같이 온다
+    if (shareId) return;
+    let live = true;
+    // 설정을 못 읽으면 기본(direct)으로 둔다. 링크가 깨졌을 때만 fallback이 저장된다.
+    api
+      .siteConfig()
+      .then((c) => live && setOpenLink(c.openLink))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [api, shareId]);
 
   const used = countChars(text);
   const over = used > MAX_REQUEST_CHARS;
@@ -170,129 +202,143 @@ export function App({ api, music }: { api: MusicwebApi; music: MusicService<HTML
       </header>
 
       <main>
-        <section className="wrap hero">
-          <div className="kicker">{t('hero.kicker')}</div>
-          <h1>{t('hero.title')}</h1>
-          <p>{t('hero.subtitle')}</p>
-          <form className="search" onSubmit={(e) => void submit(e)}>
-            <label htmlFor="request" className="visually-hidden">
-              {t('search.label')}
-            </label>
-            <input
-              id="request"
-              type="text"
-              autoComplete="off"
-              placeholder={t('search.placeholder')}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              aria-describedby="request-hints"
-              aria-invalid={over}
-            />
-            <button type="submit" className="btn-accent" disabled={creating || over || used === 0}>
-              {t('search.submit')}
-            </button>
-          </form>
-          <div className="hints" id="request-hints">
-            <span>{t('search.hints', { max: MAX_REQUEST_CHARS })}</span>
-            <span className="counter" data-over={over}>
-              {t('search.counter', { used, max: MAX_REQUEST_CHARS })}
-            </span>
-          </div>
-          {over && (
-            <div className="notice notice-error" role="alert">
-              {t('search.tooLong', { max: MAX_REQUEST_CHARS })}
-            </div>
-          )}
-          {creating && (
-            <div className="notice notice-info" role="status">
-              <span className="spinner" aria-hidden="true" />
-              {t('progress.working')}
-            </div>
-          )}
-          {error && (
-            <div className="notice notice-error" role="alert">
-              {t(error.key, error.vars)}
-            </div>
-          )}
-          {fail && (
-            <div className="notice notice-error" role="alert">
-              {t(FAIL_MESSAGE[fail])}
-              <ul>
-                <li>{t('errors.example1')}</li>
-                <li>{t('errors.example2')}</li>
-                <li>{t('errors.example3')}</li>
-              </ul>
-            </div>
-          )}
-        </section>
-
-        {result && (
-          <section className="wrap results" aria-labelledby="results-title">
-            <div className="card">
-              <div className="card-head">
-                <h2 id="results-title">{t('results.title')}</h2>
-                <span className="based-on">
-                  {t('results.basedOn', { title: result.seed.title, artist: result.seed.artist })}
+        {shareId ? (
+          <SharedView api={api} music={music} id={shareId} />
+        ) : (
+          <>
+            <section className="wrap hero">
+              <div className="kicker">{t('hero.kicker')}</div>
+              <h1>{t('hero.title')}</h1>
+              <p>{t('hero.subtitle')}</p>
+              <form className="search" onSubmit={(e) => void submit(e)}>
+                <label htmlFor="request" className="visually-hidden">
+                  {t('search.label')}
+                </label>
+                <input
+                  id="request"
+                  type="text"
+                  autoComplete="off"
+                  placeholder={t('search.placeholder')}
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  aria-describedby="request-hints"
+                  aria-invalid={over}
+                />
+                <button
+                  type="submit"
+                  className="btn-accent"
+                  disabled={creating || over || used === 0}
+                >
+                  {t('search.submit')}
+                </button>
+              </form>
+              <div className="hints" id="request-hints">
+                <span>{t('search.hints', { max: MAX_REQUEST_CHARS })}</span>
+                <span className="counter" data-over={over}>
+                  {t('search.counter', { used, max: MAX_REQUEST_CHARS })}
                 </span>
               </div>
-              {result.unsupported.length > 0 && (
-                <div className="notice notice-warn" role="note">
-                  {t('unsupported.title')}{' '}
-                  {result.unsupported.map((c) => t(UNSUPPORTED_MESSAGE[c])).join(', ')}
+              {over && (
+                <div className="notice notice-error" role="alert">
+                  {t('search.tooLong', { max: MAX_REQUEST_CHARS })}
                 </div>
               )}
-              {result.shortfall && (
-                <div className="notice notice-warn" role="note">
-                  {t('results.shortfall', {
-                    got: String(result.shortfall.got),
-                    requested: String(result.shortfall.requested),
-                  })}
+              {creating && (
+                <div className="notice notice-info" role="status">
+                  <span className="spinner" aria-hidden="true" />
+                  {t('progress.working')}
                 </div>
               )}
-              <div className="card-body">
-                <Player
-                  key={result.id}
-                  ref={player}
-                  items={result.items}
-                  service={music}
-                  onIndex={setPlaying}
-                  onEmbedBlocked={(code) => void api.reportEmbedBlocked(code).catch(() => {})}
-                />
-                <ol className="songs">
-                  {result.items.map((item, i) => (
-                    <SongRow
-                      key={`${item.songId}-${i}`}
-                      item={item}
-                      n={i + 1}
-                      playing={i === playing}
-                      disabled={busyRow !== null || savedId !== null}
-                      onPlay={() => player.current?.playAt(i)}
-                      onRemove={() => void edit('remove', i)}
-                      onReplace={() => void edit('replace', i)}
+              {error && (
+                <div className="notice notice-error" role="alert">
+                  {t(error.key, error.vars)}
+                </div>
+              )}
+              {fail && (
+                <div className="notice notice-error" role="alert">
+                  {t(FAIL_MESSAGE[fail])}
+                  <ul>
+                    <li>{t('errors.example1')}</li>
+                    <li>{t('errors.example2')}</li>
+                    <li>{t('errors.example3')}</li>
+                  </ul>
+                </div>
+              )}
+            </section>
+
+            {result && (
+              <section className="wrap results" aria-labelledby="results-title">
+                <div className="card">
+                  <div className="card-head">
+                    <h2 id="results-title">{t('results.title')}</h2>
+                    <span className="based-on">
+                      {t('results.basedOn', {
+                        title: result.seed.title,
+                        artist: result.seed.artist,
+                      })}
+                    </span>
+                  </div>
+                  {result.unsupported.length > 0 && (
+                    <div className="notice notice-warn" role="note">
+                      {t('unsupported.title')}{' '}
+                      {result.unsupported.map((c) => t(UNSUPPORTED_MESSAGE[c])).join(', ')}
+                    </div>
+                  )}
+                  {result.shortfall && (
+                    <div className="notice notice-warn" role="note">
+                      {t('results.shortfall', {
+                        got: String(result.shortfall.got),
+                        requested: String(result.shortfall.requested),
+                      })}
+                    </div>
+                  )}
+                  <div className="card-body">
+                    <Player
+                      key={result.id}
+                      ref={player}
+                      items={result.items}
+                      service={music}
+                      onIndex={setPlaying}
+                      onEmbedBlocked={(code) => void api.reportEmbedBlocked(code).catch(() => {})}
                     />
-                  ))}
-                </ol>
-              </div>
-              <div className="card-foot">
-                {savedId ? (
-                  <p className="share" role="status">
-                    {t('results.saved')}{' '}
-                    <a href={`/p/${savedId}`}>{`${window.location.origin}/p/${savedId}`}</a>
-                  </p>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn-light"
-                    disabled={saving || busyRow !== null}
-                    onClick={() => void save()}
-                  >
-                    {saving ? t('results.saving') : t('results.save')}
-                  </button>
-                )}
-                <span className="source-note">{t('results.sourceNote')}</span>
-              </div>
-            </div>
-          </section>
+                    <ol className="songs">
+                      {result.items.map((item, i) => (
+                        <SongRow
+                          key={`${item.songId}-${i}`}
+                          item={item}
+                          n={i + 1}
+                          playing={i === playing}
+                          disabled={busyRow !== null || savedId !== null}
+                          onPlay={() => player.current?.playAt(i)}
+                          onRemove={() => void edit('remove', i)}
+                          onReplace={() => void edit('replace', i)}
+                        />
+                      ))}
+                    </ol>
+                  </div>
+                  <div className="card-foot">
+                    {savedId ? (
+                      <p className="share" role="status">
+                        {t('results.saved')}{' '}
+                        <a href={`/p/${savedId}`}>{`${window.location.origin}/p/${savedId}`}</a>
+                      </p>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn-light"
+                        disabled={saving || busyRow !== null}
+                        onClick={() => void save()}
+                      >
+                        {saving ? t('results.saving') : t('results.save')}
+                      </button>
+                    )}
+                    <span className="source-note">{t('results.sourceNote')}</span>
+                  </div>
+                  <OpenInYouTube items={result.items} mode={openLink} />
+                </div>
+              </section>
+            )}
+          </>
         )}
       </main>
 
@@ -305,78 +351,5 @@ export function App({ api, music }: { api: MusicwebApi; music: MusicService<HTML
         </div>
       </footer>
     </>
-  );
-}
-
-function SongRow(props: {
-  item: PlayableItem;
-  n: number;
-  playing: boolean;
-  disabled: boolean;
-  onPlay(): void;
-  onRemove(): void;
-  onReplace(): void;
-}) {
-  const { t } = useI18n();
-  const { item } = props;
-  return (
-    <li className="song" aria-current={props.playing ? 'true' : undefined}>
-      <button
-        type="button"
-        className="song-n"
-        aria-label={t('results.play', { title: item.title })}
-        disabled={!item.videoId}
-        onClick={props.onPlay}
-      >
-        {String(props.n).padStart(2, '0')}
-      </button>
-      <div className="song-main">
-        <div className="song-title">
-          {item.title}
-          <span className="song-artist">{item.artist}</span>
-        </div>
-        {/* AI가 쓴 이유는 글자로만 그린다(React가 HTML로 해석하지 않음, D-030) */}
-        <div className="song-reason">{item.reason ?? t('results.noReason')}</div>
-        {!item.videoId && <div className="song-unavailable">{t('results.unavailable')}</div>}
-      </div>
-      <button
-        type="button"
-        className="icon-btn"
-        aria-label={t('results.replace', { title: item.title })}
-        disabled={props.disabled}
-        onClick={props.onReplace}
-      >
-        <svg
-          aria-hidden="true"
-          width="17"
-          height="17"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path d="M4 7h13l-3-3M20 17H7l3 3" />
-        </svg>
-      </button>
-      <button
-        type="button"
-        className="icon-btn"
-        aria-label={t('results.remove', { title: item.title })}
-        disabled={props.disabled}
-        onClick={props.onRemove}
-      >
-        <svg
-          aria-hidden="true"
-          width="17"
-          height="17"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path d="M6 6l12 12M18 6L6 18" />
-        </svg>
-      </button>
-    </li>
   );
 }

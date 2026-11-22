@@ -9,7 +9,14 @@ import {
   signOut,
 } from 'firebase/auth';
 import { connectFunctionsEmulator, getFunctions, httpsCallable } from 'firebase/functions';
-import { ApiError, type CreateResult, type MusicwebApi, type PlayableItem } from './api';
+import {
+  ApiError,
+  type CreateResult,
+  type MusicwebApi,
+  type OpenLinkMode,
+  type PlayableItem,
+  type SharedPlaylist,
+} from './api';
 
 /**
  * Firebase로 서버를 부른다 (T14). 클라이언트는 Firestore에 쓰지 않는다: 모든 변경은 callable(SPEC 6.2).
@@ -79,5 +86,7 @@ export function createFirebaseApi(): MusicwebApi {
     reportEmbedBlocked: async (code) => {
       await call('playback-reportEmbedBlocked', { code });
     },
+    getPlaylist: (id) => call<SharedPlaylist>('playlists-get', { id }),
+    siteConfig: () => call<{ openLink: OpenLinkMode }>('site-config', {}),
   };
 }

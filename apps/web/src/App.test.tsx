@@ -65,6 +65,10 @@ function fakeApi(over: Partial<MusicwebApi> = {}, signedIn = true) {
     update: vi.fn(async () => ({ items: [item(1), item(3)] })),
     save: vi.fn(async () => ({ id: 'pl1', state: 'saved' as const })),
     reportEmbedBlocked: vi.fn(async () => {}),
+    getPlaylist: vi.fn(async () => {
+      throw new ApiError('not-found');
+    }),
+    siteConfig: vi.fn(async () => ({ openLink: 'direct' as const })),
     ...over,
   };
   render(
@@ -286,6 +290,10 @@ describe('플레이어 정리', () => {
       update: async () => ({ items: [] }),
       save: async () => ({ id: 'pl1', state: 'saved' as const }),
       reportEmbedBlocked: async () => {},
+      getPlaylist: async () => {
+        throw new ApiError('not-found');
+      },
+      siteConfig: async () => ({ openLink: 'direct' as const }),
     } as MusicwebApi;
     const { unmount } = render(
       <I18nProvider>
@@ -298,5 +306,57 @@ describe('플레이어 정리', () => {
       (ready as (() => void) | null)?.();
     });
     expect(calls).toEqual(['destroy']);
+  });
+});
+
+describe('공유 주소 /p/:id (보기 전용)', () => {
+  const shared = {
+    id: 'abc123',
+    title: 'Doja — Central Cee',
+    seed: { artist: 'Central Cee', title: 'Doja' },
+    items: [item(1, { videoId: 'vid00000001' }), item(2, { videoId: 'vid00000002' })],
+    locale: 'en' as const,
+    state: 'saved' as const,
+    openLink: 'direct' as const,
+  };
+
+  function showShared(over: Partial<MusicwebApi>) {
+    music = fakeMusic();
+    const api = {
+      onUser: (cb: (u: null) => void) => {
+        cb(null);
+        return () => {};
+      },
+      siteConfig: async () => ({ openLink: 'direct' as const }),
+      reportEmbedBlocked: vi.fn(async () => {}),
+      ...over,
+    } as unknown as MusicwebApi;
+    render(
+      <I18nProvider>
+        <App api={api} music={music.service} path="/p/abc123" />
+      </I18nProvider>,
+    );
+    return api;
+  }
+
+  it('로그인 없이 곡·플레이어·YouTube 링크, 빼기·바꾸기·검색창은 없음', async () => {
+    const getPlaylist = vi.fn(async () => shared);
+    showShared({ getPlaylist });
+    expect(await screen.findByRole('heading', { name: 'Shared set' })).toBeTruthy();
+    expect(getPlaylist).toHaveBeenCalledWith('abc123');
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: /^Remove/ })).toBeNull();
+    expect(screen.queryByLabelText('Describe the music you want')).toBeNull();
+    expect(screen.getByRole('link', { name: 'Open in YouTube' })).toBeTruthy();
+    await waitFor(() => expect(music.calls).toEqual(['cue:vid00000001']));
+  });
+
+  it('없거나 공유되지 않은 재생목록이면 안내', async () => {
+    showShared({
+      getPlaylist: async () => {
+        throw new ApiError('not-found');
+      },
+    });
+    expect((await screen.findByRole('alert')).textContent).toContain("doesn't exist");
   });
 });

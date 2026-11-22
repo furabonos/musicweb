@@ -16,6 +16,7 @@ export const SERVICE_COUNTERS = [
   'autoIssues',
   'autoFixes',
   'musicDataCalls',
+  'linkChecks',
 ] as const;
 export const USER_COUNTERS = ['playlists', 'searches', 'exports'] as const;
 export const FEATURES = ['create', 'ingest', 'autoIssue'] as const;
@@ -24,8 +25,13 @@ export type ServiceCounter = (typeof SERVICE_COUNTERS)[number];
 export type UserCounter = (typeof USER_COUNTERS)[number];
 export type Feature = (typeof FEATURES)[number];
 
+/** "YouTube에서 열기" 방식(D-006, T16). 링크가 깨지면 linkHealth 작업이 fallback(곡별 링크)으로 바꾼다. */
+export const OPEN_LINK_MODES = ['direct', 'fallback'] as const;
+export type OpenLinkMode = (typeof OPEN_LINK_MODES)[number];
+
 export interface RuntimeConfig {
   killSwitches: Record<Feature, boolean>;
+  youtubeOpenLink: OpenLinkMode;
   limits: { service: Record<ServiceCounter, number>; user: Record<UserCounter, number> };
 }
 
@@ -35,6 +41,7 @@ export const YOUTUBE_DAILY_SEARCHES = 100;
 
 export const DEFAULT_RUNTIME: RuntimeConfig = {
   killSwitches: { create: true, ingest: true, autoIssue: true },
+  youtubeOpenLink: 'direct',
   limits: {
     service: {
       ytUnits: 9_000,
@@ -45,6 +52,7 @@ export const DEFAULT_RUNTIME: RuntimeConfig = {
       autoIssues: 5,
       autoFixes: 3, // 자동 수정(Claude Code Action) 실행. 실제 차감은 T20에서 연결
       musicDataCalls: 20_000, // 음악 데이터 요청(무료). 도는 코드가 폭주하지 않게 막는 상한 (D-024)
+      linkChecks: 5, // "YouTube에서 열기" 링크 동작 확인(헤더만, D-006). 하루 1회 + 수동 재실행 여유 (T16)
     },
     user: { playlists: 10, searches: 3, exports: 1 },
   },
@@ -71,6 +79,7 @@ export type LimitsPatch = {
 
 const docSchema = z.strictObject({
   killSwitches: partialRecord(FEATURES, z.boolean()).optional(),
+  youtubeOpenLink: z.enum(OPEN_LINK_MODES).optional(),
   limits: limitsPatchSchema.optional(),
 });
 
@@ -88,6 +97,7 @@ export function parseRuntimeConfig(doc: unknown): RuntimeConfig {
   }
   const d = parsed.data as {
     killSwitches?: Partial<Record<Feature, boolean>>;
+    youtubeOpenLink?: OpenLinkMode;
     limits?: {
       service?: Partial<Record<ServiceCounter, number>>;
       user?: Partial<Record<UserCounter, number>>;
@@ -95,6 +105,7 @@ export function parseRuntimeConfig(doc: unknown): RuntimeConfig {
   };
   const cfg: RuntimeConfig = {
     killSwitches: { ...DEFAULT_RUNTIME.killSwitches, ...d.killSwitches },
+    youtubeOpenLink: d.youtubeOpenLink ?? DEFAULT_RUNTIME.youtubeOpenLink,
     limits: {
       service: { ...DEFAULT_RUNTIME.limits.service, ...d.limits?.service },
       user: { ...DEFAULT_RUNTIME.limits.user, ...d.limits?.user },
