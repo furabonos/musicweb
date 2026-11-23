@@ -84,6 +84,8 @@ export function createFirebaseApi(): MusicwebApi {
     signOut: () => signOut(auth),
     create: (text, locale) => call<CreateResult>('playlists-create', { text, locale }),
     createFromSong: (input, locale) => call<CreateResult>('playlists-create', { ...input, locale }),
+    explain: async (id) =>
+      (await call<{ reasons: Record<string, string> }>('playlists-explain', { id })).reasons,
     suggest: async (q) => (await call<{ items: SongSuggestion[] }>('songs-suggest', { q })).items,
     update: (id, action, position) =>
       call<{ items: PlayableItem[] }>('playlists-update', { id, action, position }),

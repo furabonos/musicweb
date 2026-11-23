@@ -456,7 +456,7 @@
     - e2e `apps/web/e2e/picker.spec.ts` — 곡 검색 → 고르기 → 곡 수 15 → 라이브 버튼 → 15곡 표시
     - unit — 두 언어 파일 키 집합 같음
 
-- [ ] **T34 자세한 이유 (요청 때만 AI 설명)** — SPEC 4.3
+- [x] **T34 자세한 이유 (요청 때만 AI 설명)** — SPEC 4.3
   - 의존: T22b, T30
   - 산출물:
     - callable `playlists-explain`: 소유자 재생목록의 곡별 이유를 AI로 쓰기, `reasonCache`에 (기준 곡, 곡, 언어)로 저장·재사용, 사용자별 하루 10회(`explains` 카운터), 절약 모드면 거부

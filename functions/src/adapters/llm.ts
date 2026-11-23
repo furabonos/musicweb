@@ -20,7 +20,8 @@ export const LLM_MODEL = 'claude-haiku-5-5';
 export const PRICE_MICRO_USD_PER_TOKEN = { input: 0.1, output: 0.5 };
 const REQUEST_TIMEOUT_MS = 20_000;
 
-export type LlmOp = 'llm.parseRequest' | 'llm.judgeLink' | 'llm.candidates' | 'llm.pick';
+export type LlmOp =
+  'llm.parseRequest' | 'llm.judgeLink' | 'llm.candidates' | 'llm.pick' | 'llm.explain';
 
 export interface StructuredRequest {
   op: LlmOp;

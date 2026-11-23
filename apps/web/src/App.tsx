@@ -64,6 +64,9 @@ function errorMessage(err: unknown, locale: Locale): Message {
   if (reason === 'noSpare') return { key: 'errors.noSpare' };
   if (reason === 'blocked') return { key: 'errors.blocked' };
   if (reason === 'seedSongNotFound') return { key: 'errors.seedSongNotFound' };
+  if (reason === 'savingMode') return { key: 'explain.off' };
+  if (reason === 'noAi') return { key: 'explain.noAi' };
+  if (reason === 'explainFailed') return { key: 'explain.failed' };
   if (reason === 'lastSong') return { key: 'errors.lastSong' };
   if (reason === 'alreadySaved') return { key: 'errors.alreadySaved' };
   return { key: 'errors.generic' };
@@ -99,6 +102,14 @@ export function App({
   const [playing, setPlaying] = useState(-1);
   const player = useRef<PlayerHandle>(null);
   const resultsRef = useRef<HTMLElement>(null);
+  // 자세한 이유(T34): 지금 결과의 곡 ID → AI 이유
+  const [details, setDetails] = useState<{ id: string; reasons: Record<string, string> } | null>(
+    null,
+  );
+  const [explaining, setExplaining] = useState(false);
+  const [explainStatus, setExplainStatus] = useState<'explain.loading' | 'explain.done' | null>(
+    null,
+  );
   // 새 재생목록이 나오면 결과로 화면을 내린다(곡 고르기·검색창 아래에 있어 안 보일 수 있다).
   // 플레이어는 절반 이상 보일 때만 다음 곡을 자동 재생하므로(youtube-policy) 보이게 두는 것이 중요하다.
   const resultId = result?.id;
@@ -180,6 +191,33 @@ export function App({
       setError(errorMessage(err, locale));
     } finally {
       setBusyRow(null);
+    }
+  }
+
+  // 바꾸기로 이유 없는 곡이 생기면 다시 누를 수 있다(저장된 이유는 서버가 다시 쓰므로 새 곡 몫만 AI에 간다)
+  const explainDone =
+    !!result && details?.id === result.id && result.items.every((i) => i.songId in details.reasons);
+  const explainBlocked = explaining || aiOff !== null || explainDone;
+
+  async function explain() {
+    if (!result || explainBlocked) return;
+    setError(null);
+    setExplaining(true);
+    setExplainStatus('explain.loading');
+    try {
+      const reasons = await api.explain(result.id);
+      setDetails((d) => ({
+        id: result.id,
+        reasons: { ...(d?.id === result.id ? d.reasons : {}), ...reasons },
+      }));
+      setExplainStatus('explain.done');
+    } catch (err) {
+      setExplainStatus(null);
+      if (err instanceof ApiError && err.details.reason === 'savingMode') setAiOff('saving');
+      else if (err instanceof ApiError && err.details.reason === 'noAi') setAiOff('noAi');
+      else setError(errorMessage(err, locale));
+    } finally {
+      setExplaining(false);
     }
   }
 
@@ -351,7 +389,7 @@ export function App({
                       onIndex={setPlaying}
                       onEmbedBlocked={(code) => void api.reportEmbedBlocked(code).catch(() => {})}
                     />
-                    <ol className="songs">
+                    <ol className="songs" aria-busy={explaining}>
                       {result.items.map((item, i) => (
                         <SongRow
                           key={`${item.songId}-${i}`}
@@ -362,6 +400,9 @@ export function App({
                           onPlay={() => player.current?.playAt(i)}
                           onRemove={() => void edit('remove', i)}
                           onReplace={() => void edit('replace', i)}
+                          detail={
+                            details?.id === result.id ? details.reasons[item.songId] : undefined
+                          }
                         />
                       ))}
                     </ol>
@@ -382,6 +423,24 @@ export function App({
                         {saving ? t('results.saving') : t('results.save')}
                       </button>
                     )}
+                    {/* 누르는 동안·끝난 뒤에도 포커스가 남도록 disabled 대신 aria-disabled */}
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      aria-disabled={explainBlocked}
+                      aria-describedby={aiOff ? 'explain-off' : undefined}
+                      onClick={() => void explain()}
+                    >
+                      {explaining ? t('explain.loading') : t('explain.button')}
+                    </button>
+                    {aiOff && (
+                      <span id="explain-off" className="source-note">
+                        {t(aiOff === 'saving' ? 'explain.off' : 'explain.noAi')}
+                      </span>
+                    )}
+                    <span className="sr-only" role="status">
+                      {explainStatus ? t(explainStatus) : ''}
+                    </span>
                     <span className="source-note">{t('results.sourceNote')}</span>
                   </div>
                   <OpenInYouTube items={result.items} mode={openLink} />

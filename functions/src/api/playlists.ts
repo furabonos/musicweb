@@ -21,7 +21,15 @@ import { touchRequested } from '../core/precomputeOnDemand.js';
 import { parseFallback, parseWithFallback } from '../core/parseFallback.js';
 import { COUNT_MAX, COUNT_MIN, type Locale, type ParsedRequest } from '../core/parseRequest.js';
 import { enterSavingMode, readSavingMode, savingModeState } from '../core/savingMode.js';
-import { createPlaylist, getPlaylist, savePlaylist, updatePlaylist } from '../core/playlists.js';
+import {
+  assertNotBlocked,
+  createPlaylist,
+  getPlaylist,
+  savePlaylist,
+  updatePlaylist,
+} from '../core/playlists.js';
+import { explainPlaylist } from '../core/explain.js';
+import { BudgetExceededError } from '../core/budget.js';
 import { readRuntimeConfig, RuntimeConfigError } from '../core/runtimeConfig.js';
 import { recommend, type RecommendPorts } from '../core/recommend.js';
 import { firestoreRecommendPorts } from '../core/recommendPorts.js';
@@ -114,6 +122,24 @@ const NO_LLM: Llm = {
   },
 };
 
+/**
+ * AI 연결만. 키가 없으면(사이트 AI 키 미정, D-039) null → AI 없는 방식으로 돈다.
+ * 자세한 이유(explain)는 음악·YouTube 연결 없이 이것만 쓴다(그 함수에 선언하지 않은 비밀값을 읽지 않게).
+ */
+function buildLlm(db: Firestore, events: EventSink): Llm | null {
+  if (fake()) return fakeLlm(firestoreLlmBudget(db));
+  try {
+    return createLlm({
+      apiKey: secrets.ANTHROPIC_API_KEY.value(),
+      events,
+      budget: firestoreLlmBudget(db),
+    });
+  } catch (err) {
+    if (!(err instanceof LlmConfigError)) throw err;
+    return null;
+  }
+}
+
 function buildPorts(db: Firestore, events: EventSink): { ports: RecommendPorts; llm: Llm | null } {
   if (fake()) {
     const llm = fakeLlm(firestoreLlmBudget(db));
@@ -129,17 +155,7 @@ function buildPorts(db: Firestore, events: EventSink): { ports: RecommendPorts; 
     return { ports: { ...base, ...fakeMusicAndYt(), officialChannels: async () => [] }, llm };
   }
   const music = { events, budget: firestoreCallBudget(db), contact: MB_CONTACT.value() };
-  // 키가 없으면(사이트 AI 키 미정, D-039) AI 없는 방식으로 돈다
-  let llm: Llm | null = null;
-  try {
-    llm = createLlm({
-      apiKey: secrets.ANTHROPIC_API_KEY.value(),
-      events,
-      budget: firestoreLlmBudget(db),
-    });
-  } catch (err) {
-    if (!(err instanceof LlmConfigError)) throw err;
-  }
+  const llm = buildLlm(db, events);
   const lastfmKey = secrets.LASTFM_API_KEY.value();
   const ports = firestoreRecommendPorts({
     db,
@@ -262,6 +278,41 @@ export const playlists = {
           uid,
           input,
         );
+      }),
+  ),
+  /**
+   * 자세한 이유(T34, D-050): 소유자 재생목록의 곡별 이유를 AI로. 절약 모드·AI 없음이면 거부(failed-precondition).
+   * 사용자 하루 explains 상한, (기준 곡, 곡, 언어) 이유 저장소 재사용.
+   */
+  explain: onCall(
+    { secrets: [secrets.ANTHROPIC_API_KEY, secrets.ACTOR_HASH_KEY], timeoutSeconds: 60 },
+    (req) =>
+      handle(async () => {
+        const uid = requireUid(req.auth);
+        const { id } = parseInput(getInput, req.data);
+        const db = getFirestore();
+        const events = callableEventSink(db);
+        await assertNotBlocked(db, uid);
+        const llm = buildLlm(db, events);
+        if (!llm) throw new HttpsError('failed-precondition', 'AI is off', { reason: 'noAi' });
+        if (await readSavingMode(db, events)) {
+          throw new HttpsError('failed-precondition', 'saving mode', { reason: 'savingMode' });
+        }
+        try {
+          const out = await explainPlaylist({ db, llm, events }, uid, id);
+          // AI가 아무 이유도 주지 않았다: 빈 결과를 "받음"으로 보이지 않게 오류로 알린다(화면은 다시 누를 수 있다)
+          if (out.requested > 0 && Object.keys(out.reasons).length === 0) {
+            throw new HttpsError('unavailable', 'no reasons', { reason: 'explainFailed' });
+          }
+          return { reasons: out.reasons };
+        } catch (err) {
+          // AI 비용 상한에 닿으면 절약 모드를 켜고 같은 거부로 답한다
+          if (err instanceof BudgetExceededError && err.counter === 'aiCostMicroUsd') {
+            await enterSavingMode(db, events);
+            throw new HttpsError('failed-precondition', 'saving mode', { reason: 'savingMode' });
+          }
+          throw err;
+        }
       }),
   ),
   update: onCall({ secrets: [secrets.ACTOR_HASH_KEY] }, (req) =>
