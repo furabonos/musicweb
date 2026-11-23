@@ -6,10 +6,12 @@ import { firestoreEventSink, type EventSink } from '../core/events.js';
 // 에뮬레이터 가짜 모드에서 이벤트 해시에 쓰는 고정 키(실제 배포에서는 쓰이지 않음, D-031)
 const FAKE_HASH_KEY = 'emulator-only-actor-hash-key-not-a-secret';
 
+/** callable에서 쓰는 서버 해시 키(이벤트 해시·저장된 해석 키). 함수 옵션에 secrets.ACTOR_HASH_KEY를 연결해야 한다 */
+export function serverHashKey(): string {
+  return fakeExternalEnabled() ? FAKE_HASH_KEY : secrets.ACTOR_HASH_KEY.value();
+}
+
 /** callable용 이벤트 기록기. 함수 옵션에 secrets.ACTOR_HASH_KEY를 연결해야 한다. */
 export function callableEventSink(db: Firestore): EventSink {
-  return firestoreEventSink(
-    db,
-    fakeExternalEnabled() ? FAKE_HASH_KEY : secrets.ACTOR_HASH_KEY.value(),
-  );
+  return firestoreEventSink(db, serverHashKey());
 }

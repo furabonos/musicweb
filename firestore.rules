@@ -4,7 +4,8 @@ rules_version = '2';
 // - 기본은 전부 거부. 아래에 적은 "읽기"만 연다.
 // - 클라이언트 쓰기는 어디에도 없다. 모든 쓰기는 Cloud Functions(관리자 권한 SDK)로만 한다.
 //   tools/firestore-rules-static.test.ts가 쓰기 허용 줄이 생기면 실패시킨다.
-// - secrets_oauth, events, issueFingerprints는 match 자체가 없어 누구도 읽지 못한다(서버 전용).
+// - secrets_oauth, events, issueFingerprints, 미리 계산·캐시(artistSimilar, artistVectors, parseCache, resultCache 등)는
+//   match 자체가 없어 누구도 읽지 못한다(서버 전용, tests/rules/server-only.test.ts).
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() {

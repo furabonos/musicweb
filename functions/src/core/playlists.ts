@@ -205,7 +205,7 @@ export async function createPlaylist(
   }
   await events.record({
     type: 'playlist_created',
-    attrs: { songs: chosen.length },
+    attrs: { songs: chosen.length, ...(rec.fromCache ? { fromCache: true } : {}) },
     outcome: 'ok',
     actorUid: uid,
   });

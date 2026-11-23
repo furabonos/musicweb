@@ -146,7 +146,7 @@ export async function parseRequest(
   };
   await deps.events.record({
     type: 'request_parsed',
-    attrs: { locale, requestedCount: value.count },
+    attrs: { locale, requestedCount: value.count, path: 'ai' },
     outcome: 'ok',
     ...actor,
   });

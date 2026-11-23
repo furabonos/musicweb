@@ -397,3 +397,68 @@ describe('playlists-get / site-config (T16)', () => {
     });
   });
 });
+
+describe('저장된 해석·결과 (T32, D-048)', () => {
+  const parsedPaths = async () =>
+    (await db.collection('events').where('type', '==', 'request_parsed').get()).docs
+      .map((d) => [d.get('at')?.toMillis?.() ?? 0, d.get('attrs.path')] as const)
+      .sort((a, b) => a[0] - b[0])
+      .map(([, p]) => p);
+  const created = async () =>
+    (await db.collection('events').where('type', '==', 'playlist_created').get()).docs
+      .map((d) => [d.get('at')?.toMillis?.() ?? 0, d.get('attrs.fromCache') === true] as const)
+      .sort((a, b) => a[0] - b[0])
+      .map(([, f]) => f);
+
+  it('규칙으로 못 읽는 같은 문장 두 번째는 저장된 해석(AI 호출 없음), 원문은 저장하지 않음', async () => {
+    const { token } = await googleSignIn(ADMIN);
+    const text = 'please find me something that feels like Doja';
+    await createOk(token, text, 'en');
+    await createOk(token, `  PLEASE find me something  that feels like doja `, 'en');
+    expect(await parsedPaths()).toEqual(['ai', 'cache']);
+    const docs = (await db.collection('parseCache').get()).docs.map((d) => d.data());
+    expect(docs).toHaveLength(1);
+    expect(JSON.stringify(docs)).not.toMatch(/please|feels/i);
+  });
+
+  it('규칙으로 읽히는 문장은 처음부터 AI 없이(rule)', async () => {
+    const { token } = await googleSignIn(ADMIN);
+    await createOk(token, REQUEST, 'en');
+    expect(await parsedPaths()).toEqual(['rule']);
+  });
+
+  it('같은 조합 두 번째 결과는 추천 계산 없이 같은 곡, 영상 ID는 저장하지 않음, 7일 지나면 다시 계산', async () => {
+    const { token } = await googleSignIn(ADMIN);
+    const a = await createOk(token, REQUEST, 'en');
+    const b = await createOk(token, REQUEST, 'en');
+    expect(b.items.map((i) => i.songId)).toEqual(a.items.map((i) => i.songId));
+    expect(await created()).toEqual([false, true]);
+    // 두 번째는 추천 단계 기록이 늘지 않는다(계산하지 않음)
+    const steps = (await db.collection('events').where('type', '==', 'recommend_step').get()).size;
+    await createOk(token, REQUEST, 'en');
+    expect((await db.collection('events').where('type', '==', 'recommend_step').get()).size).toBe(
+      steps,
+    );
+
+    const cache = (await db.collection('resultCache').get()).docs;
+    expect(cache).toHaveLength(1);
+    expect(JSON.stringify(cache[0]?.data())).not.toMatch(/videoId|demoVid|ytTitle/);
+
+    // 7일 지난 결과는 쓰지 않는다
+    await cache[0]?.ref.update({ expiresAt: new Date(Date.now() - 1000) });
+    await createOk(token, REQUEST, 'en');
+    expect(await created()).toEqual([false, true, true, false]);
+  });
+
+  it('절약 모드에서도 AI가 전에 읽은 문장은 저장된 해석으로 성공한다', async () => {
+    const { token } = await googleSignIn(ADMIN);
+    const text = 'please find me something that feels like Doja';
+    await createOk(token, text, 'en');
+    const { enterSavingMode } = await import('../core/savingMode.js');
+    const { memoryEvents } = await import('../testing/music.js');
+    await enterSavingMode(db, memoryEvents().sink, new Date());
+    const again = await createOk(token, text, 'en');
+    expect(again.items.length).toBeGreaterThan(0);
+    expect((await parsedPaths()).at(-1)).toBe('cache');
+  });
+});

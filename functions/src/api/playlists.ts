@@ -14,6 +14,8 @@ import { MB_CONTACT, secrets } from '../config/secrets.js';
 import type { CallerAuth } from '../core/auth.js';
 import type { EventSink } from '../core/events.js';
 import { enqueueArtist } from '../core/ingestQueue.js';
+import { firestoreParseCache } from '../core/parseCache.js';
+import { withResultCache } from '../core/resultCache.js';
 import { errName } from '../core/jobErrors.js';
 import { touchRequested } from '../core/precomputeOnDemand.js';
 import { parseFallback, parseWithFallback } from '../core/parseFallback.js';
@@ -25,7 +27,7 @@ import { firestoreRecommendPorts } from '../core/recommendPorts.js';
 import { fakeLlm, fakeMusicAndYt } from '../dev/fakeWorld.js';
 import { requireAdmin } from './admin.js';
 import { handle } from './errors.js';
-import { callableEventSink } from './eventSink.js';
+import { callableEventSink, serverHashKey } from './eventSink.js';
 
 /**
  * 재생목록 callable (SPEC 1.3, 4.3, T14, D-031).
@@ -164,33 +166,52 @@ export const playlists = {
             return 'precomputed' as const;
           });
         const onAiLimit = async () => void (await enterSavingMode(db, events));
+        // 저장된 해석(30일)·결과(7일) (T32, D-048)
+        const parseCache = firestoreParseCache(db, serverHashKey());
+        const cachedRecommend = withResultCache({ db, mode, events }, (parsed, spares) =>
+          recommend(
+            ports,
+            parsed,
+            { uid },
+            { spares, mode, ai: { mode: aiMode, onLimit: onAiLimit } },
+          ),
+        );
         return createPlaylist(
           {
             db,
             events,
             parse: (text, locale) =>
-              parseWithFallback({ llm, events, actorUid: uid, aiMode, onAiLimit }, text, locale),
+              parseWithFallback(
+                { llm, events, actorUid: uid, aiMode, onAiLimit, cache: parseCache },
+                text,
+                locale,
+              ),
+            // AI를 못 쓸 때 규칙으로도 못 읽고 저장된 해석도 없는 문장은 한도를 쓰기 전에 다시 묻는다
             rejectBeforeLimit: async (text, locale) =>
-              aiMode === 'on' || parseFallback(text, locale)
+              aiMode === 'on' ||
+              parseFallback(text, locale) ||
+              (await parseCache.get(text, locale).catch(() => null))
                 ? null
                 : parseWithFallback({ llm, events, actorUid: uid, aiMode }, text, locale),
             ...(aiMode === 'on'
               ? {
                   reparseWithAi: (text: string, locale: 'en' | 'ko') =>
                     parseWithFallback(
-                      { llm, events, actorUid: uid, aiMode, onAiLimit, skipRule: true },
+                      {
+                        llm,
+                        events,
+                        actorUid: uid,
+                        aiMode,
+                        onAiLimit,
+                        skipRule: true,
+                        cache: parseCache,
+                      },
                       text,
                       locale,
                     ),
                 }
               : {}),
-            recommend: (parsed, spares) =>
-              recommend(
-                ports,
-                parsed,
-                { uid },
-                { spares, mode, ai: { mode: aiMode, onLimit: onAiLimit } },
-              ),
+            recommend: cachedRecommend,
             enqueueArtist: (artist) => enqueueArtist(db, artist),
             touchRequested: (ids) => touchRequested(db, ids),
           },

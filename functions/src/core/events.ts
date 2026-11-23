@@ -77,7 +77,12 @@ export const JOBS = [
 
 /** 이벤트 종류 → attrs 스키마. 새 종류는 여기에 추가한다(스키마 없는 종류는 기록되지 않음). */
 export const EVENT_SCHEMAS = {
-  request_parsed: z.strictObject({ locale, requestedCount: count }),
+  // path: 저장된 해석·규칙·AI 중 어디서 읽었는지(T32). 문장은 없다
+  request_parsed: z.strictObject({
+    locale,
+    requestedCount: count,
+    path: z.enum(['cache', 'rule', 'ai']).optional(),
+  }),
   request_parse_failed: z.strictObject({ reason: id }),
   recommend_step: z.strictObject({
     step: z.enum(['seed', 'candidates', 'catalog_filter', 'lookup', 'ai_pick', 'rule_pick']),
@@ -95,7 +100,7 @@ export const EVENT_SCHEMAS = {
     reason: z.enum(['ai_limit', 'new_day', 'limit_raised']),
   }),
   // 재생목록을 만들었다: 보여 준 곡 수 (현황판 "사용자가 뺀 곡 비율"의 분모, T21)
-  playlist_created: z.strictObject({ songs: count }),
+  playlist_created: z.strictObject({ songs: count, fromCache: z.boolean().optional() }),
   song_linked: z.strictObject({
     kind: z.enum(['official_audio', 'mv', 'live', 'cover', 'remix', 'other']),
     // 소수 둘째 자리까지만(숫자에 다른 정보를 싣지 못하게)
