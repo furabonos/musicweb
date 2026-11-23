@@ -134,6 +134,10 @@ export type RecommendResult =
       items: RecommendItem[];
       /** 요청 수보다 적을 때만. 이유 코드는 화면이 언어에 맞게 풀어 쓴다. */
       shortfall: { requested: number; got: number; reason: 'not_enough_playable' } | null;
+      /** 저장된 결과를 다시 썼다(T32) */
+      fromCache?: boolean;
+      /** 곡을 누가 골랐나: AI 또는 점수(AI 없이). 저장된 결과 키를 실제 방식에 맞추는 데 쓴다 */
+      pickedBy?: 'ai' | 'rule';
     }
   | { ok: false; reason: SeedFailReason };
 
@@ -317,6 +321,7 @@ export async function recommend(
   const pool = playable.sort((a, b) => b.c.score - a.c.score).slice(0, L.maxPickPool);
   const pickCount = req.count + (opts.spares ?? 0);
   let items = ai.on ? await aiPick(ports, seed, req, pickCount, pool, user.uid, ai) : null;
+  const pickedBy: 'ai' | 'rule' = items ? 'ai' : 'rule';
   if (!items) items = await rulePick(ports, seed, req, pickCount, pool, user.uid, tagInfo);
   return {
     ok: true,
@@ -327,6 +332,7 @@ export async function recommend(
       title: seed.title,
     },
     items,
+    pickedBy,
     shortfall:
       items.length < req.count
         ? { requested: req.count, got: items.length, reason: 'not_enough_playable' }

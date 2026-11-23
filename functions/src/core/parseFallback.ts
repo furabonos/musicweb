@@ -12,6 +12,8 @@ import {
   type ParseFailReason,
   type ParseResult,
 } from './parseRequest.js';
+import { errName } from './jobErrors.js';
+import type { ParseCache } from './parseCache.js';
 import { KillSwitchError } from './runtimeConfig.js';
 
 /**
@@ -118,6 +120,8 @@ export async function parseWithFallback(
     onAiLimit?: () => Promise<void>;
     /** 규칙을 건너뛰고 AI로만 (규칙으로 읽은 기준 곡을 못 찾았을 때 다시 읽기) */
     skipRule?: boolean;
+    /** 저장된 해석(T32). AI가 해석한 결과를 30일 다시 쓴다 */
+    cache?: ParseCache;
   },
   text: string,
   locale: Locale,
@@ -139,11 +143,26 @@ export async function parseWithFallback(
   if (!request) return fail('empty');
   if ([...request].length > MAX_REQUEST_CHARS) return fail('too_long');
 
+  // 1. 저장된 해석 (AI가 전에 읽은 같은 문장)
+  if (deps.cache && !deps.skipRule) {
+    const hit = await deps.cache.get(request, locale);
+    if (hit) {
+      await deps.events.record({
+        type: 'request_parsed',
+        attrs: { locale, requestedCount: hit.count, path: 'cache' },
+        outcome: 'ok',
+        ...actor,
+      });
+      return { ok: true, value: hit, via: 'ai' };
+    }
+  }
+
+  // 2. 규칙
   const rule = deps.skipRule ? null : parseFallback(request, locale);
   if (rule) {
     await deps.events.record({
       type: 'request_parsed',
-      attrs: { locale, requestedCount: rule.count },
+      attrs: { locale, requestedCount: rule.count, path: 'rule' },
       outcome: 'ok',
       ...actor,
     });
@@ -160,6 +179,18 @@ export async function parseWithFallback(
       request,
       locale,
     );
+    if (r.ok && r.value.seed) {
+      try {
+        await deps.cache?.set(request, locale, r.value);
+      } catch (err) {
+        // 저장 실패는 이번 요청에 영향 없음. 기록은 남긴다
+        await deps.events.record({
+          type: 'error',
+          attrs: { code: errName(err), where: 'parse.cache_set' },
+          outcome: 'error',
+        });
+      }
+    }
     return r.ok ? { ...r, via: 'ai' } : r;
   } catch (err) {
     if (err instanceof BudgetExceededError && err.counter === 'aiCostMicroUsd') {

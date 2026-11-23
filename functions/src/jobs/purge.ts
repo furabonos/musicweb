@@ -31,6 +31,8 @@ export interface PurgeSummary {
   artists: number;
   ytExports: number;
   lastfmCache: number;
+  /** 기간 지난 저장된 해석·결과(T32) */
+  caches: number;
 }
 
 export async function runPurge(deps: PurgeDeps): Promise<PurgeSummary> {
@@ -81,19 +83,30 @@ export async function runPurge(deps: PurgeDeps): Promise<PurgeSummary> {
     purgeExpiredCache(deps.lastfmCache, now.getTime()),
   );
 
-  const summary = { links, artists, ytExports, lastfmCache };
+  // 기간 지난 저장된 해석(30일)·결과(7일) (T32, D-048)
+  const nowTs = Timestamp.fromDate(now);
+  let caches = 0;
+  for (const col of ['parseCache', 'resultCache']) {
+    caches += await step(`cache_${col}`, () =>
+      drain(db.collection(col).where('expiresAt', '<=', nowTs).orderBy('expiresAt'), (b, d) =>
+        b.delete(d.ref),
+      ),
+    );
+  }
+
+  const summary = { links, artists, ytExports, lastfmCache, caches };
   await deps.events.record({
     type: 'job_finished',
     attrs: {
       job: 'purge',
-      processed: links + artists + ytExports + lastfmCache,
+      processed: links + artists + ytExports + lastfmCache + caches,
       failed: failures.length,
     },
     outcome: failures.length ? 'error' : 'ok',
   });
   await addOpsLog(db, {
     kind: failures.length ? 'job_failed' : 'job',
-    message: `Purge finished: removed ${links} links, ${artists} artist channels, ${ytExports} export records, ${lastfmCache} Last.fm cache entries${failures.length ? ` (${failures.length} steps failed)` : ''}.`,
+    message: `Purge finished: removed ${links} links, ${artists} artist channels, ${ytExports} export records, ${lastfmCache} Last.fm cache entries, ${caches} expired request caches${failures.length ? ` (${failures.length} steps failed)` : ''}.`,
   });
   if (failures.length) throw failures[0];
   return summary;

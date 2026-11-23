@@ -153,3 +153,16 @@ describe('runPurge — 30일 넘은 YouTube 데이터 무조건 삭제', () => {
     expect(log.size).toBe(1);
   });
 });
+
+describe('runPurge — 기간 지난 저장된 해석·결과 (T32, D-048)', () => {
+  it('만료된 것만 지우고 남은 것은 그대로', async () => {
+    await db.doc('parseCache/old').set({ value: {}, expiresAt: ago(1) });
+    await db.doc('parseCache/new').set({ value: {}, expiresAt: ago(-5) });
+    await db.doc('resultCache/old').set({ items: [], expiresAt: ago(1) });
+    await db.doc('resultCache/new').set({ items: [], expiresAt: ago(-5) });
+    const summary = await purge().run;
+    expect(summary.caches).toBe(2);
+    expect((await db.collection('parseCache').get()).docs.map((d) => d.id)).toEqual(['new']);
+    expect((await db.collection('resultCache').get()).docs.map((d) => d.id)).toEqual(['new']);
+  });
+});
