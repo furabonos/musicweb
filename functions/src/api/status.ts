@@ -1,5 +1,5 @@
 import { getFirestore, Timestamp, type Firestore } from 'firebase-admin/firestore';
-import { onCall } from 'firebase-functions/v2/https';
+import { onCall } from './callable.js';
 import { GITHUB_REPO } from '../adapters/github.js';
 import { handle } from './errors.js';
 

@@ -16,3 +16,6 @@ playwright-report/
 test-results/
 .claude/settings.local.json
 .auto-fix/
+# 배포 준비가 만드는 묶음·설정 (tools/prepare-deploy.ts)
+.deploy/
+firebase.deploy.json

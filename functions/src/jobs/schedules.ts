@@ -4,7 +4,7 @@ import { createMusicBrainz } from '../adapters/musicbrainz.js';
 import { firestoreCallBudget } from '../adapters/music-http.js';
 import { createWikidata } from '../adapters/wikidata.js';
 import { createYouTubeRead, firestoreYtBudget } from '../adapters/youtube-read.js';
-import { MB_CONTACT, secrets } from '../config/secrets.js';
+import { MB_CONTACT, optionalSecret, secrets } from '../config/secrets.js';
 import { firestoreEventSink } from '../core/events.js';
 import { errName } from '../core/jobErrors.js';
 import { firestoreLastfmCache } from '../adapters/lastfm.js';
@@ -156,7 +156,7 @@ export const dailyEvalNightly = onSchedule(
     let llm = null;
     try {
       llm = createLlm({
-        apiKey: secrets.ANTHROPIC_API_KEY.value(),
+        apiKey: optionalSecret('ANTHROPIC_API_KEY'),
         events,
         budget: firestoreLlmBudget(db),
       });
@@ -190,7 +190,7 @@ export const autoIssueNightly = onSchedule(
   async () => {
     const db = getFirestore();
     const events = firestoreEventSink(db, secrets.ACTOR_HASH_KEY.value());
-    const token = secrets.GITHUB_ISSUE_TOKEN.value();
+    const token = optionalSecret('GITHUB_ISSUE_TOKEN');
     const filer = token
       ? createIssueFiler({
           token,
@@ -219,7 +219,7 @@ export const githubStatsNightly = onSchedule(
   async () => {
     const db = getFirestore();
     const events = firestoreEventSink(db, secrets.ACTOR_HASH_KEY.value());
-    const token = secrets.GITHUB_ISSUE_TOKEN.value();
+    const token = optionalSecret('GITHUB_ISSUE_TOKEN');
     const reader = token
       ? createGitHubReader({ token, events, budget: firestoreGitHubReadBudget(db) })
       : null;
@@ -284,7 +284,7 @@ async function ingestJudge(
   if (await readSavingMode(db, events)) return {};
   try {
     const llm = createLlm({
-      apiKey: secrets.ANTHROPIC_API_KEY.value(),
+      apiKey: optionalSecret('ANTHROPIC_API_KEY'),
       events,
       budget: firestoreLlmBudget(db),
     });

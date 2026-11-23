@@ -32,6 +32,7 @@ pnpm 10(`npm i -g pnpm@10`, Node 26에는 corepack이 없음). 에뮬레이터�
 - 음악 데이터 녹화 응답 다시 받기: `node --experimental-strip-types tools/record-music-fixtures.ts [파일 이름]` (실제 공개 API에 요청, 초당 1회 이하)
 - e2e: `pnpm test:e2e` (functions 빌드 → 에뮬레이터(가짜 AI·음악 데이터, D-031) → 화면 개발 서버 → `apps/web/e2e/*.spec.ts`, Playwright). 처음 한 번 `pnpm --filter web exec playwright install chromium`
 - 화면을 가짜 데이터로 직접 보기: `pnpm emulators` → 다른 창에서 `pnpm emulators:seed`(가짜 곡 16곡) → `pnpm --filter web dev:emulators` (관리자 admin@example.com으로 로그인, Auth 에뮬레이터 창에서 입력)
+- 배포 준비(배포하지 않음): `pnpm deploy:prepare prod --check` (설정 검사 → `.deploy/functions` 묶음·`firebase.deploy.json` → 실행 의존성만으로 불러오기 확인). 실제 배포는 사람이 `docs/OPERATIONS.md` 7절대로 한다(D-053)
 - 시험: `pnpm eval` (곡 연결 규칙 50문제는 항상, 요청 해석·추천은 `EVAL_LLM`이 있을 때만. `evals/baseline.json`보다 낮으면 실패, D-034)
   - 실제 AI 시험: `EVAL_LLM=cli pnpm eval` (이 컴퓨터의 Claude Code 구독으로 Haiku 호출, 약 60번·4분. 구독 사용량이 깎이므로 사용자 확인 후) 또는 `EVAL_LLM=api ANTHROPIC_API_KEY=… pnpm eval`
   - 일부만: `EVAL_SUITES=matching,parse`. 기준 다시 쓰기: `EVAL_UPDATE_BASELINE=1` (규칙 변경 PR에는 전후 점수를 적는다)
@@ -51,5 +52,5 @@ pnpm 10(`npm i -g pnpm@10`, Node 26에는 corepack이 없음). 에뮬레이터�
 ## 환경 변수
 
 - 목록과 위치는 SPEC 8장에 있다.
-- 서버 비밀값은 `defineSecret`으로 읽고, 로컬 값은 `functions/.secret.local`(gitignore)에 둔다. 웹 설정은 `apps/web/.env.local`에 둔다.
+- 서버 비밀값은 `defineSecret`으로 읽고, 로컬 값은 `functions/.secret.local`(gitignore)에 둔다. 배포용 웹 설정은 `apps/web/.env.production.local`(배포 빌드만 읽음), 배포용 서버 매개변수는 `functions/.env.<프로젝트 ID>`에 둔다(둘 다 gitignore).
 - 변수를 추가하면 SPEC 8장, `functions/src/config/secrets.ts`, CI 워크플로를 같이 고친다.

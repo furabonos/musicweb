@@ -138,7 +138,8 @@ export async function computeArtistVectors(
       vocabVersion: VOCAB_VERSION,
       songs: out,
       updatedAt: FieldValue.serverTimestamp(),
-      ...(complete ? { computedAt: FieldValue.serverTimestamp() } : {}),
+      // 신선도 판정(isFresh)이 같은 시계(now)로 비교하도록 계산 시각도 now로 쓴다
+      ...(complete ? { computedAt: Timestamp.fromMillis(now) } : {}),
     },
     { merge: true },
   );

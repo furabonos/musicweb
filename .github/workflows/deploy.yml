@@ -1,0 +1,66 @@
+name: deploy
+
+# 실제 Firebase 프로젝트(.firebaserc의 prod)에 배포한다 (T23, D-053).
+# 지금은 손으로만 돌린다(workflow_dispatch). 관리자가 첫 배포를 손으로 확인한 뒤 main 합침 때 자동으로 바꾼다.
+# 비밀값은 저장소 Secrets가 아니라 환경 "production"의 Secrets에만 둔다(다른 워크플로·PR 실행이 읽지 못하게).
+# 그 환경에는 "필수 승인자"와 "배포 브랜치 main만"을 건다(docs/OPERATIONS.md 7절 9).
+#   FIREBASE_SERVICE_ACCOUNT  배포용 서비스 계정 키(JSON)
+#   WEB_ENV_PRODUCTION        apps/web/.env.production.local 내용(공개값이지만 한곳에서 관리)
+#   FUNCTIONS_ENV             functions/.env.<프로젝트 ID> 내용(ADMIN_EMAILS·MB_CONTACT, 이메일이 들어 있어 비밀로 둔다)
+# 키 파일은 화면·functions 빌드와 검사(deploy:prepare)가 끝난 뒤에만 만든다. 배포 설정에는 predeploy 빌드가 없다.
+# 서버 비밀값(AI·YouTube 키 등)은 Secret Manager에 있고 이 워크플로는 읽지 않는다.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '24'
+
+jobs:
+  deploy:
+    # main에서만(환경 보호 규칙과 이중으로)
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: 설정 파일 쓰기
+        env:
+          WEB_ENV_PRODUCTION: ${{ secrets.WEB_ENV_PRODUCTION }}
+          FUNCTIONS_ENV: ${{ secrets.FUNCTIONS_ENV }}
+        run: |
+          project=$(node -e 'console.log(JSON.parse(require("fs").readFileSync(".firebaserc","utf8")).projects.prod)')
+          printf '%s\n' "$WEB_ENV_PRODUCTION" > apps/web/.env.production.local
+          printf '%s\n' "$FUNCTIONS_ENV" > "functions/.env.$project"
+      - name: 배포 준비(설정 검사·묶음·불러오기 확인)
+        run: pnpm deploy:prepare prod --check
+      - name: 서비스 계정
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+      - name: 배포
+        run: pnpm exec firebase deploy --config firebase.deploy.json --project prod --non-interactive
+      - name: 배포 뒤 점검(App Check 없는 호출 거부)
+        run: |
+          project=$(node -e 'console.log(JSON.parse(require("fs").readFileSync(".firebaserc","utf8")).projects.prod)')
+          node --experimental-strip-types --no-warnings tools/smoke.ts "$project"
+      - name: 키 파일 지우기
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"

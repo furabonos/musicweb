@@ -24,7 +24,8 @@
     "capture:before": "CAPTURE_LABEL=before pnpm capture",
     "capture:after": "CAPTURE_LABEL=after pnpm capture",
     "emulators:seed": "node --experimental-strip-types --no-warnings tools/seed-emulator.ts",
-    "eval": "vitest run --config vitest.eval.config.ts evals/run.eval.ts"
+    "eval": "vitest run --config vitest.eval.config.ts evals/run.eval.ts",
+    "deploy:prepare": "node --experimental-strip-types --no-warnings tools/prepare-deploy.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

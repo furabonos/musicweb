@@ -18,3 +18,12 @@ export function fakeExternalEnabled(
     env.MUSICWEB_FAKE_EXTERNAL === 'true'
   );
 }
+
+/**
+ * App Check 강제 여부 (T23, SPEC 6.1). 실제 배포에서는 항상 켠다.
+ * Functions 에뮬레이터는 App Check 토큰을 만들 수 없어(가짜 프로젝트) 그 안에서만 끈다.
+ * 배포 때 CLI가 코드를 읽는 순간에도 FUNCTIONS_EMULATOR가 없으므로 켜진 값이 배포 설정에 들어간다.
+ */
+export function appCheckEnforced(env: Record<string, string | undefined> = process.env): boolean {
+  return env.FUNCTIONS_EMULATOR !== 'true';
+}

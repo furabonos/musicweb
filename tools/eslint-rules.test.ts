@@ -326,3 +326,51 @@ describe('YouTube 재생목록 쓰기는 adapters/youtube-write.ts에서만 (SPE
     ).toEqual([]);
   });
 });
+
+describe('callable은 api/callable.ts의 onCall로만 (App Check 강제, T23)', () => {
+  it('firebase-functions의 onCall을 직접 쓰면 막고, 대신 쓸 것을 알려 준다', async () => {
+    const errors = await ruleErrors(
+      "import { onCall } from 'firebase-functions/v2/https';\nexport const f = onCall(() => 1);",
+      'functions/src/api/__lint_fixture__.ts',
+      'no-restricted-imports',
+    );
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain("import { onCall } from './callable.js'");
+  });
+
+  it.each([
+    "import { onCall } from 'firebase-functions/https';",
+    "import { https } from 'firebase-functions/v2';",
+    "import { https } from 'firebase-functions';",
+    "import * as v1 from 'firebase-functions/v1';",
+    "import { onCall } from 'firebase-functions/v1/https';",
+  ])('우회 경로도 막는다: %s', async (code) => {
+    const errors = await ruleErrors(
+      `${code}\nexport const used = 1;`,
+      'functions/src/api/__lint_fixture__.ts',
+      'no-restricted-imports',
+    );
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0]).toContain('callable.ts');
+  });
+
+  it('HttpsError 같은 다른 이름은 막지 않는다', async () => {
+    expect(
+      await ruleErrors(
+        "import { HttpsError } from 'firebase-functions/v2/https';\nexport const e = HttpsError;",
+        'functions/src/api/__lint_fixture__.ts',
+        'no-restricted-imports',
+      ),
+    ).toEqual([]);
+  });
+
+  it('api/callable.ts 자체는 허용한다', async () => {
+    expect(
+      await ruleErrors(
+        "import { onCall } from 'firebase-functions/v2/https';\nexport const f = onCall;",
+        'functions/src/api/callable.ts',
+        'no-restricted-imports',
+      ),
+    ).toEqual([]);
+  });
+});
