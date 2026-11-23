@@ -11,6 +11,7 @@ import {
 import { connectFunctionsEmulator, getFunctions, httpsCallable } from 'firebase/functions';
 import {
   ApiError,
+  type AdminOverview,
   type CreateResult,
   type MusicwebApi,
   type OpenLinkMode,
@@ -90,5 +91,7 @@ export function createFirebaseApi(): MusicwebApi {
     getPlaylist: (id) => call<SharedPlaylist>('playlists-get', { id }),
     siteConfig: () => call<{ openLink: OpenLinkMode }>('site-config', {}),
     status: () => call<StatusData>('status-get', {}),
+    adminOverview: () => call<AdminOverview>('admin-overview', {}),
+    admin: (action, data) => call<unknown>(`admin-${action}`, data),
   };
 }

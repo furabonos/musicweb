@@ -14,6 +14,7 @@ import { OpenInYouTube } from './OpenInYouTube';
 import { Player, type PlayerHandle } from './player/Player';
 import { SharedView } from './SharedView';
 import { StatusView } from './StatusView';
+import { AdminView } from './AdminView';
 import { SongRow } from './SongRow';
 
 /** 검색창 글자 수 상한. 서버(parseRequest)와 같게 코드 포인트로 센다. */
@@ -59,6 +60,7 @@ function errorMessage(err: unknown, locale: Locale): Message {
     };
   }
   if (reason === 'noSpare') return { key: 'errors.noSpare' };
+  if (reason === 'blocked') return { key: 'errors.blocked' };
   if (reason === 'lastSong') return { key: 'errors.lastSong' };
   if (reason === 'alreadySaved') return { key: 'errors.alreadySaved' };
   return { key: 'errors.generic' };
@@ -80,6 +82,7 @@ export function App({
 }) {
   const shareId = sharedId(path);
   const isStatus = /^\/status\/?$/.test(path);
+  const isAdmin = /^\/admin\/?$/.test(path);
   const { locale, setLocale, t } = useI18n();
   const [user, setUser] = useState<SignedInUser | null>(null);
   const [text, setText] = useState('');
@@ -98,7 +101,7 @@ export function App({
   useEffect(() => api.onUser(setUser), [api]);
   useEffect(() => {
     // 공유 화면은 playlists-get 응답에 방식이 같이 온다
-    if (shareId || isStatus) return;
+    if (shareId || isStatus || isAdmin) return;
     let live = true;
     // 설정을 못 읽으면 기본(direct)으로 둔다. 링크가 깨졌을 때만 fallback이 저장된다.
     api
@@ -108,7 +111,7 @@ export function App({
     return () => {
       live = false;
     };
-  }, [api, shareId, isStatus]);
+  }, [api, shareId, isStatus, isAdmin]);
 
   const used = countChars(text);
   const over = used > MAX_REQUEST_CHARS;
@@ -208,6 +211,9 @@ export function App({
           <SharedView api={api} music={music} id={shareId} />
         ) : isStatus ? (
           <StatusView api={api} />
+        ) : isAdmin ? (
+          // 계정이 바뀌면 화면 상태를 새로 시작한다(이전 관리자의 조회 결과가 남지 않게)
+          <AdminView key={user?.uid ?? 'signed-out'} api={api} signedIn={user !== null} />
         ) : (
           <>
             <section className="wrap hero">

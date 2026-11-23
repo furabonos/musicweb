@@ -395,3 +395,84 @@ export type GitHubReader = ReturnType<typeof createGitHubReader>;
 export function firestoreGitHubReadBudget(db: Firestore): GitHubReadBudget {
   return { call: () => consume(db, { service: { githubCalls: 1 } }) };
 }
+
+/**
+ * 관리자가 연결을 고친 사례를 시험 문제로 추가하자는 이슈 (SPEC 4.11, T22, D-043).
+ * - 저장소 쓰기(PR)는 토큰 권한 밖이라 이슈로 남긴다. 관리자가 `auto-fix` 라벨을 붙이면 자동 수정(T20)이
+ *   시험 문제를 추가하는 PR 링크를 만든다.
+ * - 본문은 고정 문장과 공개 ID(곡 MBID·영상 ID)뿐이다. 영상 제목·채널 이름 같은 YouTube 글은 넣지 않는다.
+ * - 새 이슈 상한(autoIssues)·githubCalls·긴급 정지 autoIssue를 따른다(자동 이슈와 같은 예산).
+ */
+export const EVAL_CASE_LABELS = ['eval-case'];
+const SONG_ID = /^[A-Za-z0-9-]{1,64}$/;
+const VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
+
+export function renderEvalCaseIssue(c: {
+  songId: string;
+  videoId: string;
+  action: 'active' | 'blocked';
+}) {
+  if (!SONG_ID.test(c.songId) || !VIDEO_ID.test(c.videoId)) {
+    throw new IssueContentError('곡 ID·영상 ID 모양이 아닙니다.');
+  }
+  const what = c.action === 'blocked' ? 'blocked a wrong video' : 'switched to the right video';
+  return {
+    title: `Eval case: admin ${what} for a song`,
+    body: [
+      `An admin ${what} for this song on the admin page.`,
+      'Add it to `evals/matching/cases.json` so the song-matching rules are tested against it.',
+      '',
+      '| field | value |',
+      '| --- | --- |',
+      `| song (MusicBrainz recording) | \`${c.songId}\` |`,
+      `| video | \`${c.videoId}\` |`,
+      `| admin decision | ${c.action === 'blocked' ? 'not this video' : 'this video'} |`,
+      '',
+      'A case needs the recorded video candidates for this song (same shape as the other cases in that file).',
+      'Add the `auto-fix` label to let the auto-fix workflow propose the change.',
+    ].join('\n'),
+    labels: EVAL_CASE_LABELS,
+  };
+}
+
+export function createEvalCaseFiler(deps: {
+  token: string;
+  events: EventSink;
+  budget: IssueBudget;
+  fetch?: typeof fetch;
+  timeoutMs?: number;
+}) {
+  if (!deps.token) throw new Error('GITHUB_ISSUE_TOKEN이 비었습니다.');
+  const f = deps.fetch ?? fetch;
+  return {
+    async file(c: { songId: string; videoId: string; action: 'active' | 'blocked' }) {
+      const issue = renderEvalCaseIssue(c);
+      await deps.budget.create();
+      const r = await recordCall(
+        deps.events,
+        { target: 'github', op: 'github.issues.create' },
+        async () => {
+          const res = await f(`${API}/issues`, {
+            method: 'POST',
+            headers: {
+              Accept: 'application/vnd.github+json',
+              Authorization: `Bearer ${deps.token}`,
+              'X-GitHub-Api-Version': '2022-11-28',
+              'User-Agent': 'musicweb-admin',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(issue),
+            signal: AbortSignal.timeout(deps.timeoutMs ?? GITHUB_TIMEOUT_MS),
+          });
+          if (!res.ok) {
+            await res.body?.cancel();
+            throw new GitHubError(res.status);
+          }
+          return { result: (await res.json()) as { number: number }, status: res.status };
+        },
+        (err) => (err instanceof GitHubError ? { status: err.status } : {}),
+      );
+      return { number: r.number, url: `https://github.com/${GITHUB_REPO}/issues/${r.number}` };
+    },
+  };
+}

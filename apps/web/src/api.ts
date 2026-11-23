@@ -85,6 +85,33 @@ export interface StatusData {
   opsLog: { at: string | null; kind: string | null; message: string | null; links: string[] }[];
 }
 
+/** 관리자 화면(`/admin`, T22). 서버 `admin-overview` 응답 모양 */
+export interface AdminOverview {
+  killSwitches: Record<'create' | 'ingest' | 'autoIssue', boolean>;
+  limits: { service: Record<string, number>; user: Record<string, number> };
+  usage: { day: string; used: Record<string, number> };
+  jobs: { job: string; at: string | null; outcome: string; processed: number; failed: number }[];
+  artists: {
+    id: string;
+    name: string;
+    status: string;
+    failCount: number;
+    channelId: string | null;
+    lastScannedAt: string | null;
+  }[];
+  testers: { uid: string; email: string | null }[];
+  blocked: { uid: string; email: string | null }[];
+}
+export type AdminAction =
+  | 'setKillSwitch'
+  | 'setLimits'
+  | 'addArtist'
+  | 'setArtistStatus'
+  | 'setLinkStatus'
+  | 'setUserBlocked'
+  | 'setExportTester'
+  | 'runJob';
+
 export interface SignedInUser {
   uid: string;
 }
@@ -109,4 +136,8 @@ export interface MusicwebApi {
   siteConfig(): Promise<{ openLink: OpenLinkMode }>;
   /** 공개 현황판 수치와 운영 일지 (로그인 불필요) */
   status(): Promise<StatusData>;
+  /** 관리자 화면 한눈에 보기. 관리자가 아니면 ApiError('permission-denied') */
+  adminOverview(): Promise<AdminOverview>;
+  /** 관리자 변경. 서버가 관리자 확인·감사 기록을 한다 */
+  admin(action: AdminAction, data: Record<string, unknown>): Promise<unknown>;
 }

@@ -1,5 +1,6 @@
 import { HttpsError } from 'firebase-functions/v2/https';
 import { BudgetExceededError } from '../core/budget.js';
+import { AdminOpError } from '../core/adminOps.js';
 import { NotAdminError } from '../core/auth.js';
 import { PlaylistError } from '../core/playlists.js';
 import { KillSwitchError, RuntimeConfigError } from '../core/runtimeConfig.js';
@@ -31,12 +32,23 @@ export function toHttpsError(err: unknown): HttpsError {
     const code =
       err.reason === 'notFound'
         ? 'not-found'
-        : err.reason === 'notOwner'
+        : err.reason === 'notOwner' || err.reason === 'blocked'
           ? 'permission-denied'
           : err.reason === 'badPosition'
             ? 'invalid-argument'
             : 'failed-precondition';
     return new HttpsError(code, 'playlist request rejected', { reason: err.reason });
+  }
+  if (err instanceof AdminOpError) {
+    const code =
+      err.reason === 'artistExists'
+        ? 'already-exists'
+        : err.reason === 'artistNotFound' || err.reason === 'linkNotFound'
+          ? 'not-found'
+          : err.reason === 'testersFull'
+            ? 'resource-exhausted'
+            : 'failed-precondition';
+    return new HttpsError(code, 'admin request rejected', { reason: err.reason });
   }
   if (err instanceof RuntimeConfigError) {
     // 설정이 깨지면 막는 쪽으로 실패한다(D-020). 관리자가 콘솔에서 config/runtime을 고친다.
