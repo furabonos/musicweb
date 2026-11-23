@@ -466,9 +466,9 @@
     - integration — 11번째 요청 거부, 절약 모드면 `failed-precondition`, 다른 사용자 재생목록 거부
     - e2e — 버튼 → 이유 표시, 절약 모드에서 버튼 꺼짐
 
-- [ ] **T35 현황판: AI 비용 지표** — SPEC 4.10
+- [x] **T35 현황판: AI 비용 지표** — SPEC 4.10
   - 의존: T21, T22b, T32
-  - 산출물: `jobs/metrics.ts`에 AI 없이 처리된 요청 비율, 요청 한 건 평균 AI 비용, 오늘 절약 모드였던 시간(분), 계산 방법 문구. `/status`에 표시
+  - 산출물: `jobs/metrics.ts`에 AI 없이 만든 재생목록 비율, 한 건 평균 AI 비용, 지난 24시간 중 절약 모드였던 시간(분), 계산 방법 문구. `/status`에 표시 (D-051)
   - 완료 기준:
     - unit `functions/src/jobs/metrics.test.ts`(확장) — 준비한 이벤트에서 세 지표가 손 계산과 일치, 자정을 넘는 절약 모드 구간 나누기, 분모 0
     - e2e `status.spec.ts`(확장) — 세 지표와 계산 방법 표시

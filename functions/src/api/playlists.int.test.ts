@@ -409,6 +409,11 @@ describe('저장된 해석·결과 (T32, D-048)', () => {
       .map((d) => [d.get('at')?.toMillis?.() ?? 0, d.get('attrs.fromCache') === true] as const)
       .sort((a, b) => a[0] - b[0])
       .map(([, f]) => f);
+  const usedAi = async () =>
+    (await db.collection('events').where('type', '==', 'playlist_created').get()).docs
+      .map((d) => [d.get('at')?.toMillis?.() ?? 0, d.get('attrs.usedAi')] as const)
+      .sort((a, b) => a[0] - b[0])
+      .map(([, f]) => f);
 
   it('규칙으로 못 읽는 같은 문장 두 번째는 저장된 해석(AI 호출 없음), 원문은 저장하지 않음', async () => {
     const { token } = await googleSignIn(ADMIN);
@@ -416,6 +421,8 @@ describe('저장된 해석·결과 (T32, D-048)', () => {
     await createOk(token, text, 'en');
     await createOk(token, `  PLEASE find me something  that feels like doja `, 'en');
     expect(await parsedPaths()).toEqual(['ai', 'cache']);
+    // 현황판 "AI 없이 처리"(T35): 첫 번째는 AI 해석, 두 번째는 저장된 해석이라 AI 없음
+    expect(await usedAi()).toEqual([true, false]);
     const docs = (await db.collection('parseCache').get()).docs.map((d) => d.data());
     expect(docs).toHaveLength(1);
     expect(JSON.stringify(docs)).not.toMatch(/please|feels/i);
@@ -425,6 +432,12 @@ describe('저장된 해석·결과 (T32, D-048)', () => {
     const { token } = await googleSignIn(ADMIN);
     await createOk(token, REQUEST, 'en');
     expect(await parsedPaths()).toEqual(['rule']);
+    // 미리 계산한 추천(기본)이라 AI를 부르지 않았다
+    expect(await usedAi()).toEqual([false]);
+    // AI 추천 방식이면 후보·고르기에서 AI를 부른다
+    await db.doc('config/runtime').set({ recommendMode: 'ai' }, { merge: true });
+    await createOk(token, 'something like Doja by Central Cee, 12 songs', 'en');
+    expect(await usedAi()).toEqual([false, true]);
   });
 
   it('같은 조합 두 번째 결과는 추천 계산 없이 같은 곡, 영상 ID는 저장하지 않음, 7일 지나면 다시 계산', async () => {

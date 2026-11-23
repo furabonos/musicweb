@@ -53,8 +53,16 @@ describe('runMetrics', () => {
       hallucinated: 0,
       usedSearch: false,
     });
-    await event('playlist_created', { songs: 10 });
-    await event('playlist_created', { songs: 10 });
+    await event('playlist_created', { songs: 10, usedAi: true });
+    await event('playlist_created', { songs: 10, usedAi: false });
+    // AI 비용 (T35): llm 호출만 더한다
+    await event('external_call', { target: 'llm', op: 'llm.pick', costMicroUsd: 3000 });
+    await event('external_call', { target: 'llm', op: 'llm.explain', costMicroUsd: 1000 });
+    await event('external_call', { target: 'llm', op: 'llm.pick', costMicroUsd: 9999 }, 30);
+    await event('external_call', { target: 'youtube_read', op: 'youtube.videos.list', units: 1 });
+    // 간단 모드: 2시간 전에 켜지고 1시간 전에 꺼짐(같은 태평양 날) = 60분
+    await event('saving_mode', { state: 'on', reason: 'ai_limit' }, 2);
+    await event('saving_mode', { state: 'off', reason: 'limit_raised' }, 1);
     await event('song_removed', { position: 3 });
 
     // 곡 목록: active 연결 2개, 막힌 연결 1개
@@ -81,6 +89,9 @@ describe('runMetrics', () => {
       expect(d.catalog.searchFreeRate.value).toBe(0.333); // false 1 / lookup 3
       expect(d.catalog.ytUnitsLeft.value).toBe(8900);
       expect(d.catalog.ytUserSearchesLeft.value).toBe(77);
+      expect(d.ai.aiFreeRate.value).toBe(0.5); // 1 / 2
+      expect(d.ai.aiCostPerSet.value).toBe(0.002); // 4000 / 2 microUSD
+      expect(d.ai.savingModeMinutes.value).toBe(60);
     }
     // 매일 시험 결과(eval)는 지우지 않는다(merge)
     expect((await db.doc('metrics/current').get()).get('eval.matching.score')).toBe(0.98);

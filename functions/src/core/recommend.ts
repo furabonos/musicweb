@@ -139,6 +139,8 @@ export type RecommendResult =
       fromCache?: boolean;
       /** 곡을 누가 골랐나: AI 또는 점수(AI 없이). 저장된 결과 키를 실제 방식에 맞추는 데 쓴다 */
       pickedBy?: 'ai' | 'rule';
+      /** 이번 추천에서 AI를 불렀나(후보·고르기). 현황판 "AI 없이 처리된 요청 비율"(T35) */
+      usedAi?: boolean;
     }
   | { ok: false; reason: SeedFailReason };
 
@@ -253,6 +255,7 @@ export async function recommend(
   }
   const lastfm = ports.music.lastfmSimilar;
   if (lastfm) add('lastfm', await soft(ports, () => lastfm(seed.artist, seed.title, L.lastfm), []));
+  const aiAtCandidates = ai.on;
   if (ai.on) add('ai', await aiCandidates(ports, seed, user.uid, ai));
   await step(ports, 'candidates', cands.size, 0, 0, user.uid);
 
@@ -321,6 +324,7 @@ export async function recommend(
     : new Map<string, TagInfo>();
   const pool = playable.sort((a, b) => b.c.score - a.c.score).slice(0, L.maxPickPool);
   const pickCount = req.count + (opts.spares ?? 0);
+  const aiAtPick = ai.on;
   let items = ai.on ? await aiPick(ports, seed, req, pickCount, pool, user.uid, ai) : null;
   const pickedBy: 'ai' | 'rule' = items ? 'ai' : 'rule';
   if (!items) items = await rulePick(ports, seed, req, pickCount, pool, user.uid, tagInfo);
@@ -334,6 +338,7 @@ export async function recommend(
     },
     items,
     pickedBy,
+    usedAi: aiAtCandidates || aiAtPick,
     shortfall:
       items.length < req.count
         ? { requested: req.count, got: items.length, reason: 'not_enough_playable' }

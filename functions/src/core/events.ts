@@ -101,7 +101,12 @@ export const EVENT_SCHEMAS = {
     reason: z.enum(['ai_limit', 'new_day', 'limit_raised']),
   }),
   // 재생목록을 만들었다: 보여 준 곡 수 (현황판 "사용자가 뺀 곡 비율"의 분모, T21)
-  playlist_created: z.strictObject({ songs: count, fromCache: z.boolean().optional() }),
+  // usedAi: 이 요청에서 AI를 불렀나(현황판 "AI 없이 처리된 요청 비율", T35)
+  playlist_created: z.strictObject({
+    songs: count,
+    usedAi: z.boolean().optional(),
+    fromCache: z.boolean().optional(),
+  }),
   song_linked: z.strictObject({
     kind: z.enum(['official_audio', 'mv', 'live', 'cover', 'remix', 'other']),
     // 소수 둘째 자리까지만(숫자에 다른 정보를 싣지 못하게)

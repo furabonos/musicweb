@@ -32,6 +32,11 @@ const SECTIONS = [
       'ytJobSearchesLeft',
     ],
   },
+  {
+    key: 'ai',
+    title: 'status.section.ai',
+    metrics: ['aiFreeRate', 'aiCostPerSet', 'savingModeMinutes'],
+  },
 ] as const;
 const GITHUB_METRICS = ['autoIssues', 'approvalRate', 'hoursToFix', 'revertRate', 'ciPassRate'];
 
@@ -60,6 +65,12 @@ export function StatusView({ api }: { api: MusicwebApi }) {
 
   const num = new Intl.NumberFormat(locale);
   const pct = new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 1 });
+  // 한 건 비용은 아주 작다(약 $0.002): 유효 숫자 2자리
+  const usd = new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: 'USD',
+    maximumSignificantDigits: 2,
+  });
   const when = (iso: string | null) =>
     iso
       ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(
@@ -70,6 +81,8 @@ export function StatusView({ api }: { api: MusicwebApi }) {
     if (m.value === null) return t('status.noData');
     if (m.unit === 'rate' || m.unit === 'score') return pct.format(m.value);
     if (m.unit === 'hours') return t('status.hours', { n: num.format(m.value) });
+    if (m.unit === 'minutes') return t('status.minutes', { n: num.format(m.value) });
+    if (m.unit === 'usd') return usd.format(m.value);
     return num.format(m.value);
   };
 
@@ -132,7 +145,7 @@ export function StatusView({ api }: { api: MusicwebApi }) {
       {SECTIONS.map((sec) => (
         <div className="card status-card" key={sec.key}>
           <h3>{t(sec.title)}</h3>
-          {metricList(s[sec.key], sec.metrics)}
+          {metricList(s[sec.key] ?? {}, sec.metrics)}
         </div>
       ))}
 

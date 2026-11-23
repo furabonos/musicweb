@@ -39,7 +39,7 @@ export type ParseFailReason =
 export type SeedFailReason = 'no_seed' | 'seed_not_found';
 /** via: 규칙으로 읽었는지 AI로 읽었는지(규칙으로 읽은 기준 곡을 못 찾으면 AI로 다시 읽는다, D-044) */
 export type ParseResult =
-  | { ok: true; value: ParsedRequest; via?: 'rule' | 'ai' | 'pick' }
+  | { ok: true; value: ParsedRequest; via?: 'rule' | 'ai' | 'pick' | 'cache' }
   | { ok: false; reason: ParseFailReason };
 
 /** AI에 주는 출력 형식. 구조화 출력이 지키고, 받은 뒤 OUTPUT으로 다시 검사한다. */

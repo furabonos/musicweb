@@ -231,5 +231,10 @@
   "explain.noAi": "자세한 이유는 AI가 필요한데, 지금 이 사이트는 AI를 쓰지 않아요.",
   "explain.failed": "이번에는 이유를 쓰지 못했어요. 다시 눌러 주세요.",
   "explain.done": "곡마다 이유를 붙였어요.",
-  "admin.userCounter.explains": "한 사람 하루 ‘자세한 이유’ 횟수"
+  "admin.userCounter.explains": "한 사람 하루 ‘자세한 이유’ 횟수",
+  "status.minutes": "{n}분",
+  "status.section.ai": "AI 비용",
+  "status.metric.aiFreeRate": "AI 없이 만든 재생목록",
+  "status.metric.aiCostPerSet": "재생목록 한 건 평균 AI 비용",
+  "status.metric.savingModeMinutes": "간단 모드였던 시간(24시간)"
 }

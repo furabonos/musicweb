@@ -25,6 +25,11 @@ describe('readStatus', () => {
         removedSongRate: { value: 'x', unit: 'rate', method: 'bad value becomes null' },
       },
       catalog: { playableSongs: { value: 10, unit: 'count', method: 'Songs with a video.' } },
+      ai: {
+        aiCostPerSet: { value: 0.002, unit: 'usd', method: 'AI spending divided by sets.' },
+        savingModeMinutes: { value: 30, unit: 'minutes', method: 'Minutes in simple mode.' },
+        aiFreeRate: { value: 0.9, unit: 'parsecs', method: 'Unknown unit is dropped.' },
+      },
       github: {
         recent: [
           { number: 5, url: 'https://github.com/furabonos/musicweb/pull/5', state: 'merged' },
@@ -45,6 +50,10 @@ describe('readStatus', () => {
     expect(Object.keys(s.service).sort()).toEqual(['parseSuccessRate', 'removedSongRate']);
     expect(s.service.removedSongRate?.value).toBeNull();
     expect(s.catalog.playableSongs?.value).toBe(10);
+    expect(s.ai).toEqual({
+      aiCostPerSet: { value: 0.002, unit: 'usd', method: 'AI spending divided by sets.' },
+      savingModeMinutes: { value: 30, unit: 'minutes', method: 'Minutes in simple mode.' },
+    });
     expect(s.github?.recent?.map((r) => r.number)).toEqual([5]);
     expect(s.opsLog).toEqual([
       {
@@ -59,7 +68,14 @@ describe('readStatus', () => {
 
   it('아직 아무 지표가 없어도 빈 모양으로 답한다', async () => {
     const s = await readStatus(db);
-    expect(s).toEqual({ updatedAt: null, service: {}, catalog: {}, github: null, opsLog: [] });
+    expect(s).toEqual({
+      updatedAt: null,
+      service: {},
+      catalog: {},
+      ai: {},
+      github: null,
+      opsLog: [],
+    });
   });
 });
 

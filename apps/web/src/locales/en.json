@@ -231,5 +231,10 @@
   "explain.noAi": "More detail needs AI, which is off on this site right now.",
   "explain.failed": "Couldn't write details this time. Please try again.",
   "explain.done": "Details added to each song.",
-  "admin.userCounter.explains": "“More detail” uses per person per day"
+  "admin.userCounter.explains": "“More detail” uses per person per day",
+  "status.minutes": "{n} min",
+  "status.section.ai": "AI cost",
+  "status.metric.aiFreeRate": "Sets made without AI",
+  "status.metric.aiCostPerSet": "Average AI cost per set",
+  "status.metric.savingModeMinutes": "Time in simple mode (24 h)"
 }
