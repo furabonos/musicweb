@@ -83,6 +83,8 @@ export interface CreateDeps {
   reparseWithAi?(text: string, locale: Locale): Promise<ParseResult>;
   /** spares: 요청 수 밖의 예비 곡 수. 조회·검색은 요청 수까지만 한다(recommend opts). */
   recommend(req: ParsedRequest, spares: number): Promise<RecommendResult>;
+  /** 곡·아티스트 마지막 조회 시각(하루 한 번, T29). 실패해도 만들기는 계속한다 */
+  touchRequested?(ids: { songIds: string[]; artistMbids: string[] }): Promise<unknown>;
   /** 기준 곡 아티스트를 수집 대기열에 (SPEC 3.3). 실패해도 만들기는 계속한다. */
   enqueueArtist(artist: { mbid: string; name: string }): Promise<unknown>;
   now?: () => Date;
@@ -189,6 +191,18 @@ export async function createPlaylist(
     spares: spares.map(toItem),
   });
   await batch.commit();
+  try {
+    await deps.touchRequested?.({
+      songIds: [rec.seed.songId, ...chosen.map((i) => i.songId)],
+      artistMbids: rec.seed.artistMbid ? [rec.seed.artistMbid] : [],
+    });
+  } catch (err) {
+    await events.record({
+      type: 'error',
+      attrs: { code: errName(err), where: 'playlists.touch' },
+      outcome: 'error',
+    });
+  }
   await events.record({
     type: 'playlist_created',
     attrs: { songs: chosen.length },

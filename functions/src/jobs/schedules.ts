@@ -25,6 +25,8 @@ import {
 import { runAutoIssue } from './autoIssue.js';
 import { runGithubStats } from './githubStats.js';
 import { runMetrics } from './metrics.js';
+import { runPrecompute } from './precompute.js';
+import { createListenBrainz } from '../adapters/listenbrainz.js';
 import { readSavingMode } from '../core/savingMode.js';
 
 /**
@@ -238,6 +240,38 @@ export const metricsNightly = onSchedule(
   async () => {
     const db = getFirestore();
     await runMetrics({ db, events: firestoreEventSink(db, secrets.ACTOR_HASH_KEY.value()) });
+  },
+);
+
+/**
+ * 비슷한 아티스트·숫자 묶음 미리 계산 (T29, D-046). 03:30, 수집(03:00) 뒤. 최근 조회 순 + 수집 대상.
+ * 인스턴스 1개: 음악 데이터 초당 1회 줄(D-024). 제한 시간 60초 앞에서 멈추고 다음 밤에 이어 한다.
+ */
+export const precomputeNightly = onSchedule(
+  {
+    schedule: 'every day 03:30',
+    timeZone: 'America/Los_Angeles',
+    maxInstances: 1,
+    timeoutSeconds: 540,
+    retryCount: 0,
+    secrets: [secrets.ACTOR_HASH_KEY],
+  },
+  async () => {
+    const deadlineMs = Date.now() + 480_000;
+    const db = getFirestore();
+    const events = firestoreEventSink(db, secrets.ACTOR_HASH_KEY.value());
+    const deps = { events, budget: firestoreCallBudget(db), contact: MB_CONTACT.value() };
+    const mb = createMusicBrainz(deps);
+    const lb = createListenBrainz(deps);
+    await runPrecompute({
+      db,
+      events,
+      deadlineMs,
+      music: {
+        similarArtists: (mbid, limit) => lb.similarArtists(mbid, limit),
+        getRecording: (mbid) => mb.getRecording(mbid),
+      },
+    });
   },
 );
 

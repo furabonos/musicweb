@@ -357,6 +357,15 @@ async function ingestArtist(
     // 업로드 목록을 방금 읽었으므로 채널 정보가 확인됐다(30일 규칙, T11)
     ytVerifiedAt: now(),
   });
+  // 곡이 늘었으면 미리 계산(T29)에 "다시 계산 필요"를 알린다. 문서가 없으면 computedAt null로 만들어 맨 앞 차례
+  if (linksActive + linksPending > 0) {
+    const vref = deps.db.doc(`artistVectors/${artist.mbid}`);
+    const exists = (await vref.get()).exists;
+    await vref.set(
+      { songsChangedAt: FieldValue.serverTimestamp(), ...(exists ? {} : { computedAt: null }) },
+      { merge: true },
+    );
+  }
   const processed = lastSeen ? toCheck.filter((v) => v.t <= ms(lastSeen)).length : 0;
   return { videosSeen: processed, linksActive, linksPending, gap, deadlineHit };
 }

@@ -14,6 +14,7 @@ import { MB_CONTACT, secrets } from '../config/secrets.js';
 import type { CallerAuth } from '../core/auth.js';
 import type { EventSink } from '../core/events.js';
 import { enqueueArtist } from '../core/ingestQueue.js';
+import { touchRequested } from '../core/precomputeOnDemand.js';
 import { parseFallback, parseWithFallback } from '../core/parseFallback.js';
 import { enterSavingMode, readSavingMode, savingModeState } from '../core/savingMode.js';
 import { createPlaylist, getPlaylist, savePlaylist, updatePlaylist } from '../core/playlists.js';
@@ -178,6 +179,7 @@ export const playlists = {
                 { spares, ai: { mode: aiMode, onLimit: onAiLimit } },
               ),
             enqueueArtist: (artist) => enqueueArtist(db, artist),
+            touchRequested: (ids) => touchRequested(db, ids),
           },
           uid,
           input,

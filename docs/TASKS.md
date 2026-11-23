@@ -398,7 +398,7 @@
     - integration `functions/src/core/vectors.int.test.ts` — 아티스트 2명 계산 시 `artistVectors` 2건, 태그 없는 곡은 연도 자리만
     - rules `tests/rules/server-only.test.ts`(확장) — `artistSimilar`, `artistVectors`, `parseCache`, `resultCache`, `reasonCache`, `cooccur`, `channelSongs`, `songs/*/private/*` 누구도 읽기 불가
 
-- [ ] **T29 비슷한 아티스트·숫자 묶음 미리 계산 작업** — SPEC 3.3, 4.3, 6.3
+- [x] **T29 비슷한 아티스트·숫자 묶음 미리 계산 작업** — SPEC 3.3, 4.3, 6.3
   - 의존: T10, T28
   - 산출물:
     - `jobs/precompute.ts`: 수집 대상 + `lastRequestedAt` 최근 순으로 아티스트 500명까지 ListenBrainz 비슷한 아티스트 → `artistSimilar`, 숫자 묶음 → `artistVectors`. 30일 지난 것 다시 계산. 긴급 정지 `ingest`·음악 데이터 호출 한도를 따름
