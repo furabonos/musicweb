@@ -7,6 +7,8 @@
  *     없음          AI 시험은 건너뜀(건너뛰었다고 출력하고 비교하지 않음)
  * - evals/baseline.json의 점수보다 (허용 폭을 넘어) 낮으면 실패(exit≠0). 같거나 높으면 통과.
  * - EVAL_UPDATE_BASELINE=1이면 이번 결과로 baseline.json을 쓴다(첫 측정·규칙 변경 PR에서).
+ * - EVAL_SUITES=recommend-compare: 같은 추천 문제를 미리 계산(precomputed)·AI 두 방식으로 채점해 나란히 출력한다(T31, D-040).
+ *   기준 비교 대상이 아니고, 기본 목록에도 없다(실제 AI가 필요해 구독 사용량이 든다 → 사용자 확인 후 실행).
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -26,6 +28,38 @@ import {
 
 export const SUITES = ['matching', 'parse', 'recommend', 'recommend-precomputed'] as const;
 export type SuiteName = (typeof SUITES)[number];
+/** 기준 비교가 아닌 실행(명시할 때만) */
+export const COMPARE = 'recommend-compare';
+type Wanted = SuiteName | typeof COMPARE;
+
+/** AI 방식이 미리 계산 방식보다 이만큼 넘게 높아야 AI를 기본으로 (D-040) */
+export const MODE_MARGIN = 0.05;
+
+export interface ModeComparison {
+  precomputed: number;
+  ai: number;
+  /** ai − precomputed, 소수 셋째 자리 */
+  diff: number;
+  /** 기본 방식 판단: 차이가 MODE_MARGIN을 넘을 때만 ai */
+  choice: 'precomputed' | 'ai';
+  cases: number;
+}
+
+/** 두 방식 점수 비교와 판단 규칙. 차이가 정확히 0.05면 넘은 것이 아니다(소수 오차는 무시) */
+export function compareModes(pre: SuiteResult, ai: SuiteResult): ModeComparison {
+  if (pre.cases !== ai.cases) {
+    throw new EvalConfigError(`두 방식의 문제 수가 다릅니다(${pre.cases} vs ${ai.cases}).`);
+  }
+  const raw = ai.score - pre.score;
+  return {
+    precomputed: pre.score,
+    ai: ai.score,
+    // 반올림은 보여 주기용. 판단은 반올림 전 값으로
+    diff: Math.round(raw * 1000) / 1000,
+    choice: raw > MODE_MARGIN + 1e-9 ? 'ai' : 'precomputed',
+    cases: pre.cases,
+  };
+}
 
 export interface SuiteResult {
   score: number;
@@ -124,15 +158,16 @@ export class EvalConfigError extends Error {
 }
 
 /** 정해진 값이 아니면 던진다(오타로 시험을 몰래 건너뛰지 않게). */
-export function suitesFrom(env: Record<string, string | undefined>): SuiteName[] {
+export function suitesFrom(env: Record<string, string | undefined>): Wanted[] {
   if (!env.EVAL_SUITES) return [...SUITES];
   const names = env.EVAL_SUITES.split(',').map((x) => x.trim());
+  const known: readonly string[] = [...SUITES, COMPARE];
   for (const n of names)
-    if (!(SUITES as readonly string[]).includes(n))
+    if (!known.includes(n))
       throw new EvalConfigError(
-        `EVAL_SUITES에 모르는 시험 '${n}'. 쓸 수 있는 값: ${SUITES.join(', ')}`,
+        `EVAL_SUITES에 모르는 시험 '${n}'. 쓸 수 있는 값: ${known.join(', ')}`,
       );
-  return names as SuiteName[];
+  return names as Wanted[];
 }
 
 export function pickLlm(env: Record<string, string | undefined>): {
@@ -174,10 +209,19 @@ export function pickLlm(env: Record<string, string | undefined>): {
 
 export async function runAll(
   env: Record<string, string | undefined>,
-): Promise<{ results: Results; label: string; stats?: Record<string, number> }> {
+  /** 테스트용: AI를 직접 넣는다(EVAL_LLM 대신) */
+  inject?: { llm: Llm },
+): Promise<{
+  results: Results;
+  label: string;
+  stats?: Record<string, number>;
+  compare?: ModeComparison | { skipped: string };
+}> {
   const only = suitesFrom(env);
-  const want = (n: SuiteName) => only.includes(n);
-  const { llm, label, stats, cleanup } = pickLlm(env);
+  const want = (n: Wanted) => only.includes(n);
+  const { llm, label, stats, cleanup } = inject
+    ? { llm: inject.llm, label: 'injected', stats: undefined, cleanup: undefined }
+    : pickLlm(env);
   try {
     const results: Results = {};
     const noLlm = 'EVAL_LLM이 없어 실제 AI 시험을 건너뜀';
@@ -188,7 +232,22 @@ export async function runAll(
       results.recommend = llm ? await runRecommend(llm) : { score: 0, cases: 0, skipped: noLlm };
     if (want('recommend-precomputed'))
       results['recommend-precomputed'] = await runRecommendPrecomputed();
-    return { results, label, ...(stats ? { stats: stats() } : {}) };
+    let compare: ModeComparison | { skipped: string } | undefined;
+    if (want(COMPARE)) {
+      if (!llm) compare = { skipped: noLlm };
+      else {
+        // 이미 잰 결과가 있으면 다시 쓰지 않는다(AI 호출을 두 번 하지 않게)
+        const pre = results['recommend-precomputed'] ?? (await runRecommendPrecomputed());
+        const ai = results.recommend ?? (await runRecommend(llm));
+        compare = compareModes(pre, ai);
+      }
+    }
+    return {
+      results,
+      label,
+      ...(stats ? { stats: stats() } : {}),
+      ...(compare ? { compare } : {}),
+    };
   } finally {
     cleanup?.();
   }
@@ -222,13 +281,27 @@ export async function main(
   env: Record<string, string | undefined> = process.env,
   baselinePath = join(DIR, 'baseline.json'),
 ): Promise<number> {
-  const { results, label, stats } = await runAll(env);
+  const { results, label, stats, compare } = await runAll(env);
   const baseline = JSON.parse(readFileSync(baselinePath, 'utf8')) as Baseline;
   const { ok, lines } = compareToBaseline(results, baseline);
   console.log(`[eval] AI: ${label}`);
   for (const l of lines) console.log(`[eval] ${l}`);
+  if (compare) {
+    if ('skipped' in compare) console.log(`[eval] ${COMPARE}: 건너뜀 (${compare.skipped})`);
+    else {
+      console.log(`[eval] ${COMPARE} (${compare.cases}문제)`);
+      console.log(`[eval]   precomputed ${compare.precomputed}  |  ai ${compare.ai}`);
+      console.log(
+        `[eval]   차이 ${compare.diff >= 0 ? '+' : ''}${compare.diff} (기준 ${MODE_MARGIN} 넘으면 ai) → 기본: ${compare.choice}`,
+      );
+    }
+  }
   if (stats) console.log('[eval] 호출 기록', stats);
   console.log(JSON.stringify(results, null, 2));
+  if (env.EVAL_UPDATE_BASELINE === '1' && Object.keys(results).length === 0) {
+    console.log('[eval] 기준 비교 시험을 재지 않아 baseline.json은 그대로입니다.');
+    return 0;
+  }
   if (env.EVAL_UPDATE_BASELINE === '1') {
     writeFileSync(
       baselinePath,

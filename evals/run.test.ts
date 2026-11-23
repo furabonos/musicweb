@@ -13,11 +13,14 @@ import {
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import {
+  compareModes,
   compareToBaseline,
   EvalConfigError,
+  MODE_MARGIN,
   main,
   nextBaseline,
   runAll,
+  runRecommendPrecomputed,
   type Baseline,
 } from './run.js';
 
@@ -223,5 +226,61 @@ describe('Claude Code(구독) 호출', () => {
     });
     expect(parseCliOutput('{"is_error":true,"total_cost_usd":0}').value).toBeNull();
     expect(parseCliOutput('not json').value).toBeNull();
+  });
+});
+
+describe('추천 방식 비교 (T31, D-040)', () => {
+  const r = (score: number, cases = 20) => ({ score, cases });
+
+  it('두 점수·차이가 손 계산과 일치', () => {
+    expect(compareModes(r(0.85), r(0.95))).toEqual({
+      precomputed: 0.85,
+      ai: 0.95,
+      diff: 0.1,
+      choice: 'ai',
+      cases: 20,
+    });
+    expect(compareModes(r(0.9), r(0.8))).toMatchObject({ diff: -0.1, choice: 'precomputed' });
+  });
+
+  it('판단 규칙 경계: 정확히 0.05는 넘은 것이 아니다(소수 오차 포함), 0.051은 넘음', () => {
+    expect(MODE_MARGIN).toBe(0.05);
+    // 0.9 - 0.85 = 0.05000000000000004 (부동소수 오차)
+    expect(compareModes(r(0.85), r(0.9))).toMatchObject({ diff: 0.05, choice: 'precomputed' });
+    expect(compareModes(r(0.85), r(0.9 + 0.001))).toMatchObject({ diff: 0.051, choice: 'ai' });
+    expect(compareModes(r(0.85), r(0.85))).toMatchObject({ diff: 0, choice: 'precomputed' });
+    // 반올림하면 0.05지만 실제로는 넘었다 → ai
+    expect(compareModes(r(0.85), r(0.9004))).toMatchObject({ diff: 0.05, choice: 'ai' });
+  });
+
+  it('문제 수가 다르면 비교하지 않는다', () => {
+    expect(() => compareModes(r(0.8, 20), r(0.9, 19))).toThrow(EvalConfigError);
+  });
+
+  it('EVAL_LLM이 없으면 비교는 건너뛴다고 남기고, 기본 목록에는 없다', async () => {
+    const out = await runAll({ EVAL_SUITES: 'recommend-compare' });
+    expect(out.compare).toEqual({ skipped: expect.any(String) });
+    expect(Object.keys(out.results)).toEqual([]);
+    expect((await runAll({ EVAL_SUITES: 'matching' })).compare).toBeUndefined();
+  });
+
+  it('AI 추천은 한 번만 채점한다(이미 잰 결과를 다시 씀) — 구독 사용량이 두 배가 되지 않게', async () => {
+    let calls = 0;
+    // 가짜 AI는 답하지 않는다 → 추천은 규칙으로 돌아간다. 호출 수만 센다
+    const fake: Llm = {
+      structured: async () => {
+        calls++;
+        return null;
+      },
+    };
+    const only = await runAll({ EVAL_SUITES: 'recommend-compare' }, { llm: fake });
+    const once = calls;
+    expect(once).toBeGreaterThan(0);
+    calls = 0;
+    const both = await runAll({ EVAL_SUITES: 'recommend,recommend-compare' }, { llm: fake });
+    expect(calls).toBe(once);
+    expect(both.compare).toEqual(only.compare);
+    const pre = await runRecommendPrecomputed();
+    expect(only.compare).toMatchObject({ precomputed: pre.score, cases: pre.cases });
   });
 });
