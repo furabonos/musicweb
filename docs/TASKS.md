@@ -366,27 +366,121 @@
     - integration — 차단된 계정은 만들기 거부, 테스트 사용자 101번째 등록 거부
     - e2e `apps/web/e2e/admin.spec.ts` — 비관리자는 /admin에서 접근 거부 화면, 관리자가 긴급 정지를 켜면 다른 사용자의 만들기가 즉시 실패, 검색 문장 기본 미노출
 
-- [ ] **T22b AI 없는 재생목록 (간단 모드)** — SPEC 4.3, 6.3
+- [ ] **T22b 절약 모드와 규칙 해석** — SPEC 3.4, 4.2, 4.3, 6.3 (D-039)
   - 의존: T13, T14
   - 산출물:
-    - `functions/src/core/parseFallback.ts`: 규칙으로 기준 곡·곡 수 읽기
-    - `core/recommend.ts`: AI 상한(`BudgetExceededError` aiCostMicroUsd)·키 없음·AI 오류일 때 AI 후보·AI 고르기 없이 점수 순서로 고르기, 고정 이유 문장
-    - 화면: "간단 모드" 안내(영·한)
-    - `runtimeConfig` 기본 AI 비용 상한 $1 → $3, 이벤트 `ai_fallback`(이유만)
+    - `functions/src/core/parseFallback.ts`: 규칙으로 기준 곡·곡 수·조건 낱말 읽기(SPEC 4.2 2단계)
+    - `functions/src/core/savingMode.ts`: AI 비용 예약이 상한에 닿으면 `config/runtime.savingMode`를 `active`로(트랜잭션, 하루 한 번), 태평양 자정·상한 상향 시 해제. 운영 일지 한 줄 + `saving_mode` 이벤트(켜짐·꺼짐)
+    - `core/recommend.ts`: 절약 모드·AI 키 없음·AI 오류일 때 AI 후보·AI 고르기 없이 점수 순서로 고르기, 고정 이유 문장, 이벤트 `ai_fallback`(이유만)
+    - 화면: 절약 모드 안내(영·한), `site-config`로 상태 전달. 관리자 화면에는 상태만 표시(T22와 겹치면 T22 쪽에서)
+    - `runtimeConfig` 기본 AI 비용 상한 $1 → $3, `savingMode` 필드(관리자 `setKillSwitch`·`setLimits`로는 못 씀)
   - 완료 기준:
-    - unit `parseFallback.test.ts` — `Doja by Central Cee`, `Central Cee - Doja`, `15 songs like …`, 한국어 예시를 읽고, 못 읽으면 다시 묻기
-    - unit `recommend.test.ts`(확장) — AI 상한·키 없음·AI 오류 세 경우 모두 재생목록이 나오고 AI 호출 0건, 같은 아티스트 연속 제한
-    - integration — AI 상한을 0으로 두고 만들기 → 성공, `ai_fallback` 이벤트, 응답에 간단 모드 표시
-    - e2e — 가짜 AI를 끈 상태에서 요청 → 재생목록과 "간단 모드" 안내 표시
+    - unit `functions/src/core/parseFallback.test.ts` — `Doja by Central Cee`, `Central Cee - Doja`, `15 songs like …`, 한국어 예시(`… 15곡`, `라이브 포함`)를 읽고, 못 읽으면 null
+    - unit `recommend.test.ts`(확장) — 절약 모드·키 없음·AI 오류 세 경우 모두 재생목록이 나오고 AI 호출 0건, 같은 아티스트 연속 제한
+    - integration `functions/src/core/savingMode.int.test.ts` — AI 상한을 0으로 두고 만들기 → 성공, `savingMode.active`, 운영 일지 1줄, 같은 날 두 번째 상한 도달은 일지를 더 쓰지 않음, 다음 날 해제, 긴급 정지 값은 안 바뀜
+    - e2e — 가짜 AI를 끈 상태에서 요청 → 재생목록과 절약 모드 안내 표시
+
+## I2. 추가 기능 — AI 비용 구조 (SPEC 3.4, 4.2, 4.3, D-040)
+
+요청 때 AI를 부르지 않는 구조. T23 배포 전에 끝낸다.
+
+- [ ] **T28 음악 데이터 태그와 곡 숫자 묶음** — SPEC 4.3, 5 / 스킬 `music-data-terms`
+  - 의존: T08, T13
+  - 산출물:
+    - `adapters/musicbrainz.ts`: 녹음·아티스트의 태그·장르 조회(`inc=tags+genres`), 녹화 응답 추가(`tools/record-music-fixtures.ts`)
+    - `packages/shared/src/similarity/`: 태그 낱말 목록(`vocab.ts`, 버전 번호), 태그 정규화(동의어·대소문자), `toVector(tags, genres, year)`, `closeness(a, b)`, 연도대
+    - `functions/src/core/vectors.ts`: 아티스트별 `artistVectors` 문서 쓰기, `songs.tags`·`genres` 채우기
+    - 입력 타입은 음악 데이터 타입만 받는다(YouTube 응답 타입을 넘기면 타입 오류)
+    - `firestore.rules`: 새 서버 전용 컬렉션 거부 확인
+  - 완료 기준:
+    - unit `packages/shared/src/similarity/*.test.ts` — 같은 태그는 가까움 1, 겹치지 않으면 0, 동의어(`hip hop`/`hip-hop`) 같은 자리, 모르는 태그 무시, 낱말 목록 버전이 결과에 들어감
+    - unit `functions/src/adapters/musicbrainz.test.ts`(확장) — 녹화 응답에서 태그·장르 파싱
+    - integration `functions/src/core/vectors.int.test.ts` — 아티스트 2명 계산 시 `artistVectors` 2건, 태그 없는 곡은 연도 자리만
+    - rules `tests/rules/server-only.test.ts`(확장) — `artistSimilar`, `artistVectors`, `parseCache`, `resultCache`, `reasonCache`, `cooccur`, `channelSongs`, `songs/*/private/*` 누구도 읽기 불가
+
+- [ ] **T29 비슷한 아티스트·숫자 묶음 미리 계산 작업** — SPEC 3.3, 4.3, 6.3
+  - 의존: T10, T28
+  - 산출물:
+    - `jobs/precompute.ts`: 수집 대상 + `lastRequestedAt` 최근 순으로 아티스트 500명까지 ListenBrainz 비슷한 아티스트 → `artistSimilar`, 숫자 묶음 → `artistVectors`. 30일 지난 것 다시 계산. 긴급 정지 `ingest`·음악 데이터 호출 한도를 따름
+    - `core/precomputeOnDemand.ts`: 계산이 없는 아티스트를 요청 때 계산(최대 인스턴스 1개 함수로 모아 초당 1회 유지, D-024)
+    - 요청 때 `songs.lastRequestedAt`·`artistVectors.lastRequestedAt` 갱신(하루 한 번만 써서 쓰기 비용 절약)
+    - `jobs/schedules.ts`에 `precomputeNightly`, 운영 일지에 처리량
+  - 완료 기준:
+    - integration `functions/src/jobs/precompute.int.test.ts` — 녹화 응답으로 아티스트 3명 계산, 상한 2명이면 최근 조회 순 2명만, 30일 안 된 것은 건너뜀, 긴급 정지면 호출 0건, 한도 도달 시 운영 일지
+    - unit `functions/src/core/precomputeOnDemand.test.ts` — 같은 아티스트 동시 요청은 한 번만 계산
+    - unit — 같은 날 두 번째 조회는 `lastRequestedAt`을 쓰지 않음
+
+- [ ] **T30 미리 계산한 추천과 태그 이유 문장** — SPEC 4.3
+  - 의존: T22b, T29
+  - 산출물:
+    - `core/recommend.ts`: 기본 경로를 "비슷한 아티스트의 곡 중 가까운 곡 + ListenBrainz 비슷한 곡 + Last.fm(보조)"으로, 점수 = 출처 가중치 + 아티스트 유사도 × 가까움 + 연도 가까움, 같은 아티스트 연속 금지. AI 후보·AI 고르기는 설정(`recommendMode: 'precomputed' | 'ai'`, 기본 `precomputed`) 뒤로
+    - `packages/shared/src/similarity/reason.ts`: 겹치는 태그로 이유 문장 조립(영·한), 태그가 없으면 출처 문장
+    - `evals/recommend/`: 가까운 장르 미끼 추가(D-034 "문제가 너무 쉽다"), `precomputed` 방식은 AI 없이 CI에서 항상 채점
+  - 완료 기준:
+    - unit `recommend.test.ts`(확장) — 기본 경로에서 AI 호출 0건, 가까운 태그 곡이 먼 곡보다 앞, 같은 아티스트 연속 없음, 후보가 모자라면 이유와 함께 반환
+    - unit `packages/shared/src/similarity/reason.test.ts` — 두 언어 문장, 태그 최대 2개, HTML 특수문자 없이 텍스트만
+    - eval `pnpm eval` — `recommend-precomputed` 점수를 baseline에 기록(키 없이 결정적)
+
+- [ ] **T31 추천 방식 비교 시험** — SPEC 4.9 (D-040)
+  - 의존: T17, T30
+  - 산출물:
+    - `evals/run.ts`: 같은 추천 문제를 `precomputed`·`ai` 두 방식으로 채점해 나란히 출력(`EVAL_SUITES=recommend-compare`)
+    - 측정은 구독(`EVAL_LLM=cli`) 사용량이 들므로 **사용자 확인 후** 실행
+    - 결과와 판단을 `docs/DECISIONS.md`에 기록: `ai`가 0.05 넘게 높지 않으면 `recommendMode` 기본을 `precomputed`로 확정
+  - 완료 기준:
+    - unit `evals/run.test.ts`(확장) — 두 방식 점수·차이 계산이 손 계산과 일치, 판단 규칙(0.05) 경계값
+    - 측정 결과(두 점수, 호출 수, 추정 비용)를 PR 본문과 DECISIONS에 기록
+
+- [ ] **T32 요청 처리 순서와 결과 재사용** — SPEC 4.2, 4.3
+  - 의존: T22b, T30
+  - 산출물:
+    - `core/parseCache.ts`: 정규화 문장의 HMAC(`ACTOR_HASH_KEY`에 용도 접두어, 새 비밀값 없음) → 해석 결과, 30일
+    - `core/resultCache.ts`: (기준 곡, 곡 수, 조건, 언어) 키 → songIds·spares·이유, 7일. 영상 ID 저장 안 함
+    - `api/playlists.ts` 순서: 한도 확인 → 저장된 해석 → 규칙 → (절약 모드 아니면) AI 해석 → 저장된 결과 → 추천
+    - 이벤트에 처리 경로(`cache`·`rule`·`ai`)와 AI 비용만 기록(문장 없음)
+    - `jobs/purge.ts`에 기간 지난 캐시 지우기
+  - 완료 기준:
+    - unit `functions/src/core/parseCache.test.ts` — 공백·대소문자만 다른 문장은 같은 키, 저장 문서에 원문 없음
+    - integration `functions/src/api/playlists.int.test.ts`(확장) — 같은 문장 두 번째 요청은 AI 호출 0건, 규칙으로 읽히는 문장은 처음부터 AI 0건, 같은 조합 두 번째 결과는 추천 계산 없이 같은 곡, 7일 지난 결과는 다시 계산
+    - integration — 저장된 결과에 영상 ID 필드 없음
+
+- [ ] **T33 AI 없는 곡 고르기 화면** — SPEC 4.2, 4.13
+  - 의존: T14, T32
+  - 산출물:
+    - callable `songs-suggest`(이름 비교 키 앞부분 일치, 최대 10개, App Check, 입력 50자)
+    - `playlists-create`가 `{ seedSongId, count, include }` 입력도 받음(해석 단계 없음)
+    - 화면 `/`: 곡 검색 제안, 곡 수 선택(5~30), 조건 버튼 3개. 검색창은 그대로 두고 "편의 기능"으로 배치(시안 B)
+  - 완료 기준:
+    - integration `functions/src/api/songs.int.test.ts` — 앞부분 일치·10개 상한·정보가 적은 곡은 제안 안 함
+    - integration `playlists.int.test.ts`(확장) — 곡 ID 입력 만들기에서 AI 호출 0건, 없는 곡 ID 거부
+    - e2e `apps/web/e2e/picker.spec.ts` — 곡 검색 → 고르기 → 곡 수 15 → 라이브 버튼 → 15곡 표시
+    - unit — 두 언어 파일 키 집합 같음
+
+- [ ] **T34 자세한 이유 (요청 때만 AI 설명)** — SPEC 4.3
+  - 의존: T22b, T30
+  - 산출물:
+    - callable `playlists-explain`: 소유자 재생목록의 곡별 이유를 AI로 쓰기, `reasonCache`에 (기준 곡, 곡, 언어)로 저장·재사용, 사용자별 하루 10회(`explains` 카운터), 절약 모드면 거부
+    - 화면: "자세한 이유" 버튼, 절약 모드면 꺼진 버튼과 안내. AI 글은 텍스트로만 그림
+  - 완료 기준:
+    - unit `functions/src/core/explain.test.ts` (가짜 LLM) — 캐시에 있는 곡은 AI에 보내지 않음, 목록 밖 곡 이유는 버림, 주입 문장이 형식을 못 바꿈
+    - integration — 11번째 요청 거부, 절약 모드면 `failed-precondition`, 다른 사용자 재생목록 거부
+    - e2e — 버튼 → 이유 표시, 절약 모드에서 버튼 꺼짐
+
+- [ ] **T35 현황판: AI 비용 지표** — SPEC 4.10
+  - 의존: T21, T22b, T32
+  - 산출물: `jobs/metrics.ts`에 AI 없이 처리된 요청 비율, 요청 한 건 평균 AI 비용, 오늘 절약 모드였던 시간(분), 계산 방법 문구. `/status`에 표시
+  - 완료 기준:
+    - unit `functions/src/jobs/metrics.test.ts`(확장) — 준비한 이벤트에서 세 지표가 손 계산과 일치, 자정을 넘는 절약 모드 구간 나누기, 분모 0
+    - e2e `status.spec.ts`(확장) — 세 지표와 계산 방법 표시
 
 ## J. 배포와 공개 기능
 
 - [ ] **T23 배포** — SPEC 6.2, 6.3
-  - 의존: T18, T21, T22, T22b
+  - 의존: T18, T21, T22, T22b, T31, T33, T34, T35
   - 산출물:
     - functions 배포 묶음 확인: esbuild가 `@musicweb/shared`를 묶고, `workspace:` 개발 의존성이 Cloud Build 설치를 깨지 않게 한다(D-027). 손으로 만든 YouTube 응답을 실제 녹화본으로 바꾼다(T10)
     - Firebase 프로젝트(Blaze), 월 예산 알림 $10, Functions 예산 정지, App Check(reCAPTCHA Enterprise) 강제
-    - Secret Manager 등록, 예약 작업 등록. `playlists-create`는 `ANTHROPIC_API_KEY`·`YOUTUBE_API_KEY`·`LASTFM_API_KEY`·`ACTOR_HASH_KEY`를 연결하므로(D-031) Last.fm 키를 안 쓰더라도 비밀값은 만들어 둬야 배포된다(코드는 값이 비면 Last.fm 없이 동작하지만, Secret Manager가 빈 값을 받는지는 배포 때 확인)
+    - Secret Manager 등록, 예약 작업 등록(`precomputeNightly` 포함). 첫 배포 전에 인기 아티스트 미리 계산을 한 번 돌린다(T29). `playlists-create`는 `ANTHROPIC_API_KEY`·`YOUTUBE_API_KEY`·`LASTFM_API_KEY`·`ACTOR_HASH_KEY`를 연결하므로(D-031) Last.fm 키를 안 쓰더라도 비밀값은 만들어 둬야 배포된다(코드는 값이 비면 Last.fm 없이 동작하지만, Secret Manager가 빈 값을 받는지는 배포 때 확인)
     - 실제 YouTube 플레이어로 재생·다음 곡·오류 건너뛰기를 손으로 한 번 확인(e2e는 가짜 플레이어, D-032)
     - API 키 결정(D-034): 서비스 AI·매일 시험·CI AI 시험에 필요. 구독은 서버·CI에 쓰지 않는다
     - 모든 callable의 App Check 강제. 특히 로그인 없이 부르는 `playback-reportEmbedBlocked`(D-032), `playlists-get`, `site-config`(D-033)
@@ -443,6 +537,75 @@
     - 도메인 주소로 접속, 약관 페이지가 같은 도메인
     - 심사 제출 완료와 제출일이 `docs/REVIEW.md`와 운영 일지에 기록
 
+## K. 추가 기능 — 목록에 없는 곡 (SPEC 3.1, 4.3a, 4.4, D-041)
+
+사용자별 한도가 필요하므로 로그인(T24) 뒤에 한다.
+
+- [ ] **T36 YouTube 주소로 기준 곡** — SPEC 3.1, 4.4 / 스킬 `youtube-policy`, `song-matching`
+  - 의존: T24, T28
+  - 산출물:
+    - `packages/shared/src/youtubeUrl.ts`: `watch?v=`, `youtu.be/`, `music.youtube.com`, `shorts/`에서 영상 ID만 뽑기
+    - `core/linkInput.ts`: `videos.list`(snippet·status·contentDetails, 1단위) → categoryId `10`이 아니거나 재생 불가면 멈춤 → 곡 목록에 있으면 그 곡 → 아니면 제목 규칙으로 이름 미리 채우기
+    - callable `songs-addFromLink`(확인 창에서 사용자가 확인한 이름 → MusicBrainz 조회 → 보통 곡 또는 `lowInfo` 곡 + 연결 + `songs/*/private/label`)
+    - 사용자별 하루 5회(`links` 카운터), 같은 영상 하루 한 번만 새로 처리. 영상 설명·태그는 저장하지 않고 AI에 넘기지 않음
+    - 화면: 검색창에 주소를 넣으면 확인 창(이름 두 칸), 음악 영상이 아니면 안내
+    - 이벤트 `seed_unlisted`(경로 `link`, 결과만)
+  - 완료 기준:
+    - unit `packages/shared/src/youtubeUrl.test.ts` — 주소 형식별 ID, 다른 사이트·재생목록 주소 거부
+    - unit `functions/src/core/linkInput.test.ts` — categoryId 10 아님·비공개·퍼가기 불가면 멈춤, LLM 어댑터 호출 0건, 설명·태그가 저장 문서에 없음
+    - integration `functions/src/api/songs.int.test.ts`(확장) — 6번째 링크 거부, MusicBrainz에서 찾으면 보통 곡, 못 찾으면 `lowInfo`, 확인 이름은 클라이언트가 못 읽음
+    - e2e `apps/web/e2e/link-input.spec.ts` — 주소 입력 → 확인 → 재생목록 표시, 음악 아닌 영상 안내
+
+- [ ] **T37 이름 검색 몫과 링크 안내** — SPEC 4.4, 6.3
+  - 의존: T04, T36
+  - 산출물:
+    - budget 카운터 `ytSearchUser` → `ytSearchSeed`(50) + `ytSearchCandidate`(30), `runtimeConfig`·관리자 한도 입력 스키마·기존 날짜 문서 읽기 호환
+    - `core/seedSearch.ts`: 곡 목록·MusicBrainz에 없을 때 검색 1회 → 상위 5개 제시 → 고르면 T36 흐름
+    - 몫·사용자 한도를 다 쓰면 "YouTube 주소를 붙여 넣어 주세요" 안내
+    - 이벤트 `seed_unlisted`(경로 `search`)
+  - 완료 기준:
+    - integration `functions/src/core/budget.int.test.ts`(확장) — 기준 곡 몫이 다 차도 후보 몫은 남음, 반대도 같음
+    - unit `functions/src/core/seedSearch.test.ts` — 목록에 있으면 검색 0회, 몫 소진 시 링크 안내 결과
+    - e2e — 검색 결과 5개에서 고르기, 몫 소진 상태면 링크 안내
+
+- [ ] **T38 정보가 적은 곡의 후보와 화면 표시** — SPEC 4.3, 4.4
+  - 의존: T30, T36
+  - 산출물:
+    - `core/recommend.ts`: `lowInfo` 기준 곡이면 같은 채널 곡(`channelSongs`) + 확인 이름으로 찾은 태그가 가까운 곡 + 같이 담긴 곡(T40 뒤에 연결, 없으면 건너뜀)
+    - 이유 문장 "같은 채널의 곡"·"같이 담긴 곡", 결과에 `lowInfo` 표시
+    - 화면: "정보가 적어 정확도가 낮을 수 있음" 표시, 영상 제목·채널을 YouTube 출처와 함께 보여 줌
+  - 완료 기준:
+    - unit `recommend.test.ts`(확장) — `lowInfo` 기준 곡의 후보 출처와 이유 문장, AI 호출 0건
+    - e2e — 정보가 적은 곡 표시와 다른 근거 문장
+
+- [ ] **T39 밤 다시 대조와 채널 수집** — SPEC 4.4
+  - 의존: T11, T36
+  - 산출물:
+    - `jobs/rematch.ts`: `lowInfo` 곡을 확인 이름으로 MusicBrainz 재조회 → 찾으면 보통 곡 + 숫자 묶음, 30일 못 찾으면 중단
+    - `jobs/channelCollect.ts`: 정보가 적은 곡이 들어온 채널의 업로드 목록에서 음악 분류 영상 수집(하룻밤 채널 50개·채널당 50개), `channelSongs` 갱신
+    - `channelSongs`를 30일 재확인·정리(`refresh`·`purge`)에 추가
+  - 완료 기준:
+    - integration `functions/src/jobs/rematch.int.test.ts` — 찾으면 `lowInfo=false`·mbid·태그 채움, 30일 지나면 더 조회 안 함
+    - integration `functions/src/jobs/channelCollect.int.test.ts` — 상한 지킴, 음악 분류가 아니면 건너뜀, 긴급 정지면 호출 0건, 단위 사용량 기대값
+    - integration `purge.int.test.ts`(확장) — 31일 된 `channelSongs` 0건
+
+- [ ] **T40 같이 담긴 곡 집계** — SPEC 4.3a
+  - 의존: T24, T30
+  - 산출물:
+    - `core/cooccur.ts`: `playlists.save` 때 곡 쌍 횟수 +1(트랜잭션, `cooccurCounted` 표시로 한 번만), 바꾸기로 넣은 곡 쌍은 `swapCount`
+    - 후보 조회: 서로 다른 재생목록 3개 이상 쌍만, 가중치 상한
+    - 약관(T25) 문구에 집계 사실 추가
+  - 완료 기준:
+    - unit `functions/src/core/cooccur.test.ts` — 쌍 계산, 2회 쌍은 후보에 없음·3회는 있음, 가중치 상한
+    - integration — 같은 재생목록 두 번 저장해도 한 번만 셈, 저장 문서에 uid·재생목록 ID 없음, 계정 삭제 후에도 횟수 유지
+
+- [ ] **T41 현황판: 목록에 없는 곡 지표** — SPEC 4.10
+  - 의존: T35, T37, T38
+  - 산출물: 목록에 없던 요청 비율, 링크·검색 비율, 요청으로 새로 추가된 곡 수, 정보가 적은 곡과 보통 곡의 뺀 곡 비율 비교(계산 방법 포함)
+  - 완료 기준:
+    - unit `metrics.test.ts`(확장) — 네 지표가 손 계산과 일치, 분모 0
+    - e2e `status.spec.ts`(확장) — 지표 표시
+
 ---
 
 ## 의존 관계 요약
@@ -461,6 +624,17 @@ T04,T07 ─ T12 ───────┴─ T13 ─ T14 ─┬─ T15
 T09,T13 ─ T17 ─ T18(+T01,T02,T03) ─ T20
 T07,T10,T16,T17 ─ T19 ─ T20
 T19 ─ T21 ─ T22 ─ T23 ─ T24 ─ T25 ─ T26 ─ T27
+T13,T14 ─ T22b ─┐
+T08,T13 ─ T28 ─ T29(+T10) ─ T30(+T22b) ─┬─ T31(+T17)
+                                        ├─ T32 ─ T33(+T14)
+                                        └─ T34
+T21,T22b,T32 ─ T35
+T31,T33,T34,T35 ─ T23
+T24,T28 ─ T36 ─┬─ T37(+T04)
+               ├─ T38(+T30)
+               └─ T39(+T11)
+T24,T30 ─ T40
+T35,T37,T38 ─ T41
 ```
 
 ## 범위 밖
