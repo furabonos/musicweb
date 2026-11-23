@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_RUNTIME, parseRuntimeConfig, RuntimeConfigError } from './runtimeConfig.js';
+import {
+  DEFAULT_RUNTIME,
+  effectiveRecommendMode,
+  parseRuntimeConfig,
+  RuntimeConfigError,
+} from './runtimeConfig.js';
 
 describe('parseRuntimeConfig', () => {
   it('문서가 없으면 SPEC 6.3 기본값', () => {
@@ -56,9 +61,21 @@ describe('youtubeOpenLink (T16, D-006)', () => {
 });
 
 describe('recommendMode (T30)', () => {
-  it('기본은 precomputed, 저장된 값은 그대로, 모르는 값은 거부', () => {
-    expect(parseRuntimeConfig(undefined).recommendMode).toBe('precomputed');
+  it('기본은 ai(T31 측정, D-052), 저장된 값은 그대로, 모르는 값은 거부', () => {
+    expect(parseRuntimeConfig(undefined).recommendMode).toBe('ai');
+    expect(parseRuntimeConfig({ recommendMode: 'precomputed' }).recommendMode).toBe('precomputed');
     expect(parseRuntimeConfig({ recommendMode: 'ai' }).recommendMode).toBe('ai');
     expect(() => parseRuntimeConfig({ recommendMode: 'magic' })).toThrow(RuntimeConfigError);
+  });
+});
+
+describe('effectiveRecommendMode (D-052)', () => {
+  it('설정 ai + AI 사용 가능일 때만 ai', () => {
+    expect(effectiveRecommendMode('ai', 'on')).toBe('ai');
+  });
+  it('키 없음·절약 모드·설정 precomputed면 미리 계산', () => {
+    expect(effectiveRecommendMode('ai', 'no_key')).toBe('precomputed');
+    expect(effectiveRecommendMode('ai', 'saving')).toBe('precomputed');
+    expect(effectiveRecommendMode('precomputed', 'on')).toBe('precomputed');
   });
 });

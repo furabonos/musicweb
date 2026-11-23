@@ -30,7 +30,11 @@ import {
 } from '../core/playlists.js';
 import { explainPlaylist } from '../core/explain.js';
 import { BudgetExceededError } from '../core/budget.js';
-import { readRuntimeConfig, RuntimeConfigError } from '../core/runtimeConfig.js';
+import {
+  effectiveRecommendMode,
+  readRuntimeConfig,
+  RuntimeConfigError,
+} from '../core/runtimeConfig.js';
 import { recommend, type RecommendPorts } from '../core/recommend.js';
 import { firestoreRecommendPorts } from '../core/recommendPorts.js';
 import { fakeLlm, fakeMusicAndYt } from '../dev/fakeWorld.js';
@@ -210,8 +214,8 @@ export const playlists = {
           : (await readSavingMode(db, events))
             ? ('saving' as const)
             : ('on' as const);
-        // 추천 방식(기본 미리 계산, D-040). 설정을 못 읽으면 미리 계산한 방식
-        const mode = await readRuntimeConfig(db)
+        // 추천 방식(기본 AI, D-052). 설정을 못 읽으면 미리 계산한 방식
+        const configured = await readRuntimeConfig(db)
           .then((c) => c.recommendMode)
           .catch(async (err: unknown) => {
             // 설정이 깨졌으면 기록을 남기고 미리 계산한 방식으로(한도·긴급 정지 확인은 만들기 단계가 따로 막는다)
@@ -222,10 +226,13 @@ export const playlists = {
             });
             return 'precomputed' as const;
           });
+        const mode = effectiveRecommendMode(configured, aiMode);
         const onAiLimit = async () => void (await enterSavingMode(db, events));
         // 저장된 해석(30일)·결과(7일) (T32, D-048)
         const parseCache = firestoreParseCache(db, serverHashKey());
-        const cachedRecommend = withResultCache({ db, mode, events }, (parsed, spares) =>
+        // 설정은 ai인데 지금 AI를 못 쓰면 저장된 AI 결과를 먼저 다시 쓴다(비용 없이 더 나은 결과, 저장은 미리 계산 키에만)
+        const alsoRead = configured === 'ai' && mode !== 'ai' ? 'ai' : undefined;
+        const cachedRecommend = withResultCache({ db, mode, alsoRead, events }, (parsed, spares) =>
           recommend(
             ports,
             parsed,

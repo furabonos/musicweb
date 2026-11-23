@@ -30,7 +30,7 @@ export type Feature = (typeof FEATURES)[number];
 export const OPEN_LINK_MODES = ['direct', 'fallback'] as const;
 export type OpenLinkMode = (typeof OPEN_LINK_MODES)[number];
 
-/** 추천 방식(D-040): 미리 계산한 값으로 고르기(기본) 또는 AI가 고르기. 시험 비교(T31) 뒤에 정한다 */
+/** 추천 방식: AI가 후보 안에서 고르기(기본, T31 측정 D-052) 또는 미리 계산한 값으로 고르기(D-040) */
 export const RECOMMEND_MODES = ['precomputed', 'ai'] as const;
 export type RecommendMode = (typeof RECOMMEND_MODES)[number];
 
@@ -46,7 +46,8 @@ export const YOUTUBE_DAILY_UNITS = 10_000;
 export const YOUTUBE_DAILY_SEARCHES = 100;
 
 export const DEFAULT_RUNTIME: RuntimeConfig = {
-  recommendMode: 'precomputed',
+  // T31 측정(D-052): AI 0.99 vs 미리 계산 0.85 → AI가 기본. 키가 없거나 절약 모드면 미리 계산으로 돈다
+  recommendMode: 'ai',
   killSwitches: { create: true, ingest: true, autoIssue: true },
   youtubeOpenLink: 'direct',
   limits: {
@@ -168,4 +169,16 @@ export class KillSwitchError extends Error {
 export async function assertEnabled(db: Firestore, feature: Feature): Promise<void> {
   const cfg = await readRuntimeConfig(db);
   if (!cfg.killSwitches[feature]) throw new KillSwitchError(feature);
+}
+
+/**
+ * 이번 요청의 추천 방식 (D-052). 설정이 ai여도 AI를 지금 쓸 수 없으면(키 없음·절약 모드) 미리 계산한 방식으로 처음부터 돈다
+ * (AI 방식의 "대체"가 아니므로 요청마다 대체 기록을 남기지 않고, 저장된 결과는 미리 계산 결과로 쓴다).
+ * 곡 고르기도 같다(해석 단계만 없다).
+ */
+export function effectiveRecommendMode(
+  configured: RecommendMode,
+  aiMode: 'on' | 'saving' | 'no_key',
+): RecommendMode {
+  return configured === 'ai' && aiMode === 'on' ? 'ai' : 'precomputed';
 }

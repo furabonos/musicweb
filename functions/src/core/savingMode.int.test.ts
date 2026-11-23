@@ -31,7 +31,7 @@ const logs = async () =>
 
 describe('절약 모드', () => {
   it('AI 상한 0에서 만들기 → 성공(AI 없는 방식), 절약 모드 켜짐, 일지 1줄, 긴급 정지는 그대로', async () => {
-    // AI가 고르는 방식이어야 추천에서 AI를 부른다(기본은 미리 계산한 방식, D-040)
+    // AI가 고르는 방식(기본, D-052)이라 추천에서 AI를 부르려다 상한에 닿는다
     await db
       .doc('config/runtime')
       .set({ recommendMode: 'ai', limits: { service: { aiCostMicroUsd: 0 } } });
@@ -52,10 +52,21 @@ describe('절약 모드', () => {
     const runtime = (await db.doc('config/runtime').get()).data();
     expect(runtime?.killSwitches).toBeUndefined();
 
-    // 같은 날 두 번째: 이미 절약 모드라 AI를 부르지 않고, 일지도 더 쓰지 않는다
+    // 같은 날 두 번째: 이미 절약 모드라 처음부터 미리 계산한 방식(D-052): AI를 부르지 않고,
+    // 추천 단계 대체 기록을 새로 남기지 않으며, 결과는 미리 계산 키로 저장된다. 일지도 더 쓰지 않는다
+    const fallbacksBefore = (await db.collection('events').where('type', '==', 'ai_fallback').get())
+      .size;
     const again = await callFunction('playlists-create', input, token);
     expect((again.result as { ok: boolean }).ok).toBe(true);
     expect(await logs()).toHaveLength(1);
+    const fallbacks = (await db.collection('events').where('type', '==', 'ai_fallback').get()).docs;
+    // 해석 단계는 규칙으로 읽히는 문장이라 AI를 시도하지 않는다 → 새 대체 기록 0건
+    expect(fallbacks.length).toBe(fallbacksBefore);
+    const created = (
+      await db.collection('events').where('type', '==', 'playlist_created').get()
+    ).docs.map((d) => d.get('attrs.usedAi'));
+    expect(created).toContain(false);
+    expect((await db.collection('resultCache').get()).size).toBe(1);
 
     // 화면용 설정이 절약 모드를 알려 준다
     const cfg = await callFunction('site-config', {});

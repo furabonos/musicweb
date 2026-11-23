@@ -12,12 +12,12 @@
     },
     "recommend": {
       "cases": 20,
-      "score": 1,
+      "score": 0.99,
       "aiPicked": 100,
-      "failedIds": [],
+      "failedIds": ["r13"],
       "tolerance": 0.05,
       "llm": "claude-code-cli (구독, claude-haiku-5-5)",
-      "measuredAt": "2026-11-22T14:42:08.887Z"
+      "measuredAt": "2026-11-23T10:57:02.697Z"
     },
     "matching": {
       "cases": 50,
@@ -50,7 +50,7 @@
       ],
       "tolerance": 0,
       "llm": "none",
-      "measuredAt": "2026-11-23T08:59:20.829Z"
+      "measuredAt": "2026-11-23T10:57:02.697Z"
     }
   }
 }

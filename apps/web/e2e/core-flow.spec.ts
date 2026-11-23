@@ -12,10 +12,8 @@ test('요청 입력 → 10곡 표시 → 1곡 빼기 → 저장', async ({ page 
   const songs = page.locator('ol.songs > li');
   await expect(songs).toHaveCount(10);
   await expect(page.getByText('Based on Doja · Central Cee')).toBeVisible();
-  // 기본은 미리 계산한 방식(AI 없이 고르기, D-040): 출처·태그로 만든 영어 이유
-  // 에뮬레이터에는 미리 계산한 문서가 없어 출처 문장이 나온다
-  await expect(songs.first()).toContainText('People who play Doja also play this.');
-  await expect(page.locator('ol.songs')).not.toContainText('Demo pick');
+  // 기본은 AI 방식(T31 측정, D-052): 에뮬레이터의 가짜 AI가 고르고 이유를 쓴다
+  await expect(songs.first()).toContainText('Demo pick: people who play Doja also play this.');
 
   const remove = songs.nth(2).getByRole('button', { name: /^Remove / });
   const title = ((await remove.getAttribute('aria-label')) ?? '').replace(/^Remove /, '');

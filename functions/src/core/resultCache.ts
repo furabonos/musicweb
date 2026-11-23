@@ -36,7 +36,14 @@ interface Stored {
 
 /** 추천 함수에 저장된 결과를 씌운다. 저장된 결과를 쓰면 fromCache: true */
 export function withResultCache(
-  deps: { db: Firestore; mode: string; now?: () => Date; events?: EventSink },
+  deps: {
+    db: Firestore;
+    mode: string;
+    /** 이 방식의 저장된 결과도 먼저 읽는다(쓰기는 mode에만). 절약 모드에서 저장된 AI 결과를 쓰려고 (D-052) */
+    alsoRead?: string | undefined;
+    now?: () => Date;
+    events?: EventSink;
+  },
   recommend: (req: ParsedRequest, spares: number) => Promise<RecommendResult>,
 ): (req: ParsedRequest, spares: number) => Promise<RecommendResult> {
   const now = deps.now ?? (() => new Date());
@@ -44,23 +51,28 @@ export function withResultCache(
     const key = resultCacheKey(req, deps.mode);
     if (!key) return recommend(req, spares);
     const ref = deps.db.doc(`resultCache/${key}`);
-    const snap = await ref.get();
-    const exp = snap.get('expiresAt') as unknown;
-    if (snap.exists && exp instanceof Timestamp && exp.toMillis() > now().getTime()) {
-      const s = snap.data() as Stored;
-      const links = await recommendableLinks(
-        deps.db,
-        s.items.map((i) => i.songId),
-        now(),
-        req.include,
-      );
-      const visible = s.items.slice(0, req.count);
-      if (visible.length === req.count && visible.every((i) => links.has(i.songId))) {
-        const items: RecommendItem[] = s.items.flatMap((i) => {
-          const l = links.get(i.songId);
-          return l ? [{ ...i, videoId: l.videoId, kind: l.kind, madeForKids: l.madeForKids }] : [];
-        });
-        return { ok: true, seed: s.seed, items, shortfall: s.shortfall, fromCache: true };
+    const extra = deps.alsoRead ? resultCacheKey(req, deps.alsoRead) : null;
+    for (const k of extra ? [extra, key] : [key]) {
+      const snap = await deps.db.doc(`resultCache/${k}`).get();
+      const exp = snap.get('expiresAt') as unknown;
+      if (snap.exists && exp instanceof Timestamp && exp.toMillis() > now().getTime()) {
+        const s = snap.data() as Stored;
+        const links = await recommendableLinks(
+          deps.db,
+          s.items.map((i) => i.songId),
+          now(),
+          req.include,
+        );
+        const visible = s.items.slice(0, req.count);
+        if (visible.length === req.count && visible.every((i) => links.has(i.songId))) {
+          const items: RecommendItem[] = s.items.flatMap((i) => {
+            const l = links.get(i.songId);
+            return l
+              ? [{ ...i, videoId: l.videoId, kind: l.kind, madeForKids: l.madeForKids }]
+              : [];
+          });
+          return { ok: true, seed: s.seed, items, shortfall: s.shortfall, fromCache: true };
+        }
       }
     }
     const rec = await recommend(req, spares);

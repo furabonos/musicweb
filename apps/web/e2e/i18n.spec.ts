@@ -32,6 +32,6 @@ test('기본 영어 → 언어 버튼으로 한국어 → 새로고침 후에도
   expect((await request).postDataJSON()).toMatchObject({ data: { locale: 'ko' } });
   // 이유 문장은 받은 화면 언어로 만든다 → 한국어 이유가 보이면 언어가 추천까지 전달된 것
   await expect(page.locator('ol.songs > li').first()).toContainText(
-    '「Doja」 청취자들이 함께 듣는 곡이에요.',
+    '데모 선택: Doja을(를) 듣는 사람들이 함께 듣는 곡입니다.',
   );
 });
