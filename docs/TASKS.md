@@ -421,7 +421,7 @@
     - unit `packages/shared/src/similarity/reason.test.ts` — 두 언어 문장, 태그 최대 2개, HTML 특수문자 없이 텍스트만
     - eval `pnpm eval` — `recommend-precomputed` 점수를 baseline에 기록(키 없이 결정적)
 
-- [ ] **T31 추천 방식 비교 시험** — SPEC 4.9 (D-040)
+- [ ] **T31 추천 방식 비교 시험** — SPEC 4.9 (D-040) — 비교 코드 완료(`EVAL_SUITES=recommend-compare`), 실제 측정은 사용자 확인 대기
   - 의존: T17, T30
   - 산출물:
     - `evals/run.ts`: 같은 추천 문제를 `precomputed`·`ai` 두 방식으로 채점해 나란히 출력(`EVAL_SUITES=recommend-compare`)
