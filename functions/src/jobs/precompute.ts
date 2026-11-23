@@ -86,7 +86,8 @@ export async function precomputeArtist(
   await deps.db.doc(`artistSimilar/${mbid}`).set({
     items: similar.map((a) => ({ artistMbid: a.mbid, score: a.score })),
     source: 'listenbrainz',
-    computedAt: FieldValue.serverTimestamp(),
+    // isFresh가 같은 시계(now)로 비교한다. 서버 시각을 쓰면 주입한 시각과 섞여 판정이 날짜에 따라 달라진다
+    computedAt: opts.now ? Timestamp.fromDate(opts.now) : FieldValue.serverTimestamp(),
   });
   return { songs: r.songs, complete: true };
 }
