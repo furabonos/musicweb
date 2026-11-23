@@ -20,6 +20,9 @@
     "scan:bundle": "pnpm --filter web build && node --experimental-strip-types --no-warnings tools/scan-bundle.ts apps/web/dist",
     "test:rules": "tools/with-java.sh firebase emulators:exec --project demo-musicweb --only firestore,storage \"vitest run --config vitest.rules.config.ts\"",
     "test:e2e": "pnpm --filter functions build && tools/emulator-env.sh && tools/with-java.sh firebase emulators:exec --project demo-musicweb --only functions,firestore,auth \"pnpm --filter web exec playwright test\"",
+    "capture": "pnpm --filter functions build && tools/emulator-env.sh && tools/with-java.sh firebase emulators:exec --project demo-musicweb --only functions,firestore,auth \"pnpm --filter web exec playwright test --config playwright.capture.config.ts\"",
+    "capture:before": "CAPTURE_LABEL=before pnpm capture",
+    "capture:after": "CAPTURE_LABEL=after pnpm capture",
     "emulators:seed": "node --experimental-strip-types --no-warnings tools/seed-emulator.ts",
     "eval": "vitest run --config vitest.eval.config.ts evals/run.eval.ts"
   },
