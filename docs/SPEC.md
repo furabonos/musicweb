@@ -193,10 +193,12 @@ PC 웹만 지원한다(최소 너비 1024px 기준). 모바일 화면은 고려�
   - 같은 문제는 지문(fingerprint)으로 묶어 중복 이슈를 만들지 않는다.
   - 하루 최대 5개. 긴급 정지 스위치로 끌 수 있다.
   - 이슈 본문에는 검색 문장·재생목록 이름·계정 정보를 넣지 않는다.
-- **자동 수정**: `auto-fix` 라벨이 붙은 이슈에서 Claude Code GitHub Action이 실행된다.
-  - 재현 테스트 → 수정 → PR 순서로 진행한다.
-  - 하루 실행 상한이 있다.
-- PR 본문(템플릿 강제): 쉬운 말 요약 3줄, 화면이 바뀌면 수정 전후 캡처, 테스트·시험 점수 변화, 직접 확인하는 방법.
+- **자동 수정**: `auto-fix` 라벨이 붙은 이슈에서 Claude Code GitHub Action이 실행된다 (D-038).
+  - 재현 테스트 → 수정 → PR 순서로 진행한다. 화면이 바뀌면 수정 전후 캡처(`pnpm capture`)를 PR에 붙인다.
+  - 하루 실행 상한은 3회(태평양 시간)다.
+  - 라벨을 붙인 사람과 이슈 작성자 모두 저장소 쓰기 권한이 있어야 실행한다.
+  - Claude는 브랜치에 커밋하고, 워크플로가 제목·본문을 채운 PR 만들기 링크를 이슈에 남긴다. 관리자가 눌러 PR을 연다.
+- PR 본문(템플릿 강제, CI `pr-body` 검사): 쉬운 말 요약 3줄, 화면이 바뀌면 수정 전후 캡처(CI가 찍어 올림), 테스트·시험 점수 변화, 직접 확인하는 방법.
 - CI를 통과한 PR을 관리자가 확인하고 합친다. **자동 합침 없음.**
 - **시험 문제**:
   - 곡 연결: 정답을 정해 둔 50곡의 영상 후보를 녹화해 둔 데이터로 연결 정확도를 잰다 (CI에서 결정적으로 실행).
@@ -350,7 +352,7 @@ firestore.rules, firebase.json
 
 | 이름                                              | 위치                                                                            | 용도                                                                                                                   |
 | ------------------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `ANTHROPIC_API_KEY`                               | Secret Manager (`defineSecret`), GitHub Secrets(자동 수정·시험)                 | AI                                                                                                                     |
+| `ANTHROPIC_API_KEY`                               | Secret Manager (`defineSecret`), GitHub Secrets(시험)                           | AI                                                                                                                     |
 | `YOUTUBE_API_KEY`                                 | Secret Manager                                                                  | YouTube 읽기                                                                                                           |
 | `LASTFM_API_KEY`                                  | Secret Manager                                                                  | Last.fm                                                                                                                |
 | `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET`          | Secret Manager                                                                  | 내 계정에 넣기 권한                                                                                                    |
@@ -364,6 +366,7 @@ firestore.rules, firebase.json
 | `VITE_FIREBASE_*`                                 | `apps/web/.env.local` (공개 설정값, 비밀 아님)                                  | Firebase 웹 설정                                                                                                       |
 | `VITE_RECAPTCHA_SITE_KEY`                         | `apps/web/.env.local`                                                           | App Check                                                                                                              |
 | `VITE_USE_EMULATORS`                              | `apps/web/.env.local` 또는 `dev:emulators` 스크립트                             | `true`면 로컬 에뮬레이터에 붙음. 개발 서버에서만 효과, 배포 빌드에서는 비움(`scan:bundle`이 흔적 검사, D-031)          |
+| `CLAUDE_CODE_OAUTH_TOKEN`                         | GitHub Secrets                                                                  | 자동 수정(`auto-fix.yml`)의 Claude Code. 관리자 구독 토큰(`claude setup-token`), Claude GitHub App 설치 필요 (D-038)   |
 | `FIREBASE_SERVICE_ACCOUNT`                        | GitHub Secrets                                                                  | 배포                                                                                                                   |
 
 비밀값은 저장소에 두지 않는다. 로컬 에뮬레이터용 값은 `functions/.secret.local`에 둔다(gitignore). 에뮬레이터용 매개변수(`ADMIN_EMAILS`, `MB_CONTACT`, `MUSICWEB_FAKE_EXTERNAL`)는 `tools/emulator-env.sh`가 `functions/.env.demo-musicweb`(gitignore)에 만든다.

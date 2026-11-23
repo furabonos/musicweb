@@ -326,15 +326,20 @@
       - 본문에 검색 문장·이메일·재생목록 이름이 없음(금지 필드 검사)
     - integration — `autoIssue=false`면 GitHub 호출 0건
 
-- [ ] **T20 자동 수정 PR 흐름** — SPEC 4.9
+- [x] **T20 자동 수정 PR 흐름** — SPEC 4.9
   - 의존: T18, T19
   - 산출물:
     - `.github/workflows/auto-fix.yml`: `auto-fix` 라벨 → Claude Code Action, 하루 3회 상한, 자동 합침 없음
     - `.github/pull_request_template.md`: 쉬운 말 요약 3줄, 전후 캡처, 테스트·시험 점수 변화, 확인 방법
     - 캡처 스크립트(Playwright)
   - 완료 기준:
-    - 연습: 곡 연결 규칙에 일부러 오류 하나를 넣어 main에 합친다(PR) → 매일 작업 또는 수동 실행으로 자동 이슈 생성 → 수정 PR → CI 통과 → 관리자 승인까지 진행. 이슈·PR 링크를 운영 일지와 이 작업 PR에 기록
     - unit `tools/pr-body.test.ts` — PR 본문 검사기가 필수 절이 빠지면 실패(CI에서 실행)
+    - (연습은 토큰 등록이 필요해 T20a로 나눔, D-038)
+
+- [ ] **T20a 자동 수정 연습** — SPEC 4.9
+  - 의존: T20, 관리자의 등록 작업(`CLAUDE_CODE_OAUTH_TOKEN` 비밀값, Claude GitHub App 설치, 자동 이슈용 `GITHUB_ISSUE_TOKEN`)
+  - 완료 기준:
+    - 연습: 곡 연결 규칙에 일부러 오류 하나를 넣어 main에 합친다(PR) → 매일 작업 또는 수동 실행으로 자동 이슈 생성 → 수정 PR → CI 통과 → 관리자 승인까지 진행. 이슈·PR 링크를 운영 일지와 이 작업 PR에 기록
 
 ## I. 현황판과 관리자 화면
 
