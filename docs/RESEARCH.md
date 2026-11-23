@@ -104,3 +104,30 @@
   - 아티스트 1,000명의 최신 영상 확인 ≈ 1,000단위
   - 30일 재확인은 곡 10만 개 기준 하루 약 70단위
 - **병목은 비용이 아니라 search 하루 100회**다. 구현 뒤 이벤트 로그로 실제 값을 잰다.
+
+## 9. AI 비용 구조와 목록에 없는 곡 (확인일 2026-11-23)
+
+- **Firestore 유사도 검색** — https://firebase.google.com/docs/firestore/vector-search , https://firebase.google.com/docs/firestore/pricing
+  - `findNearest`는 Python·Node.js·Go·Java 서버 라이브러리만 지원한다(웹 SDK 없음). 최대 2048차원, 최대 1000건이다. 거리 기준은 EUCLIDEAN·COSINE·DOT_PRODUCT다. 미리 거르기(where)를 하려면 복합 벡터 색인이 필요하고, 색인 방식은 `flat`뿐이다.
+  - 비용: "one read operation for each batch of up to 100 kNN vector index entries read by the query" + 돌려받은 문서 읽기.
+  - Firestore는 임베딩을 만들지 않는다. 에뮬레이터 지원은 문서에 없다(미확인).
+- **임베딩**: Anthropic은 임베딩 모델이 없고 Voyage를 권한다 — https://platform.claude.com/docs/en/build-with-claude/embeddings . voyage-4-lite는 100만 토큰당 $0.02이고 200M 토큰까지 무료다 — https://docs.voyageai.com/docs/pricing
+- **Message Batches** — https://platform.claude.com/docs/en/build-with-claude/batch-processing
+  - "charged at 50 percent of the standard API prices". 대개 1시간 안에 끝나고, 24시간 안에 안 끝나면 만료된다. 한 묶음은 10만 건 또는 256MB까지이고, 결과는 29일 동안 받을 수 있다. 모든 활성 모델을 지원한다.
+  - 구조화 출력 지원 여부는 미확인이다.
+- **가격** — https://platform.claude.com/docs/en/about-claude/pricing
+  - Haiku 5.5(10만 토큰 이하 요청): 입력 $0.10, 출력 $0.50, 캐시 읽기 $0.01. 일괄 처리는 $0.05/$0.25.
+  - Haiku 4.5는 $1/$5다. 가장 싼 현행 모델은 Haiku 5.5다.
+- **YouTube** — https://developers.google.com/youtube/v3/determine_quota_cost , https://developers.google.com/youtube/v3/docs/videos/list
+  - `videos.list`는 받는 항목과 상관없이 호출당 1단위다. `part=snippet`에 channelId·title·description·tags·categoryId가 들어 있다. search.list는 별도 하루 100회다.
+  - oEmbed(`youtube.com/oembed`)는 키 없이 제목·채널을 주지만, 읽은 공식 API 문서에서는 찾지 못했다 → 쓰지 않는다.
+- **YouTube 정책 안내서** — https://developers.google.com/youtube/terms/developer-policies-guide
+  - "Infer or estimate the content category/type of a video or channel; you may only use the content type returned by the YouTube API"
+  - "Merge or combine YouTube API data with any other data"
+  - 이 때문에 영상 정보로 AI 장르 분류를 하지 않기로 했다(D-041). AI·기계학습에 대한 별도 조항은 찾지 못했다.
+- **Chrome 내장 AI(Prompt API)** — https://developer.chrome.com/docs/ai/built-in-apis , https://developer.chrome.com/docs/ai/prompt-api , https://developer.chrome.com/docs/ai/get-started
+  - 웹 페이지에서 쓸 수 있는 시점이 문서 안에서 엇갈린다(표는 Chrome 148, 본문은 "Chrome Extensions만").
+  - 언어는 en·ja·es·de·fr이고 **한국어가 없다**.
+  - Windows 10/11·macOS 13+·Linux·Chromebook Plus만 되고, 저장 공간 22GB와 VRAM 4GB 초과(또는 RAM 16GB·4코어)가 필요하다. 다른 브라우저 지원은 없다.
+  - 구조화 출력(`responseConstraint`)은 Chrome 137부터다.
+  - → 지금은 쓰지 않는다(SPEC 9).
