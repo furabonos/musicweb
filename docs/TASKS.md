@@ -366,10 +366,23 @@
     - integration — 차단된 계정은 만들기 거부, 테스트 사용자 101번째 등록 거부
     - e2e `apps/web/e2e/admin.spec.ts` — 비관리자는 /admin에서 접근 거부 화면, 관리자가 긴급 정지를 켜면 다른 사용자의 만들기가 즉시 실패, 검색 문장 기본 미노출
 
+- [ ] **T22b AI 없는 재생목록 (간단 모드)** — SPEC 4.3, 6.3
+  - 의존: T13, T14
+  - 산출물:
+    - `functions/src/core/parseFallback.ts`: 규칙으로 기준 곡·곡 수 읽기
+    - `core/recommend.ts`: AI 상한(`BudgetExceededError` aiCostMicroUsd)·키 없음·AI 오류일 때 AI 후보·AI 고르기 없이 점수 순서로 고르기, 고정 이유 문장
+    - 화면: "간단 모드" 안내(영·한)
+    - `runtimeConfig` 기본 AI 비용 상한 $1 → $3, 이벤트 `ai_fallback`(이유만)
+  - 완료 기준:
+    - unit `parseFallback.test.ts` — `Doja by Central Cee`, `Central Cee - Doja`, `15 songs like …`, 한국어 예시를 읽고, 못 읽으면 다시 묻기
+    - unit `recommend.test.ts`(확장) — AI 상한·키 없음·AI 오류 세 경우 모두 재생목록이 나오고 AI 호출 0건, 같은 아티스트 연속 제한
+    - integration — AI 상한을 0으로 두고 만들기 → 성공, `ai_fallback` 이벤트, 응답에 간단 모드 표시
+    - e2e — 가짜 AI를 끈 상태에서 요청 → 재생목록과 "간단 모드" 안내 표시
+
 ## J. 배포와 공개 기능
 
 - [ ] **T23 배포** — SPEC 6.2, 6.3
-  - 의존: T18, T21, T22
+  - 의존: T18, T21, T22, T22b
   - 산출물:
     - functions 배포 묶음 확인: esbuild가 `@musicweb/shared`를 묶고, `workspace:` 개발 의존성이 Cloud Build 설치를 깨지 않게 한다(D-027). 손으로 만든 YouTube 응답을 실제 녹화본으로 바꾼다(T10)
     - Firebase 프로젝트(Blaze), 월 예산 알림 $10, Functions 예산 정지, App Check(reCAPTCHA Enterprise) 강제
