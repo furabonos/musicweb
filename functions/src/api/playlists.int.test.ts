@@ -67,8 +67,8 @@ describe('playlists-create (가짜 AI·음악 데이터)', () => {
     expect(out.shortfall).toBeNull();
     expect(out.items.every((i) => i.videoId?.startsWith('demoVid'))).toBe(true);
     expect(out.items.map((i) => i.songId)).not.toContain(DEMO_SEED.mbid);
-    // 기본은 미리 계산한 방식(AI 없이 고르기, D-040): 출처 문장. AI가 고르는 이유는 recommendMode ai에서
-    expect(out.items[0]?.reason).toBe('People who play Doja also play this.');
+    // 기본은 AI 방식(T31 측정, D-052): 가짜 AI가 화면 언어로 이유를 쓴다
+    expect(out.items[0]?.reason).toBe(FAKE_REASON.en('Doja'));
 
     const doc = (await db.doc(`playlists/${out.id}`).get()).data();
     expect(doc).toMatchObject({ ownerUid: uid, state: 'draft', locale: 'en' });
@@ -87,14 +87,18 @@ describe('playlists-create (가짜 AI·음악 데이터)', () => {
     expect(all.join('\n')).not.toContain(ADMIN);
   });
 
-  it('화면 언어가 한국어면 곡 이유도 한국어', async () => {
+  it('recommendMode precomputed면 AI 없이 고르고 출처 문장을 화면 언어로', async () => {
+    await db.doc('config/runtime').set({ recommendMode: 'precomputed' }, { merge: true });
     const { token } = await googleSignIn(ADMIN);
-    const out = await createOk(token, REQUEST, 'ko');
-    expect(out.items[0]?.reason).toBe('「Doja」 청취자들이 함께 듣는 곡이에요.');
+    expect((await createOk(token, REQUEST, 'en')).items[0]?.reason).toBe(
+      'People who play Doja also play this.',
+    );
+    expect((await createOk(token, REQUEST, 'ko')).items[0]?.reason).toBe(
+      '「Doja」 청취자들이 함께 듣는 곡이에요.',
+    );
   });
 
-  it('recommendMode ai면 AI가 화면 언어로 이유를 쓴다', async () => {
-    await db.doc('config/runtime').set({ recommendMode: 'ai' }, { merge: true });
+  it('기본(AI)이면 AI가 화면 언어로 이유를 쓴다', async () => {
     const { token } = await googleSignIn(ADMIN);
     expect((await createOk(token, REQUEST, 'en')).items[0]?.reason).toBe(FAKE_REASON.en('Doja'));
     expect((await createOk(token, REQUEST, 'ko')).items[0]?.reason).toBe(FAKE_REASON.ko('Doja'));
@@ -430,14 +434,32 @@ describe('저장된 해석·결과 (T32, D-048)', () => {
 
   it('규칙으로 읽히는 문장은 처음부터 AI 없이(rule)', async () => {
     const { token } = await googleSignIn(ADMIN);
+    // 미리 계산한 추천으로 설정하면 AI를 부르지 않는다
+    await db.doc('config/runtime').set({ recommendMode: 'precomputed' }, { merge: true });
     await createOk(token, REQUEST, 'en');
     expect(await parsedPaths()).toEqual(['rule']);
-    // 미리 계산한 추천(기본)이라 AI를 부르지 않았다
     expect(await usedAi()).toEqual([false]);
-    // AI 추천 방식이면 후보·고르기에서 AI를 부른다
+    // AI 추천 방식(기본)이면 후보·고르기에서 AI를 부른다
     await db.doc('config/runtime').set({ recommendMode: 'ai' }, { merge: true });
     await createOk(token, 'something like Doja by Central Cee, 12 songs', 'en');
     expect(await usedAi()).toEqual([false, true]);
+  });
+
+  it('절약 모드면 저장된 AI 결과를 먼저 다시 쓰고(AI 호출 없음), 새로 만든 결과는 미리 계산 키에만 저장 (D-052)', async () => {
+    const { token } = await googleSignIn(ADMIN);
+    const a = await createOk(token, REQUEST, 'en');
+    expect(a.items[0]?.reason).toBe(FAKE_REASON.en('Doja')); // AI가 고른 결과, ai 키로 저장
+    expect((await db.collection('resultCache').get()).size).toBe(1);
+    const { enterSavingMode } = await import('../core/savingMode.js');
+    const { memoryEvents } = await import('../testing/music.js');
+    await enterSavingMode(db, memoryEvents().sink, new Date());
+    const b = await createOk(token, REQUEST, 'en');
+    expect(b.items.map((i) => i.songId)).toEqual(a.items.map((i) => i.songId));
+    expect(b.items[0]?.reason).toBe(FAKE_REASON.en('Doja'));
+    expect(await created()).toEqual([false, true]);
+    // 다른 곡 수: 저장된 AI 결과가 없으니 미리 계산으로 만들고 그 키에만 저장
+    await createOk(token, '12 songs like Doja by Central Cee', 'en');
+    expect((await db.collection('resultCache').get()).size).toBe(2);
   });
 
   it('같은 조합 두 번째 결과는 추천 계산 없이 같은 곡, 영상 ID는 저장하지 않음, 7일 지나면 다시 계산', async () => {
@@ -479,7 +501,10 @@ describe('저장된 해석·결과 (T32, D-048)', () => {
 describe('곡 고르기로 만들기 (T33)', () => {
   it('곡 ID·곡 수·조건으로 만들면 해석 단계가 없다(AI·규칙 해석 0건), 없는 곡 ID는 거부', async () => {
     // AI 비용 상한 0: AI를 한 번이라도 부르면 상한에 닿아 절약 모드가 켜진다 → 안 켜졌으면 AI 호출 0건
-    await db.doc('config/runtime').set({ limits: { service: { aiCostMicroUsd: 0 } } });
+    // (해석 단계가 없음을 보려고 추천은 미리 계산 방식으로. AI 방식이면 추천 단계는 AI를 쓴다, D-052)
+    await db
+      .doc('config/runtime')
+      .set({ recommendMode: 'precomputed', limits: { service: { aiCostMicroUsd: 0 } } });
     const { token } = await googleSignIn(ADMIN);
     const r = await callFunction(
       'playlists-create',

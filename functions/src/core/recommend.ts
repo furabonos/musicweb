@@ -170,7 +170,7 @@ export async function recommend(
   /**
    * spares: 요청 수 밖에 더 고를 예비 곡 수(바꾸기용, D-031). 조회·검색은 요청 수(req.count)까지만 한다.
    * ai: AI를 쓸 수 있는가(절약 모드·키 없음이면 아님). AI 비용 상한에 닿으면 onLimit(절약 모드 켜기)을 부른다.
-   * mode: 'precomputed'(기본 설정, D-040)면 AI 후보·AI 고르기를 쓰지 않는다. 'ai'면 AI를 쓸 수 있을 때 쓴다.
+   * mode: 'precomputed'(D-040)면 AI 후보·AI 고르기를 쓰지 않는다. 'ai'(기본 설정, D-052)면 AI를 쓸 수 있을 때 쓴다.
    */
   opts: {
     spares?: number;

@@ -765,7 +765,7 @@ describe('recommend — 미리 계산한 방식 (T30, D-047)', () => {
     return s;
   }
 
-  it('기본 경로에서 AI 호출 0건, 가까운 태그 곡이 먼 곡보다 앞, 같은 아티스트 연속 없음, 태그 이유 문장', async () => {
+  it('미리 계산 경로(AI를 쓸 수 없을 때)에서 AI 호출 0건, 가까운 태그 곡이 먼 곡보다 앞, 같은 아티스트 연속 없음, 태그 이유 문장', async () => {
     const { ports, calls, events } = precomputedWorld();
     const r = await recommend(ports, req({ count: 5 }), { uid: 'u1' }, { mode: 'precomputed' });
     if (!r.ok) throw new Error('fail');
