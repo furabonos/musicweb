@@ -38,11 +38,11 @@ export const FIXTURES: [string, string][] = [
   ],
   [
     'mb-recording-karma-police.json',
-    `${MB}/recording/${KARMA_POLICE}?${qs({ inc: 'artist-credits+url-rels+genres+work-rels', fmt: 'json' })}`,
+    `${MB}/recording/${KARMA_POLICE}?${qs({ inc: 'artist-credits+url-rels+genres+tags+work-rels', fmt: 'json' })}`,
   ],
   [
     'mb-artist-radiohead.json',
-    `${MB}/artist/${RADIOHEAD}?${qs({ inc: 'url-rels+genres', fmt: 'json' })}`,
+    `${MB}/artist/${RADIOHEAD}?${qs({ inc: 'url-rels+genres+tags', fmt: 'json' })}`,
   ],
   [
     'lb-recording-search-karma-police.json',

@@ -6,7 +6,8 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./demo": "./src/demo/catalog.ts"
+    "./demo": "./src/demo/catalog.ts",
+    "./similarity": "./src/similarity/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

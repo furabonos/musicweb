@@ -33,6 +33,8 @@ export interface RecordingCandidate {
 export interface Genre {
   name: string;
   source: 'musicbrainz' | 'wikidata';
+  /** MusicBrainz 투표 수 (T28). Wikidata 장르는 없음 */
+  count?: number;
 }
 
 export interface RecordingDetail {
@@ -46,6 +48,8 @@ export interface RecordingDetail {
   /** 이 녹음이 연주한 작품. Wikidata P435로 영상 ID·장르를 더 찾는다. */
   workMbids: string[];
   genres: Genre[];
+  /** 사용자 태그(T28, 숫자 묶음 재료). CC BY-NC-SA: 비상업·출처 표시(스킬 music-data-terms) */
+  tags: Genre[];
 }
 
 export interface ArtistDetail {
@@ -57,6 +61,7 @@ export interface ArtistDetail {
   youtubeMusicChannelIds: string[];
   wikidataId: string | null;
   genres: Genre[];
+  tags: Genre[];
 }
 
 /** Lucene 특수 문자를 이스케이프하고 따옴표로 감싼다. 검색어 안의 연산자가 질의를 바꾸지 못한다. */
@@ -91,12 +96,17 @@ function firstArtist(credit: unknown): { name: string; mbid: string | null } | n
   return capped ? { name: capped, mbid } : null;
 }
 
+/** 장르·태그 목록: 이름(60자)과 투표 수. 투표 수가 0 이하인(반대표가 많은) 것은 버린다 */
 function parseGenres(v: unknown): Genre[] {
-  return arr(v)
-    .map(obj)
-    .map((g) => text(g?.name, 60))
-    .filter((n): n is string => n !== null)
-    .map((name) => ({ name, source: 'musicbrainz' as const }));
+  const out: Genre[] = [];
+  for (const g of arr(v).map(obj)) {
+    const name = text(g?.name, 60);
+    if (name === null) continue;
+    const c = g?.count;
+    if (typeof c === 'number' && c <= 0) continue;
+    out.push({ name, source: 'musicbrainz', ...(typeof c === 'number' ? { count: c } : {}) });
+  }
+  return out;
 }
 
 export function parseRecordingSearch(json: unknown): RecordingCandidate[] {
@@ -148,6 +158,7 @@ export function parseRecording(json: unknown): RecordingDetail | null {
     youtubeVideoIds: [...videos],
     workMbids: [...works],
     genres: parseGenres(r.genres),
+    tags: parseGenres(r.tags),
   };
 }
 
@@ -179,6 +190,7 @@ export function parseArtist(json: unknown): ArtistDetail | null {
     youtubeMusicChannelIds: [...musicChannels],
     wikidataId,
     genres: parseGenres(a.genres),
+    tags: parseGenres(a.tags),
   };
 }
 
@@ -205,7 +217,7 @@ export function createMusicBrainz(deps: MusicHttpDeps) {
     },
     async getRecording(mbid: string): Promise<RecordingDetail | null> {
       const params = new URLSearchParams({
-        inc: 'artist-credits+url-rels+genres+work-rels',
+        inc: 'artist-credits+url-rels+genres+tags+work-rels',
         fmt: 'json',
       });
       const { body } = await client.get(
@@ -215,7 +227,7 @@ export function createMusicBrainz(deps: MusicHttpDeps) {
       return parseRecording(body);
     },
     async getArtist(mbid: string): Promise<ArtistDetail | null> {
-      const params = new URLSearchParams({ inc: 'url-rels+genres', fmt: 'json' });
+      const params = new URLSearchParams({ inc: 'url-rels+genres+tags', fmt: 'json' });
       const { body } = await client.get(
         `${API}/artist/${assertMbid(mbid)}?${params}`,
         'musicbrainz.artist.get',

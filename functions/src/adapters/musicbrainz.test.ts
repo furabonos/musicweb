@@ -50,7 +50,32 @@ describe('녹화 응답 해석', () => {
       youtubeVideoIds: ['1uYWYWPc9HU'],
       workMbids: ['babefb9d-3d87-3378-bfac-e13f89ae7a48'],
     });
-    expect(r?.genres).toContainEqual({ name: 'alternative rock', source: 'musicbrainz' });
+    expect(r?.genres).toContainEqual({
+      name: 'alternative rock',
+      source: 'musicbrainz',
+      count: 13,
+    });
+  });
+
+  it('녹음·아티스트 태그와 투표 수(T28, 숫자 묶음 재료)', () => {
+    const r = parseRecording(fixture('mb-recording-karma-police.json'));
+    expect(r?.tags).toContainEqual({ name: 'alternative rock', source: 'musicbrainz', count: 13 });
+    expect(r?.tags.every((t) => t.source === 'musicbrainz' && (t.count ?? 1) > 0)).toBe(true);
+    const a = parseArtist(fixture('mb-artist-radiohead.json'));
+    expect(a?.tags).toContainEqual({ name: 'art rock', source: 'musicbrainz', count: 30 });
+    expect(a?.genres.length).toBeGreaterThan(0);
+  });
+
+  it('반대표가 더 많은(투표 수 0 이하) 태그는 버리고, 아주 긴 이름은 자른다', () => {
+    const r = parseRecording({
+      ...(fixture('mb-recording-karma-police.json') as object),
+      tags: [
+        { name: 'rock', count: 3 },
+        { name: 'not rock', count: -2 },
+        { name: 'x'.repeat(200), count: 1 },
+      ],
+    });
+    expect(r?.tags.map((t) => t.name)).toEqual(['rock', 'x'.repeat(60)]);
   });
 
   it('아티스트: 공식 YouTube 채널, YouTube Music 채널, Wikidata ID', () => {
@@ -117,6 +142,6 @@ describe('요청 만들기', () => {
     await createMusicBrainz(deps).getRecording(KARMA);
     const url = new URL(server.requests[0]?.url ?? '');
     expect(url.pathname).toBe(`/ws/2/recording/${KARMA}`);
-    expect(url.searchParams.get('inc')).toBe('artist-credits+url-rels+genres+work-rels');
+    expect(url.searchParams.get('inc')).toBe('artist-credits+url-rels+genres+tags+work-rels');
   });
 });

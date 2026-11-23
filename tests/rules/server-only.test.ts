@@ -16,6 +16,15 @@ const SERVER_ONLY = [
   'ingestQueueDays/2026-11-21',
   'githubStatsState/prs',
   'evalCaseIssues/s1_v1_blocked',
+  // T28 이후 미리 계산·캐시 (D-040, D-041)
+  'artistSimilar/a1',
+  'artistVectors/a1',
+  'parseCache/h1',
+  'resultCache/k1',
+  'reasonCache/k1',
+  'cooccur/p1',
+  'channelSongs/c1',
+  'songs/s1/private/label',
 ];
 const collectionOf = (path: string) => path.split('/').slice(0, -1).join('/');
 const WHO = { alice: as.alice, admin: as.admin, anon: as.anon };
