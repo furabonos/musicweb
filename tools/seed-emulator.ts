@@ -1,4 +1,5 @@
 import { DEMO_SONGS } from '../packages/shared/src/demo/catalog.ts';
+import { compareKey } from '../packages/shared/src/matching/normalize.ts';
 
 /**
  * 에뮬레이터 Firestore에 가짜 곡 목록을 넣는다 (T14, D-031).
@@ -35,6 +36,7 @@ export async function seedDemoCatalog(host = '127.0.0.1:8080', verifiedAt = new 
           artistMbid: str(s.artistMbid),
           title: str(s.title),
           key: str(s.key),
+          titleKey: str(compareKey(s.title)),
           releaseYear: { integerValue: String(s.releaseYear) },
           source: str('demo'),
         },

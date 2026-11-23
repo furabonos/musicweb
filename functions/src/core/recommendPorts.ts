@@ -1,4 +1,5 @@
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
+import { compareKey } from '@musicweb/shared';
 import type { createLastfm } from '../adapters/lastfm.js';
 import type { createListenBrainz } from '../adapters/listenbrainz.js';
 import type { Llm } from '../adapters/llm.js';
@@ -70,6 +71,7 @@ export function firestoreRecommendPorts(deps: {
           artistMbid: song.artistMbid,
           title: song.title,
           key: songKey(song.artist, song.title),
+          titleKey: compareKey(song.title),
           releaseYear: song.releaseYear,
           source: 'musicbrainz',
           updatedAt: FieldValue.serverTimestamp(),

@@ -437,6 +437,8 @@ async function linkVideo(
       title: recording.title,
       // 이름으로 찾기용(추천의 Last.fm·AI 후보, T13)
       key: songKey(recording.artist, recording.title),
+      // 제목으로 찾기(곡 고르기 제안, T33)
+      titleKey: compareKey(recording.title),
       releaseYear: recording.firstReleaseYear,
       source: 'musicbrainz',
       updatedAt: FieldValue.serverTimestamp(),

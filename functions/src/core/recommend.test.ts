@@ -885,6 +885,36 @@ describe('recommend — 미리 계산한 방식 (T30, D-047)', () => {
     expect(r.items.filter((i) => i.artist === 'Radiohead')).toHaveLength(2);
   });
 
+  it('상한은 곡 수의 20%(최소 2): 15곡이면 기준 아티스트 3곡까지', async () => {
+    const extra = Array.from({ length: 6 }, (_, k) => ({
+      mbid: mbid(50 + k),
+      artist: 'Radiohead',
+      artistMbid: RH,
+      title: `RH Track ${k}`,
+      releaseYear: 1997,
+    }));
+    const others = Array.from({ length: 14 }, (_, k) => ({
+      mbid: mbid(70 + k),
+      artist: `Other ${k}`,
+      artistMbid: null,
+      title: `Other Song ${k}`,
+      releaseYear: 1997,
+    }));
+    const all = [SEED, ...extra, ...others];
+    const { ports } = setup(
+      world({
+        catalog: all,
+        links: Object.fromEntries(
+          all.map((x, i) => [x.mbid, [link(`vv${String(i).padStart(9, '0')}`)]]),
+        ),
+        lbSimilar: [...extra, ...others],
+      }),
+    );
+    const r = await recommend(ports, req({ count: 15 }), { uid: 'u1' }, { mode: 'precomputed' });
+    if (!r.ok) throw new Error('fail');
+    expect(r.items.slice(0, 15).filter((i) => i.artist === 'Radiohead')).toHaveLength(3);
+  });
+
   it('mode ai면 예전처럼 AI가 고른다', async () => {
     const { ports, calls } = precomputedWorld();
     await recommend(ports, req({ count: 3 }), { uid: 'u1' }, { mode: 'ai' });

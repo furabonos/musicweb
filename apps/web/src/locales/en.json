@@ -212,5 +212,17 @@
   "errors.not_understood": "Right now we can only read requests like “Song by Artist” or “Artist - Song”.",
   "admin.savingModeOn": "Saving mode is on today (automatic, the AI cost limit was reached). It ends at midnight Pacific or when you raise the AI cost limit.",
   "admin.savingModeOff": "Saving mode is off.",
-  "savingMode.noAi": "Simple mode: sets are made without AI right now. Use the form “Song by Artist” or “Artist - Song”."
+  "savingMode.noAi": "Simple mode: sets are made without AI right now. Pick a song above, or type “Song by Artist”.",
+  "picker.title": "Pick a song",
+  "picker.song": "Song or artist",
+  "picker.placeholder": "Start typing a song or artist",
+  "picker.change": "Change",
+  "picker.count": "Songs",
+  "picker.conditions": "Include",
+  "picker.include.live": "Live",
+  "picker.include.cover": "Covers",
+  "picker.include.remix": "Remixes",
+  "picker.submit": "Make the set",
+  "picker.orType": "…or describe it in your own words:",
+  "errors.seedSongNotFound": "That song is no longer in our catalog. Pick another one."
 }

@@ -707,3 +707,95 @@ a.btn-ghost {
   align-items: center;
   align-self: center;
 }
+
+/* 곡 고르기 (T33) */
+.picker {
+  width: 100%;
+  max-width: 860px;
+  margin: 28px auto 0;
+  text-align: left;
+}
+.picker h2 {
+  margin: 0 0 14px;
+  font-size: 20px;
+}
+.picker-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin-top: 12px;
+}
+.picker-song {
+  flex: 1 1 360px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.picker label,
+.picker-count span {
+  font-size: 13px;
+  color: var(--text-2);
+}
+.picker-count {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.picker input,
+.picker select {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font: inherit;
+}
+.picker-chosen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 8px 8px 14px;
+  border-radius: 12px;
+  background: var(--row-active);
+}
+.picker-options {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+}
+.picker-option {
+  color: var(--text-2);
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.picker-option:hover,
+.picker-option[data-active='true'] {
+  background: var(--row-active);
+  color: var(--text);
+}
+.picker-options strong {
+  color: var(--text);
+  margin-right: 6px;
+}
+.picker-toggle[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}
+.picker-or {
+  color: var(--muted);
+  margin: 22px 0 10px;
+  font-size: 14px;
+}

@@ -1,3 +1,4 @@
+import { compareKey } from '@musicweb/shared';
 import { Timestamp, type Firestore } from 'firebase-admin/firestore';
 import { DEMO_SONGS } from '@musicweb/shared/demo';
 
@@ -12,6 +13,7 @@ export async function seedDemoCatalog(db: Firestore, verifiedAt = new Date()) {
       artistMbid: s.artistMbid,
       title: s.title,
       key: s.key,
+      titleKey: compareKey(s.title),
       releaseYear: s.releaseYear,
       source: 'demo',
     });

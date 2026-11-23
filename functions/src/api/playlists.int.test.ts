@@ -462,3 +462,60 @@ describe('저장된 해석·결과 (T32, D-048)', () => {
     expect((await parsedPaths()).at(-1)).toBe('cache');
   });
 });
+
+describe('곡 고르기로 만들기 (T33)', () => {
+  it('곡 ID·곡 수·조건으로 만들면 해석 단계가 없다(AI·규칙 해석 0건), 없는 곡 ID는 거부', async () => {
+    // AI 비용 상한 0: AI를 한 번이라도 부르면 상한에 닿아 절약 모드가 켜진다 → 안 켜졌으면 AI 호출 0건
+    await db.doc('config/runtime').set({ limits: { service: { aiCostMicroUsd: 0 } } });
+    const { token } = await googleSignIn(ADMIN);
+    const r = await callFunction(
+      'playlists-create',
+      {
+        seedSongId: DEMO_SEED.mbid,
+        count: 12,
+        include: { live: true, cover: false, remix: false },
+        locale: 'en',
+      },
+      token,
+    );
+    expect(r.error).toBeUndefined();
+    const out = r.result as Created;
+    expect(out.ok).toBe(true);
+    expect(out.items).toHaveLength(12);
+    expect((r.result as { seed: unknown }).seed).toEqual({
+      artist: DEMO_SEED.artist,
+      title: DEMO_SEED.title,
+    });
+    const parsedEvents = await db
+      .collection('events')
+      .where('type', 'in', ['request_parsed', 'request_parse_failed'])
+      .get();
+    expect(parsedEvents.size).toBe(0);
+    expect((await db.collection('parseCache').get()).size).toBe(0);
+    expect((await db.doc('config/runtime').get()).get('savingMode')).toBeUndefined();
+
+    const missing = await callFunction(
+      'playlists-create',
+      {
+        seedSongId: 'nope',
+        count: 10,
+        include: { live: false, cover: false, remix: false },
+        locale: 'en',
+      },
+      token,
+    );
+    expect(missing.error?.status).toBe('NOT_FOUND');
+    expect(missing.error?.details).toEqual({ reason: 'seedSongNotFound' });
+    const bad = await callFunction(
+      'playlists-create',
+      {
+        seedSongId: DEMO_SEED.mbid,
+        count: 40,
+        include: { live: false, cover: false, remix: false },
+        locale: 'en',
+      },
+      token,
+    );
+    expect(bad.error?.status).toBe('INVALID_ARGUMENT');
+  });
+});

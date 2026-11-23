@@ -119,6 +119,19 @@ export type AdminAction =
   | 'setExportTester'
   | 'runJob';
 
+/** 곡 고르기(T33) */
+export interface SongSuggestion {
+  songId: string;
+  artist: string;
+  title: string;
+  releaseYear: number | null;
+}
+export interface PickInput {
+  seedSongId: string;
+  count: number;
+  include: { live: boolean; cover: boolean; remix: boolean };
+}
+
 export interface SignedInUser {
   uid: string;
 }
@@ -129,6 +142,10 @@ export interface MusicwebApi {
   signIn(): Promise<void>;
   signOut(): Promise<void>;
   create(text: string, locale: Locale): Promise<CreateResult>;
+  /** 곡 고르기로 만들기(해석 단계 없음, T33) */
+  createFromSong(input: PickInput, locale: Locale): Promise<CreateResult>;
+  /** 곡 목록에서 이름 앞부분으로 찾기(최대 10개) */
+  suggest(q: string): Promise<SongSuggestion[]>;
   update(
     id: string,
     action: 'remove' | 'replace',

@@ -212,5 +212,17 @@
   "errors.not_understood": "지금은 “곡 by 아티스트” 또는 “아티스트 - 곡” 형식만 알아들을 수 있어요.",
   "admin.savingModeOn": "오늘 절약 모드가 켜져 있습니다(자동, AI 비용 상한 도달). 태평양 자정이 지나거나 AI 비용 상한을 올리면 꺼집니다.",
   "admin.savingModeOff": "절약 모드는 꺼져 있습니다.",
-  "savingMode.noAi": "간단 모드: 지금은 AI 없이 재생목록을 만들어요. “곡 by 아티스트” 또는 “아티스트 - 곡” 형식으로 입력해 주세요."
+  "savingMode.noAi": "간단 모드: 지금은 AI 없이 재생목록을 만들어요. 위에서 곡을 고르거나 “곡 by 아티스트” 형식으로 입력해 주세요.",
+  "picker.title": "곡 고르기",
+  "picker.song": "곡 또는 아티스트",
+  "picker.placeholder": "곡이나 아티스트 이름을 입력하세요",
+  "picker.change": "바꾸기",
+  "picker.count": "곡 수",
+  "picker.conditions": "포함",
+  "picker.include.live": "라이브",
+  "picker.include.cover": "커버",
+  "picker.include.remix": "리믹스",
+  "picker.submit": "재생목록 만들기",
+  "picker.orType": "…또는 말로 적어도 돼요:",
+  "errors.seedSongNotFound": "그 곡은 이제 목록에 없어요. 다른 곡을 골라 주세요."
 }
