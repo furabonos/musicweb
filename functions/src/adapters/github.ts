@@ -288,3 +288,110 @@ export function firestoreIssueBudget(db: Firestore): IssueBudget {
     call: () => consume(db, { service: { githubCalls: 1 }, feature: 'autoIssue' }),
   };
 }
+
+/** GitHub 응답 중 현황판에 쓰는 필드 (T21) */
+export interface GhIssue {
+  number: number;
+  created_at: string;
+  labels: { name: string }[];
+  pull_request?: unknown;
+}
+export interface GhPull {
+  number: number;
+  state: 'open' | 'closed';
+  created_at: string;
+  closed_at: string | null;
+  merged_at: string | null;
+  merge_commit_sha: string | null;
+  head: { ref: string; sha: string };
+  body: string | null;
+  labels: { name: string }[];
+  html_url: string;
+}
+export interface GhCommit {
+  sha: string;
+  commit: { message: string };
+}
+
+export interface GitHubReadBudget {
+  /** 요청 한 번마다 githubCalls 1 */
+  call(): Promise<void>;
+}
+
+/**
+ * GitHub 읽기 (현황판 수치, T21, D-042). 이 저장소만, 읽기만. 요청마다 githubCalls 상한을 먼저 쓴다.
+ * 한 번 실행에 이슈 1 + PR 1 + 커밋 1 + CI(최근 자동 수정 PR 최대 10) = 최대 13회.
+ */
+export function createGitHubReader(deps: {
+  token: string;
+  events: EventSink;
+  budget: GitHubReadBudget;
+  fetch?: typeof fetch;
+  timeoutMs?: number;
+}) {
+  if (!deps.token) throw new Error('GitHub 토큰이 비었습니다.');
+  const f = deps.fetch ?? fetch;
+  const get = async <T>(
+    op: 'github.issues.list' | 'github.pulls.list' | 'github.commits.list' | 'github.checks.list',
+    path: string,
+  ): Promise<T> => {
+    await deps.budget.call();
+    return recordCall(
+      deps.events,
+      { target: 'github', op },
+      async () => {
+        const res = await f(`${API}${path}`, {
+          headers: {
+            Accept: 'application/vnd.github+json',
+            Authorization: `Bearer ${deps.token}`,
+            'X-GitHub-Api-Version': '2022-11-28',
+            'User-Agent': 'musicweb-status',
+          },
+          signal: AbortSignal.timeout(deps.timeoutMs ?? GITHUB_TIMEOUT_MS),
+        });
+        if (!res.ok) {
+          await res.body?.cancel();
+          throw new GitHubError(res.status);
+        }
+        return { result: (await res.json()) as T, status: res.status };
+      },
+      (err) => (err instanceof GitHubError ? { status: err.status } : {}),
+    );
+  };
+  const iso = (d: Date) => d.toISOString().replace(/\.\d{3}Z$/, 'Z');
+  return {
+    listIssues: (since: Date) =>
+      get<GhIssue[]>(
+        'github.issues.list',
+        `/issues?${new URLSearchParams({ state: 'all', since: iso(since), per_page: '100' })}`,
+      ),
+    listPulls: () =>
+      get<GhPull[]>(
+        'github.pulls.list',
+        `/pulls?${new URLSearchParams({ state: 'all', sort: 'created', direction: 'desc', per_page: '100' })}`,
+      ),
+    listMainCommits: (since: Date) =>
+      get<GhCommit[]>(
+        'github.commits.list',
+        `/commits?${new URLSearchParams({ sha: 'main', since: iso(since), per_page: '100' })}`,
+      ),
+    /** 그 커밋의 필수 검사 "ci" 결과 */
+    async ciState(sha: string): Promise<'success' | 'failure' | 'pending' | 'unknown'> {
+      if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error('커밋 해시가 이상합니다.');
+      const r = await get<{ check_runs: { status: string; conclusion: string | null }[] }>(
+        'github.checks.list',
+        `/commits/${sha}/check-runs?${new URLSearchParams({ check_name: 'ci', per_page: '1' })}`,
+      );
+      const run = r.check_runs[0];
+      if (!run) return 'unknown';
+      if (run.status !== 'completed') return 'pending';
+      return run.conclusion === 'success' ? 'success' : 'failure';
+    },
+  };
+}
+export type GitHubReader = ReturnType<typeof createGitHubReader>;
+
+/** 현황판 GitHub 읽기 상한: githubCalls(자동 이슈와 같이 씀). 긴급 정지 대상은 아니다(읽기만). */
+export function firestoreGitHubReadBudget(db: Firestore): GitHubReadBudget {
+  return { call: () => consume(db, { service: { githubCalls: 1 } }) };
+}

@@ -352,10 +352,17 @@ async function step(
   filtered: number,
   hallucinated: number,
   uid: string,
+  usedSearch?: boolean,
 ) {
   await ports.events.record({
     type: 'recommend_step',
-    attrs: { step: name, candidates, filtered, hallucinated },
+    attrs: {
+      step: name,
+      candidates,
+      filtered,
+      hallucinated,
+      ...(usedSearch === undefined ? {} : { usedSearch }),
+    },
     outcome: 'ok',
     actorUid: uid,
   });
@@ -505,7 +512,7 @@ async function lookup(
       throw err;
     }
   }
-  await step(ports, 'lookup', tried, tried - found.length, 0, user.uid);
+  await step(ports, 'lookup', tried, tried - found.length, 0, user.uid, searches > 0);
   return found;
 }
 

@@ -1,0 +1,18 @@
+{
+  "bbbb000000000000000000000000000000000001": {
+    "total_count": 1,
+    "check_runs": [{ "name": "ci", "status": "completed", "conclusion": "success" }]
+  },
+  "bbbb000000000000000000000000000000000002": {
+    "total_count": 1,
+    "check_runs": [{ "name": "ci", "status": "completed", "conclusion": "failure" }]
+  },
+  "bbbb000000000000000000000000000000000003": {
+    "total_count": 1,
+    "check_runs": [{ "name": "ci", "status": "completed", "conclusion": "success" }]
+  },
+  "bbbb000000000000000000000000000000000004": {
+    "total_count": 1,
+    "check_runs": [{ "name": "ci", "status": "in_progress", "conclusion": null }]
+  }
+}

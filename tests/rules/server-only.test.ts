@@ -14,6 +14,7 @@ const SERVER_ONLY = [
   'lastfmCache/k1',
   'ingestQueue/q1',
   'ingestQueueDays/2026-11-21',
+  'githubStatsState/prs',
 ];
 const collectionOf = (path: string) => path.split('/').slice(0, -1).join('/');
 const WHO = { alice: as.alice, admin: as.admin, anon: as.anon };

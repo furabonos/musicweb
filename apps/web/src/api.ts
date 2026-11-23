@@ -53,6 +53,38 @@ export interface SharedPlaylist {
   openLink: OpenLinkMode;
 }
 
+/** 공개 현황판(`/status`, T21). 서버 `functions/src/api/status.ts`의 응답 모양 */
+export interface StatusMetric {
+  value: number | null;
+  unit: 'rate' | 'count' | 'score' | 'hours';
+  /** 계산 방법(서버가 쓴 영어 고정 문장) */
+  method: string;
+}
+export interface StatusRecentFix {
+  number: number;
+  url: string;
+  state: string | null;
+  ci: string | null;
+  openedAt: string | null;
+  reverted: boolean;
+  rejectReason: string | null;
+}
+export interface StatusData {
+  updatedAt: string | null;
+  service: Record<string, StatusMetric>;
+  catalog: Record<string, StatusMetric>;
+  github:
+    | { unavailable: string }
+    | {
+        updatedAt: string | null;
+        metrics: Record<string, StatusMetric>;
+        rejectReasons: { reason: string; count: number }[];
+        recent: StatusRecentFix[];
+      }
+    | null;
+  opsLog: { at: string | null; kind: string | null; message: string | null; links: string[] }[];
+}
+
 export interface SignedInUser {
   uid: string;
 }
@@ -75,4 +107,6 @@ export interface MusicwebApi {
   getPlaylist(id: string): Promise<SharedPlaylist>;
   /** "YouTube에서 열기" 방식(D-006) */
   siteConfig(): Promise<{ openLink: OpenLinkMode }>;
+  /** 공개 현황판 수치와 운영 일지 (로그인 불필요) */
+  status(): Promise<StatusData>;
 }

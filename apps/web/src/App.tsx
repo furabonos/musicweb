@@ -13,6 +13,7 @@ import { useI18n, type MessageKey } from './i18n';
 import { OpenInYouTube } from './OpenInYouTube';
 import { Player, type PlayerHandle } from './player/Player';
 import { SharedView } from './SharedView';
+import { StatusView } from './StatusView';
 import { SongRow } from './SongRow';
 
 /** 검색창 글자 수 상한. 서버(parseRequest)와 같게 코드 포인트로 센다. */
@@ -78,6 +79,7 @@ export function App({
   path?: string;
 }) {
   const shareId = sharedId(path);
+  const isStatus = /^\/status\/?$/.test(path);
   const { locale, setLocale, t } = useI18n();
   const [user, setUser] = useState<SignedInUser | null>(null);
   const [text, setText] = useState('');
@@ -96,7 +98,7 @@ export function App({
   useEffect(() => api.onUser(setUser), [api]);
   useEffect(() => {
     // 공유 화면은 playlists-get 응답에 방식이 같이 온다
-    if (shareId) return;
+    if (shareId || isStatus) return;
     let live = true;
     // 설정을 못 읽으면 기본(direct)으로 둔다. 링크가 깨졌을 때만 fallback이 저장된다.
     api
@@ -106,7 +108,7 @@ export function App({
     return () => {
       live = false;
     };
-  }, [api, shareId]);
+  }, [api, shareId, isStatus]);
 
   const used = countChars(text);
   const over = used > MAX_REQUEST_CHARS;
@@ -204,6 +206,8 @@ export function App({
       <main>
         {shareId ? (
           <SharedView api={api} music={music} id={shareId} />
+        ) : isStatus ? (
+          <StatusView api={api} />
         ) : (
           <>
             <section className="wrap hero">
