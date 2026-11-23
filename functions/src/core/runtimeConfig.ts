@@ -48,7 +48,7 @@ export const DEFAULT_RUNTIME: RuntimeConfig = {
       ytUnits: 9_000,
       ytSearchUser: 80,
       ytSearchJob: 20,
-      aiCostMicroUsd: 1_000_000, // $1
+      aiCostMicroUsd: 3_000_000, // $3. 평소에 닿는 한도가 아니라 폭주 방지용. 넘으면 절약 모드(D-039)
       exports: 5,
       autoIssues: 5,
       autoFixes: 3, // 자동 수정(Claude Code Action) 실행. 실제 차감은 T20에서 연결
@@ -79,10 +79,23 @@ export type LimitsPatch = {
   user?: Partial<Record<UserCounter, number>>;
 };
 
+/** 절약 모드 (SPEC 3.4, T22b). 서버가 자동으로 쓴다(core/savingMode.ts). 관리자 함수로는 쓰지 못한다 */
+export const savingModeSchema = z.strictObject({
+  active: z.boolean(),
+  /** 켜진 날(태평양). 날이 바뀌면 꺼진 것으로 본다 */
+  day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  since: z.unknown(),
+  reason: z.enum(['ai_limit']),
+  /** 켜질 때의 AI 비용 상한. 관리자가 올리면 꺼진다 */
+  limitAtStart: z.number().int().nonnegative(),
+});
+export type SavingModeDoc = z.infer<typeof savingModeSchema>;
+
 const docSchema = z.strictObject({
   killSwitches: partialRecord(FEATURES, z.boolean()).optional(),
   youtubeOpenLink: z.enum(OPEN_LINK_MODES).optional(),
   limits: limitsPatchSchema.optional(),
+  savingMode: savingModeSchema.optional(),
 });
 
 export class RuntimeConfigError extends Error {

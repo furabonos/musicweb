@@ -361,9 +361,17 @@ describe('playlists-get / site-config (T16)', () => {
   });
 
   it('site-config는 로그인 없이 "YouTube에서 열기" 방식을 알려 줌', async () => {
-    expect((await callFunction('site-config', {})).result).toEqual({ openLink: 'direct' });
+    expect((await callFunction('site-config', {})).result).toEqual({
+      openLink: 'direct',
+      savingMode: false,
+      noAi: false,
+    });
     await db.doc('config/runtime').set({ youtubeOpenLink: 'fallback' });
-    expect((await callFunction('site-config', {})).result).toEqual({ openLink: 'fallback' });
+    expect((await callFunction('site-config', {})).result).toEqual({
+      openLink: 'fallback',
+      savingMode: false,
+      noAi: false,
+    });
   });
 
   it('설정 문서가 깨져도 공유 화면은 열리고 곡별 링크(fallback)로 답함', async () => {
@@ -374,6 +382,10 @@ describe('playlists-get / site-config (T16)', () => {
     const r = await callFunction('playlists-get', { id });
     expect(r.error).toBeUndefined();
     expect((r.result as { openLink: string }).openLink).toBe('fallback');
-    expect((await callFunction('site-config', {})).result).toEqual({ openLink: 'fallback' });
+    expect((await callFunction('site-config', {})).result).toEqual({
+      openLink: 'fallback',
+      savingMode: false,
+      noAi: false,
+    });
   });
 });

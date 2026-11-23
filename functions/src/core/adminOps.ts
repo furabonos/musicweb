@@ -3,6 +3,7 @@ import { pacificDay } from './day.js';
 import { JOBS } from './events.js';
 import { addOpsLogInTx } from './opsLog.js';
 import { readRuntimeConfig, SERVICE_COUNTERS } from './runtimeConfig.js';
+import { savingModeState } from './savingMode.js';
 
 /**
  * 관리자 작업 (SPEC 4.11, T22, D-043). api/admin.ts가 관리자 확인 뒤 부른다.
@@ -216,7 +217,7 @@ export interface JobResult {
 
 export async function adminOverview(db: Firestore, now = new Date()) {
   const since = Timestamp.fromMillis(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const [config, usage, jobSnap, artists, testers, blocked] = await Promise.all([
+  const [config, usage, jobSnap, artists, testers, blocked, rawRuntime] = await Promise.all([
     readRuntimeConfig(db),
     db.doc(`usage/${pacificDay(now)}`).get(),
     db
@@ -229,6 +230,7 @@ export async function adminOverview(db: Firestore, now = new Date()) {
     db.collection('artists').orderBy('name').limit(500).get(),
     db.collection('users').where('exportTester', '==', true).limit(MAX_TESTERS).get(),
     db.collection('users').where('blocked', '==', true).limit(200).get(),
+    db.doc('config/runtime').get(),
   ]);
 
   const jobs: JobResult[] = [];
@@ -253,6 +255,8 @@ export async function adminOverview(db: Firestore, now = new Date()) {
   const iso = (v: unknown) => (v instanceof Timestamp ? v.toDate().toISOString() : null);
   return {
     killSwitches: config.killSwitches,
+    // 절약 모드는 자동(SPEC 3.4). 관리자 화면은 상태만 보여 준다. 날이 지난 것은 꺼진 것으로
+    savingMode: savingModeState(rawRuntime.data(), now).active,
     limits: config.limits,
     usage: { day: pacificDay(now), used },
     jobs,

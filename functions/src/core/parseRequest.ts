@@ -32,11 +32,14 @@ export interface ParsedRequest {
   unsupported: (typeof UNSUPPORTED)[number][];
 }
 
-export type ParseFailReason = 'empty' | 'too_long' | 'no_output' | 'schema_invalid';
+/** not_understood: AI 없이(절약 모드·키 없음·AI 오류) 규칙으로도 기준 곡을 못 읽음 — 사용자에게 다시 묻는다 */
+export type ParseFailReason =
+  'empty' | 'too_long' | 'no_output' | 'schema_invalid' | 'not_understood';
 /** 추천(T13)이 남기는 해석 실패: 기준 곡이 없음 / 음악 데이터에서 못 찾음 */
 export type SeedFailReason = 'no_seed' | 'seed_not_found';
+/** via: 규칙으로 읽었는지 AI로 읽었는지(규칙으로 읽은 기준 곡을 못 찾으면 AI로 다시 읽는다, D-044) */
 export type ParseResult =
-  { ok: true; value: ParsedRequest } | { ok: false; reason: ParseFailReason };
+  { ok: true; value: ParsedRequest; via?: 'rule' | 'ai' } | { ok: false; reason: ParseFailReason };
 
 /** AI에 주는 출력 형식. 구조화 출력이 지키고, 받은 뒤 OUTPUT으로 다시 검사한다. */
 export const OUTPUT_SCHEMA = {

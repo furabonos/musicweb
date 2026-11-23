@@ -25,6 +25,7 @@ import {
 import { runAutoIssue } from './autoIssue.js';
 import { runGithubStats } from './githubStats.js';
 import { runMetrics } from './metrics.js';
+import { readSavingMode } from '../core/savingMode.js';
 
 /**
  * 예약 작업 (SPEC 4.4). 태평양 시간 기준, YouTube 할당 초기화(자정) 뒤에 차례로 돈다:
@@ -245,6 +246,8 @@ async function ingestJudge(
   db: ReturnType<typeof getFirestore>,
   events: ReturnType<typeof firestoreEventSink>,
 ): Promise<{ judge?: ReturnType<typeof createJudge> }> {
+  // 절약 모드면 AI 판정 없이 수집한다(애매한 연결은 pending_ai, SPEC 3.4)
+  if (await readSavingMode(db, events)) return {};
   try {
     const llm = createLlm({
       apiKey: secrets.ANTHROPIC_API_KEY.value(),

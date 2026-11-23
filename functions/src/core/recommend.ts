@@ -21,7 +21,9 @@ import type { ParsedRequest, SeedFailReason } from './parseRequest.js';
  * 4. 부족하면 조회: 곡마다 곡 목록 → 음악 데이터 링크(MusicBrainz URL 관계·Wikidata P1651 → videos.list) → 검색(한도 안).
  *    찾은 연결은 곡 목록에 저장한다.
  * 5. AI가 후보 목록 **안에서만** 요청 수만큼 고르고 순서와 한 줄 이유(화면 언어)를 쓴다. 목록 밖 id는 버린다.
- *    AI가 모자라게 고르거나 실패하면 점수 순으로 채운다(이유 없음).
+ *    AI가 모자라게 고르면 점수 순으로 채운다(이유 없음).
+ * AI 없는 방식(SPEC 3.4, T22b): 절약 모드·AI 키 없음·AI 오류면 AI 후보·AI 고르기를 건너뛰고
+ *    점수 순으로 고르되 같은 아티스트가 이어지지 않게 하고, 출처별 고정 이유 문장(화면 언어)을 단다. ai_fallback 이벤트.
  * 6. 곡이 모자라면 모자란 대로 돌려주고 이유 코드를 붙인다.
  *
  * 외부 호출은 모두 포트(어댑터)를 거친다. 음악 데이터 출처 장애는 그 출처만 건너뛴다.
@@ -123,13 +125,21 @@ export async function recommend(
   ports: RecommendPorts,
   req: ParsedRequest,
   user: { uid: string },
-  /** spares: 요청 수 밖에 더 고를 예비 곡 수(바꾸기용, D-031). 조회·검색은 요청 수(req.count)까지만 한다. */
-  opts: { spares?: number } = {},
+  /**
+   * spares: 요청 수 밖에 더 고를 예비 곡 수(바꾸기용, D-031). 조회·검색은 요청 수(req.count)까지만 한다.
+   * ai: AI를 쓸 수 있는가(절약 모드·키 없음이면 아님). AI 비용 상한에 닿으면 onLimit(절약 모드 켜기)을 부른다.
+   */
+  opts: {
+    spares?: number;
+    ai?: { mode: 'on' | 'saving' | 'no_key'; onLimit?: () => Promise<void> };
+  } = {},
 ): Promise<RecommendResult> {
   const now = (ports.now ?? (() => new Date()))();
   const L = RECOMMEND_LIMITS;
   const include: Include = req.include;
   const actor = { actorUid: user.uid };
+  const ai = new AiState(ports, opts.ai, user.uid);
+  await ai.start();
 
   // 1. 기준 곡
   if (!req.seed) {
@@ -197,7 +207,7 @@ export async function recommend(
   }
   const lastfm = ports.music.lastfmSimilar;
   if (lastfm) add('lastfm', await soft(ports, () => lastfm(seed.artist, seed.title, L.lastfm), []));
-  add('ai', await aiCandidates(ports, seed, user.uid));
+  if (ai.on) add('ai', await aiCandidates(ports, seed, user.uid, ai));
   await step(ports, 'candidates', cands.size, 0, 0, user.uid);
 
   // 3. 곡 목록으로 걸러 내기
@@ -258,7 +268,9 @@ export async function recommend(
 
   // 5. AI가 목록 안에서 고르고 정렬
   const pool = playable.sort((a, b) => b.c.score - a.c.score).slice(0, L.maxPickPool);
-  const items = await aiPick(ports, seed, req, req.count + (opts.spares ?? 0), pool, user.uid);
+  const pickCount = req.count + (opts.spares ?? 0);
+  let items = ai.on ? await aiPick(ports, seed, req, pickCount, pool, user.uid, ai) : null;
+  if (!items) items = await rulePick(ports, seed, req, pickCount, pool, user.uid);
   return {
     ok: true,
     seed: {
@@ -347,7 +359,7 @@ async function soft<T>(ports: RecommendPorts, fn: () => Promise<T>, fallback: T)
 
 async function step(
   ports: RecommendPorts,
-  name: 'seed' | 'candidates' | 'catalog_filter' | 'lookup' | 'ai_pick',
+  name: 'seed' | 'candidates' | 'catalog_filter' | 'lookup' | 'ai_pick' | 'rule_pick',
   candidates: number,
   filtered: number,
   hallucinated: number,
@@ -375,7 +387,7 @@ const AI_CANDIDATES_SYSTEM = [
   'Answer only with the JSON format.',
 ].join('\n');
 
-async function aiCandidates(ports: RecommendPorts, seed: Seed, uid: string) {
+async function aiCandidates(ports: RecommendPorts, seed: Seed, uid: string, ai: AiState) {
   const n = RECOMMEND_LIMITS.aiCandidates;
   let out: unknown;
   try {
@@ -403,12 +415,13 @@ async function aiCandidates(ports: RecommendPorts, seed: Seed, uid: string) {
       actorUid: uid,
     });
   } catch (err) {
-    // AI 후보는 보조 출처: 한도 초과·장애면 없이 진행한다
+    // AI 후보는 보조 출처: 한도 초과·장애면 없이 진행하고, 이 요청은 AI 없는 방식으로 바꾼다
     await ports.events.record({
       type: 'error',
       attrs: { code: errName(err), where: 'recommend.ai_candidates' },
       outcome: 'error',
     });
+    await ai.failed(err);
     return [];
   }
   const songs = (out as { songs?: unknown } | null)?.songs;
@@ -568,7 +581,8 @@ async function aiPick(
   pickCount: number,
   pool: { c: Candidate; song: SongDoc; link: PlayableLink }[],
   uid: string,
-): Promise<RecommendItem[]> {
+  ai: AiState,
+): Promise<RecommendItem[] | null> {
   const ids = pool.map((_, i) => `c${i + 1}`);
   const item = (p: (typeof pool)[number], reason: string | null): RecommendItem => ({
     songId: p.song.mbid,
@@ -584,7 +598,7 @@ async function aiPick(
     await step(ports, 'ai_pick', 0, 0, 0, uid);
     return [];
   }
-  let out: unknown = null;
+  let out: unknown;
   try {
     out = await ports.llm.structured({
       op: 'llm.pick',
@@ -626,6 +640,9 @@ async function aiPick(
       attrs: { code: errName(err), where: 'recommend.ai_pick' },
       outcome: 'error',
     });
+    // AI 고르기가 실패하면 AI 없는 방식으로 고른다(고정 이유 문장)
+    await ai.failed(err);
+    return null;
   }
 
   const picks = (out as { picks?: unknown } | null)?.picks;
@@ -666,4 +683,101 @@ function cleanReason(v: unknown): string | null {
   if (typeof v !== 'string') return null;
   const s = v.replace(/\s+/g, ' ').trim();
   return s ? [...s].slice(0, RECOMMEND_LIMITS.maxReason).join('') : null;
+}
+
+/**
+ * 이 요청에서 AI를 쓸 수 있는지. 쓰지 못하게 되면(시작부터 또는 도중 실패) ai_fallback을 한 번만 남긴다.
+ * AI 비용 상한(aiCostMicroUsd)에 닿은 실패면 onLimit(절약 모드 켜기)을 부른다.
+ */
+class AiState {
+  on: boolean;
+  private recorded = false;
+  constructor(
+    private readonly ports: RecommendPorts,
+    private readonly opts:
+      { mode: 'on' | 'saving' | 'no_key'; onLimit?: () => Promise<void> } | undefined,
+    private readonly uid: string,
+  ) {
+    this.on = (opts?.mode ?? 'on') === 'on';
+  }
+  async start() {
+    const mode = this.opts?.mode ?? 'on';
+    if (mode !== 'on') await this.fallback(mode);
+  }
+  async failed(err: unknown) {
+    this.on = false;
+    if (err instanceof BudgetExceededError && err.counter === 'aiCostMicroUsd') {
+      await this.opts?.onLimit?.();
+      await this.fallback('saving');
+    } else {
+      await this.fallback('ai_error');
+    }
+  }
+  private async fallback(reason: 'saving' | 'no_key' | 'ai_error') {
+    if (this.recorded) return;
+    this.recorded = true;
+    await this.ports.events.record({
+      type: 'ai_fallback',
+      attrs: { reason },
+      outcome: 'ok',
+      actorUid: this.uid,
+    });
+  }
+}
+
+/** AI 없는 방식의 고정 이유 문장 (출처별, 화면 언어). 사용자 글은 들어가지 않고 곡 목록의 이름만 들어간다 */
+export function ruleReason(
+  source: Source,
+  seed: { artist: string; title: string },
+  locale: 'en' | 'ko',
+) {
+  if (locale === 'ko') {
+    // 영어 이름 뒤 조사(을/를, 와/과)를 틀리지 않게 조사 없이 쓴다
+    if (source === 'similar_artist')
+      return `${seed.artist} 팬이 좋아할 만한 비슷한 아티스트의 곡이에요.`;
+    if (source === 'lastfm') return `「${seed.title}」 다음에 자주 재생되는 곡이에요.`;
+    return `「${seed.title}」 청취자들이 함께 듣는 곡이에요.`;
+  }
+  if (source === 'similar_artist') return `From an artist similar to ${seed.artist}.`;
+  if (source === 'lastfm') return `Often played alongside ${seed.title}.`;
+  return `People who play ${seed.title} also play this.`;
+}
+
+/** 후보의 대표 출처: 가중치가 가장 큰 것 */
+const mainSource = (c: Candidate): Source =>
+  [...c.sources].sort((a, b) => WEIGHT[b] - WEIGHT[a])[0] ?? 'listenbrainz';
+
+/**
+ * AI 없이 고르기 (T22b): 점수 순으로 고르되 바로 앞 곡과 같은 아티스트는 건너뛴다(다른 후보가 없을 때만 허용).
+ */
+async function rulePick(
+  ports: RecommendPorts,
+  seed: Seed,
+  req: ParsedRequest,
+  pickCount: number,
+  pool: { c: Candidate; song: SongDoc; link: PlayableLink }[],
+  uid: string,
+): Promise<RecommendItem[]> {
+  const left = [...pool];
+  const chosen: RecommendItem[] = [];
+  let lastArtist: string | null = null;
+  while (left.length && chosen.length < pickCount) {
+    let idx = left.findIndex((p) => compareKey(p.song.artist) !== lastArtist);
+    if (idx < 0) idx = 0;
+    const [p] = left.splice(idx, 1);
+    if (!p) break;
+    lastArtist = compareKey(p.song.artist);
+    chosen.push({
+      songId: p.song.mbid,
+      artist: p.song.artist,
+      title: p.song.title,
+      releaseYear: p.song.releaseYear,
+      videoId: p.link.videoId,
+      kind: p.link.kind,
+      madeForKids: p.link.madeForKids,
+      reason: ruleReason(mainSource(p.c), seed, req.locale),
+    });
+  }
+  await step(ports, 'rule_pick', pool.length, 0, 0, uid);
+  return chosen;
 }

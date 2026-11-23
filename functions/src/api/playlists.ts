@@ -4,7 +4,7 @@ import { SUPPORTED_LOCALES } from '@musicweb/shared';
 import { z } from 'zod';
 import { createLastfm, firestoreLastfmCache } from '../adapters/lastfm.js';
 import { createListenBrainz } from '../adapters/listenbrainz.js';
-import { createLlm, firestoreLlmBudget, type Llm } from '../adapters/llm.js';
+import { createLlm, firestoreLlmBudget, LlmConfigError, type Llm } from '../adapters/llm.js';
 import { firestoreCallBudget } from '../adapters/music-http.js';
 import { createMusicBrainz } from '../adapters/musicbrainz.js';
 import { createWikidata } from '../adapters/wikidata.js';
@@ -14,7 +14,8 @@ import { MB_CONTACT, secrets } from '../config/secrets.js';
 import type { CallerAuth } from '../core/auth.js';
 import type { EventSink } from '../core/events.js';
 import { enqueueArtist } from '../core/ingestQueue.js';
-import { parseRequest } from '../core/parseRequest.js';
+import { parseFallback, parseWithFallback } from '../core/parseFallback.js';
+import { enterSavingMode, readSavingMode, savingModeState } from '../core/savingMode.js';
 import { createPlaylist, getPlaylist, savePlaylist, updatePlaylist } from '../core/playlists.js';
 import { readRuntimeConfig, RuntimeConfigError } from '../core/runtimeConfig.js';
 import { recommend, type RecommendPorts } from '../core/recommend.js';
@@ -65,9 +66,16 @@ function requireUid(auth: { uid?: string } | undefined): string {
 const fake = () => fakeExternalEnabled();
 
 /** 실제 어댑터(또는 에뮬레이터 가짜)로 추천 포트와 AI를 만든다. */
-function buildPorts(db: Firestore, events: EventSink): { ports: RecommendPorts; llm: Llm } {
+/** AI 키가 없을 때 넣는 자리. AI 없는 방식(aiMode no_key)이라 불리지 않는다 */
+const NO_LLM: Llm = {
+  structured: async () => {
+    throw new LlmConfigError('ANTHROPIC_API_KEY가 없습니다.');
+  },
+};
+
+function buildPorts(db: Firestore, events: EventSink): { ports: RecommendPorts; llm: Llm | null } {
   if (fake()) {
-    const llm = fakeLlm();
+    const llm = fakeLlm(firestoreLlmBudget(db));
     const base = firestoreRecommendPorts({
       db,
       mb: {} as never,
@@ -80,11 +88,17 @@ function buildPorts(db: Firestore, events: EventSink): { ports: RecommendPorts; 
     return { ports: { ...base, ...fakeMusicAndYt(), officialChannels: async () => [] }, llm };
   }
   const music = { events, budget: firestoreCallBudget(db), contact: MB_CONTACT.value() };
-  const llm = createLlm({
-    apiKey: secrets.ANTHROPIC_API_KEY.value(),
-    events,
-    budget: firestoreLlmBudget(db),
-  });
+  // 키가 없으면(사이트 AI 키 미정, D-039) AI 없는 방식으로 돈다
+  let llm: Llm | null = null;
+  try {
+    llm = createLlm({
+      apiKey: secrets.ANTHROPIC_API_KEY.value(),
+      events,
+      budget: firestoreLlmBudget(db),
+    });
+  } catch (err) {
+    if (!(err instanceof LlmConfigError)) throw err;
+  }
   const lastfmKey = secrets.LASTFM_API_KEY.value();
   const ports = firestoreRecommendPorts({
     db,
@@ -100,7 +114,7 @@ function buildPorts(db: Firestore, events: EventSink): { ports: RecommendPorts; 
       events,
       budget: firestoreYtBudget(db, 'create'),
     }),
-    llm,
+    llm: llm ?? NO_LLM,
     events,
   });
   return { ports, llm };
@@ -129,12 +143,40 @@ export const playlists = {
         const db = getFirestore();
         const events = callableEventSink(db);
         const { ports, llm } = buildPorts(db, events);
+        // 절약 모드·키 없음이면 AI 없이 (SPEC 3.4, D-039). AI 비용 상한에 닿으면 절약 모드를 켠다
+        const aiMode = !llm
+          ? ('no_key' as const)
+          : (await readSavingMode(db, events))
+            ? ('saving' as const)
+            : ('on' as const);
+        const onAiLimit = async () => void (await enterSavingMode(db, events));
         return createPlaylist(
           {
             db,
             events,
-            parse: (text, locale) => parseRequest({ llm, events, actorUid: uid }, text, locale),
-            recommend: (parsed, spares) => recommend(ports, parsed, { uid }, { spares }),
+            parse: (text, locale) =>
+              parseWithFallback({ llm, events, actorUid: uid, aiMode, onAiLimit }, text, locale),
+            rejectBeforeLimit: async (text, locale) =>
+              aiMode === 'on' || parseFallback(text, locale)
+                ? null
+                : parseWithFallback({ llm, events, actorUid: uid, aiMode }, text, locale),
+            ...(aiMode === 'on'
+              ? {
+                  reparseWithAi: (text: string, locale: 'en' | 'ko') =>
+                    parseWithFallback(
+                      { llm, events, actorUid: uid, aiMode, onAiLimit, skipRule: true },
+                      text,
+                      locale,
+                    ),
+                }
+              : {}),
+            recommend: (parsed, spares) =>
+              recommend(
+                ports,
+                parsed,
+                { uid },
+                { spares, ai: { mode: aiMode, onLimit: onAiLimit } },
+              ),
             enqueueArtist: (artist) => enqueueArtist(db, artist),
           },
           uid,
@@ -183,11 +225,27 @@ async function openLinkMode(db: Firestore) {
   }
 }
 
-/** 화면용 공개 설정(로그인 불필요): "YouTube에서 열기" 방식(D-006). */
+/** 절약 모드인가(화면 안내용). 요청 처리와 같은 판정(날 바뀜·상한 상향이면 꺼짐). 설정이 깨졌으면 false(부가 정보) */
+async function savingModeOn(db: Firestore): Promise<boolean> {
+  try {
+    return savingModeState((await db.doc('config/runtime').get()).data(), new Date()).active;
+  } catch {
+    return false;
+  }
+}
+
+/** 화면용 공개 설정(로그인 불필요): "YouTube에서 열기" 방식(D-006), 절약 모드 여부(SPEC 3.4). */
 export const site = {
-  config: onCall(() =>
+  // 키 값은 읽기만 해서 "AI 없음"인지 판단한다(값은 내보내지 않음)
+  config: onCall({ secrets: [secrets.ANTHROPIC_API_KEY] }, () =>
     handle(async () => {
-      return { openLink: await openLinkMode(getFirestore()) };
+      const db = getFirestore();
+      const noAi = !fake() && !secrets.ANTHROPIC_API_KEY.value().trim();
+      return {
+        openLink: await openLinkMode(db),
+        savingMode: await savingModeOn(db),
+        noAi,
+      };
     }),
   ),
 };

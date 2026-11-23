@@ -128,6 +128,9 @@ export function AdminView({ api, signedIn }: { api: MusicwebApi; signedIn: boole
       <div className="card status-card">
         <h3>{t('admin.killSwitches')}</h3>
         <p className="status-intro">{t('admin.killSwitchesHelp')}</p>
+        <p className="status-intro" data-testid="admin-saving-mode">
+          {t(o.savingMode ? 'admin.savingModeOn' : 'admin.savingModeOff')}
+        </p>
         <ul className="admin-switches">
           {FEATURES.map((f) => (
             <li key={f}>

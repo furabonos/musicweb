@@ -79,12 +79,19 @@ export const EVENT_SCHEMAS = {
   request_parsed: z.strictObject({ locale, requestedCount: count }),
   request_parse_failed: z.strictObject({ reason: id }),
   recommend_step: z.strictObject({
-    step: z.enum(['seed', 'candidates', 'catalog_filter', 'lookup', 'ai_pick']),
+    step: z.enum(['seed', 'candidates', 'catalog_filter', 'lookup', 'ai_pick', 'rule_pick']),
     candidates: count,
     filtered: count,
     hallucinated: count,
     // 곡 찾기(lookup) 단계에서 YouTube 검색을 한 번이라도 했는지 (현황판 "검색 없이 처리된 요청 비율", T21)
     usedSearch: z.boolean().optional(),
+  }),
+  // AI 없이 처리했다(절약 모드·키 없음·AI 오류, SPEC 3.4, T22b). 이유만
+  ai_fallback: z.strictObject({ reason: z.enum(['saving', 'no_key', 'ai_error']) }),
+  // 절약 모드 켜짐·꺼짐 (SPEC 3.4, T22b)
+  saving_mode: z.strictObject({
+    state: z.enum(['on', 'off']),
+    reason: z.enum(['ai_limit', 'new_day', 'limit_raised']),
   }),
   // 재생목록을 만들었다: 보여 준 곡 수 (현황판 "사용자가 뺀 곡 비율"의 분모, T21)
   playlist_created: z.strictObject({ songs: count }),

@@ -128,7 +128,15 @@ async function changeRuntime<T>(
       throw err;
     }
 
-    tx.set(runtimeRef, next);
+    // 바뀐 필드만 합쳐 쓴다. 문서 전체를 다시 쓰면 서버가 쓴 값(절약 모드의 Timestamp 등)이 복사본으로 망가진다
+    tx.set(
+      runtimeRef,
+      {
+        ...(patch.killSwitches ? { killSwitches: next.killSwitches } : {}),
+        ...(patch.limits ? { limits: next.limits } : {}),
+      },
+      { merge: true },
+    );
     tx.create(db.collection('adminAudit').doc(), {
       adminUid,
       at: FieldValue.serverTimestamp(),

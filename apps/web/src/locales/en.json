@@ -207,5 +207,10 @@
   "admin.removeTester": "Remove",
   "admin.error.linkNotPlayable": "That video cannot be played on other sites, so the song would disappear. Pick another video.",
   "admin.actions": "Actions",
-  "errors.blocked": "This account is blocked from making or changing sets."
+  "errors.blocked": "This account is blocked from making or changing sets.",
+  "savingMode.notice": "Saving mode: today's AI budget is used up, so sets are made without AI. Use the form “Song by Artist”. Back to normal after midnight Pacific time.",
+  "errors.not_understood": "Right now we can only read requests like “Song by Artist” or “Artist - Song”.",
+  "admin.savingModeOn": "Saving mode is on today (automatic, the AI cost limit was reached). It ends at midnight Pacific or when you raise the AI cost limit.",
+  "admin.savingModeOff": "Saving mode is off.",
+  "savingMode.noAi": "Simple mode: sets are made without AI right now. Use the form “Song by Artist” or “Artist - Song”."
 }

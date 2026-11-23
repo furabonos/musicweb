@@ -473,6 +473,7 @@ describe('현황판 /status (T21)', () => {
 describe('관리자 화면 /admin (T22)', () => {
   const overview: AdminOverview = {
     killSwitches: { create: true, ingest: true, autoIssue: false },
+    savingMode: false,
     limits: { service: { ytUnits: 9000 }, user: { playlists: 10 } },
     usage: { day: '2026-11-23', used: { ytUnits: 1200 } },
     jobs: [{ job: 'ingest', at: null, outcome: 'error', processed: 5, failed: 1 }],

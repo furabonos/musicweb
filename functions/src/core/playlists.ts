@@ -74,6 +74,13 @@ export interface CreateDeps {
   db: Firestore;
   events: EventSink;
   parse(text: string, locale: Locale): Promise<ParseResult>;
+  /**
+   * AI를 못 쓸 때(절약 모드·키 없음) 규칙으로도 못 읽는 문장은 한도를 쓰기 전에 거부한다(비용 없는 다시 묻기).
+   * 거부면 실패 결과, 계속하면 null.
+   */
+  rejectBeforeLimit?(text: string, locale: Locale): Promise<ParseResult | null>;
+  /** 규칙으로 읽은 기준 곡을 음악 데이터에서 못 찾았을 때 AI로 다시 읽기(D-044). AI를 못 쓰면 없음 */
+  reparseWithAi?(text: string, locale: Locale): Promise<ParseResult>;
   /** spares: 요청 수 밖의 예비 곡 수. 조회·검색은 요청 수까지만 한다(recommend opts). */
   recommend(req: ParsedRequest, spares: number): Promise<RecommendResult>;
   /** 기준 곡 아티스트를 수집 대기열에 (SPEC 3.3). 실패해도 만들기는 계속한다. */
@@ -98,6 +105,10 @@ export async function createPlaylist(
 
   // 0-1. 관리자가 차단한 계정은 만들 수 없다(SPEC 4.11, T22). 한도도 쓰지 않는다
   await assertNotBlocked(db, uid);
+
+  // 0-2. AI 없이 못 읽는 문장은 한도를 쓰지 않고 다시 묻는다(T22b)
+  const early = await deps.rejectBeforeLimit?.(input.text, input.locale);
+  if (early && !early.ok) return { ok: false, reason: early.reason };
 
   // 1. 한도·긴급 정지 먼저 (AI 호출 전). AI가 해석에 실패해도 1회로 센다(AI 비용은 이미 썼으므로).
   try {
@@ -124,10 +135,18 @@ export async function createPlaylist(
   // 2. 요청 해석
   const parsed = await deps.parse(input.text, input.locale);
   if (!parsed.ok) return { ok: false, reason: parsed.reason };
-  const req = parsed.value;
+  let req = parsed.value;
 
   // 3. 추천: 바꾸기용 예비 곡까지 한 번에
-  const rec = await deps.recommend(req, SPARES);
+  let rec = await deps.recommend(req, SPARES);
+  // 규칙이 잘못 읽었을 수 있다("Stand by Me", 음역 이름): AI를 쓸 수 있으면 한 번 다시 읽는다(D-044)
+  if (!rec.ok && rec.reason === 'seed_not_found' && parsed.via === 'rule' && deps.reparseWithAi) {
+    const again = await deps.reparseWithAi(input.text, input.locale);
+    if (again.ok) {
+      req = again.value;
+      rec = await deps.recommend(req, SPARES);
+    }
+  }
   if (!rec.ok) return { ok: false, reason: rec.reason };
   const toItem = (i: (typeof rec.items)[number]): PlaylistItem => ({
     songId: i.songId,
