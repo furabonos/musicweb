@@ -153,7 +153,8 @@ export async function parseWithFallback(
         outcome: 'ok',
         ...actor,
       });
-      return { ok: true, value: hit, via: 'ai' };
+      // 저장된 AI 해석: 이번 요청에서는 AI를 부르지 않았다(현황판 "AI 없이 처리", T35)
+      return { ok: true, value: hit, via: 'cache' };
     }
   }
 

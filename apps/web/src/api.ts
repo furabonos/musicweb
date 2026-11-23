@@ -62,7 +62,7 @@ export interface SharedPlaylist {
 /** 공개 현황판(`/status`, T21). 서버 `functions/src/api/status.ts`의 응답 모양 */
 export interface StatusMetric {
   value: number | null;
-  unit: 'rate' | 'count' | 'score' | 'hours';
+  unit: 'rate' | 'count' | 'score' | 'hours' | 'minutes' | 'usd';
   /** 계산 방법(서버가 쓴 영어 고정 문장) */
   method: string;
 }
@@ -79,6 +79,8 @@ export interface StatusData {
   updatedAt: string | null;
   service: Record<string, StatusMetric>;
   catalog: Record<string, StatusMetric>;
+  /** AI 비용 (T35). 옛 응답에는 없을 수 있다 */
+  ai?: Record<string, StatusMetric>;
   github:
     | { unavailable: string }
     | {

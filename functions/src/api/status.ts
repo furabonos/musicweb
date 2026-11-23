@@ -8,12 +8,12 @@ import { handle } from './errors.js';
  * - metrics/current의 지표와 운영 일지 최근 50줄만 돌려준다. 저장된 모양을 그대로 넘기지 않고 정해진 필드만 골라낸다:
  *   숫자(또는 null)·단위·계산 방법, GitHub 링크·상태. 검색 문장·재생목록 이름·계정 정보는 이 문서들에 애초에 없다.
  */
-const UNITS = new Set(['rate', 'count', 'score', 'hours']);
+const UNITS = new Set(['rate', 'count', 'score', 'hours', 'minutes', 'usd']);
 const OPS_LIMIT = 50;
 
 export interface PublicMetric {
   value: number | null;
-  unit: 'rate' | 'count' | 'score' | 'hours';
+  unit: 'rate' | 'count' | 'score' | 'hours' | 'minutes' | 'usd';
   method: string;
 }
 
@@ -55,6 +55,7 @@ const CATALOG = [
   'ytUserSearchesLeft',
   'ytJobSearchesLeft',
 ] as const;
+const AI = ['aiFreeRate', 'aiCostPerSet', 'savingModeMinutes'] as const;
 const GITHUB = ['autoIssues', 'approvalRate', 'hoursToFix', 'revertRate', 'ciPassRate'] as const;
 const REPO = `https://github\\.com/${GITHUB_REPO.replace('/', '\\/')}`;
 const PR_URL = new RegExp(`^${REPO}/pull/\\d+$`);
@@ -96,6 +97,7 @@ export async function readStatus(db: Firestore) {
     updatedAt: iso(cur.get('updatedAt')),
     service: metrics(cur.get('service'), SERVICE),
     catalog: metrics(cur.get('catalog'), CATALOG),
+    ai: metrics(cur.get('ai'), AI),
     github: github(cur.get('github')),
     opsLog: ops.docs.map((d) => ({
       at: iso(d.get('at')),

@@ -141,15 +141,19 @@ export async function createPlaylist(
 
   // 3. 추천: 바꾸기용 예비 곡까지 한 번에
   let rec = await deps.recommend(req, SPARES);
+  let reparsed = false;
   // 규칙이 잘못 읽었을 수 있다("Stand by Me", 음역 이름): AI를 쓸 수 있으면 한 번 다시 읽는다(D-044)
   if (!rec.ok && rec.reason === 'seed_not_found' && parsed.via === 'rule' && deps.reparseWithAi) {
     const again = await deps.reparseWithAi(input.text, input.locale);
+    reparsed = again.ok && again.via === 'ai';
     if (again.ok) {
       req = again.value;
       rec = await deps.recommend(req, SPARES);
     }
   }
   if (!rec.ok) return { ok: false, reason: rec.reason };
+  // 이번 요청에서 AI를 불렀나: 해석(저장된 해석 제외)·다시 읽기·추천 후보·고르기 (T35)
+  const usedAi = parsed.via === 'ai' || reparsed || (!rec.fromCache && rec.usedAi === true);
   const toItem = (i: (typeof rec.items)[number]): PlaylistItem => ({
     songId: i.songId,
     artist: i.artist,
@@ -205,7 +209,7 @@ export async function createPlaylist(
   }
   await events.record({
     type: 'playlist_created',
-    attrs: { songs: chosen.length, ...(rec.fromCache ? { fromCache: true } : {}) },
+    attrs: { songs: chosen.length, usedAi, ...(rec.fromCache ? { fromCache: true } : {}) },
     outcome: 'ok',
     actorUid: uid,
   });

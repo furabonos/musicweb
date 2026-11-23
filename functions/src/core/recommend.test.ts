@@ -770,6 +770,7 @@ describe('recommend — 미리 계산한 방식 (T30, D-047)', () => {
     const r = await recommend(ports, req({ count: 5 }), { uid: 'u1' }, { mode: 'precomputed' });
     if (!r.ok) throw new Error('fail');
     expect(calls.filter((c) => c.startsWith('llm.'))).toEqual([]);
+    expect(r.usedAi).toBe(false); // 현황판 "AI 없이"(T35)
     const titles = r.items.map((i) => i.title);
     expect(titles.indexOf('Unintended')).toBeLessThan(titles.indexOf('Bounce'));
     for (let i = 1; i < r.items.length; i++) {

@@ -22,6 +22,23 @@ test.beforeEach(async () => {
       catalog: {
         playableSongs: { value: 1500, unit: 'count', method: 'Songs with a playable video.' },
       },
+      ai: {
+        aiFreeRate: {
+          value: 0.8,
+          unit: 'rate',
+          method: 'Sets made without calling AI divided by all sets.',
+        },
+        aiCostPerSet: {
+          value: 0.0021,
+          unit: 'usd',
+          method: 'All AI spending divided by sets made.',
+        },
+        savingModeMinutes: {
+          value: 45,
+          unit: 'minutes',
+          method: 'Minutes when simple mode was on.',
+        },
+      },
       github: {
         updatedAt: new Date('2026-11-23T13:15:00Z'),
         approvalRate: { value: 0.5, unit: 'rate', method: 'Merged divided by merged or closed.' },
@@ -74,6 +91,16 @@ test('로그아웃 상태로 /status — 수치·계산 방법·갱신 시각·�
   await expect(metric('removedSongRate')).toContainText('No data yet');
   await expect(metric('playableSongs')).toContainText('1,500');
   await expect(metric('approvalRate')).toContainText('50%');
+  // AI 비용 (T35): 세 지표와 계산 방법
+  await expect(page.getByRole('heading', { name: 'AI cost' })).toBeVisible();
+  await expect(metric('aiFreeRate')).toContainText('80%');
+  await expect(metric('aiFreeRate')).toContainText(
+    'Sets made without calling AI divided by all sets.',
+  );
+  await expect(metric('aiCostPerSet')).toContainText('$0.0021');
+  await expect(metric('aiCostPerSet')).toContainText('All AI spending divided by sets made.');
+  await expect(metric('savingModeMinutes')).toContainText('45 min');
+  await expect(metric('savingModeMinutes')).toContainText('Minutes when simple mode was on.');
 
   // 실패·거절도 숨기지 않는다
   await expect(page.getByText('wrong fix: 1')).toBeVisible();
