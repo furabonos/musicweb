@@ -1,6 +1,6 @@
 import { compareKey } from '@musicweb/shared';
 import { DEMO_SEED, DEMO_SIMILAR, DEMO_SONGS } from '@musicweb/shared/demo';
-import type { Llm, StructuredRequest } from '../adapters/llm.js';
+import type { Llm, LlmBudget, StructuredRequest } from '../adapters/llm.js';
 import type { RecommendPorts } from '../core/recommend.js';
 
 /**
@@ -50,19 +50,27 @@ function fakePick(input: Record<string, unknown>) {
   };
 }
 
-export function fakeLlm(): Llm {
+/**
+ * budget을 주면 진짜 AI처럼 호출마다 비용 상한을 거친다(1 microUSD 예약, 실제 비용 0).
+ * 에뮬레이터에서 AI 비용 상한을 0으로 두면 절약 모드로 바뀌는 흐름을 확인할 수 있다(T22b).
+ */
+export function fakeLlm(budget?: LlmBudget): Llm {
+  const answer = (req: StructuredRequest) => {
+    switch (req.op) {
+      case 'llm.parseRequest':
+        return fakeParse(req.input);
+      case 'llm.pick':
+        return fakePick(req.input);
+      case 'llm.candidates':
+        return { songs: [] };
+      case 'llm.judgeLink':
+        return { choice: null };
+    }
+  };
   return {
     async structured(req: StructuredRequest) {
-      switch (req.op) {
-        case 'llm.parseRequest':
-          return fakeParse(req.input);
-        case 'llm.pick':
-          return fakePick(req.input);
-        case 'llm.candidates':
-          return { songs: [] };
-        case 'llm.judgeLink':
-          return { choice: null };
-      }
+      if (budget) return budget.run(1, async () => ({ result: answer(req), costMicroUsd: 0 }));
+      return answer(req);
     },
   };
 }

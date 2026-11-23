@@ -7,7 +7,7 @@ describe('parseRuntimeConfig', () => {
     expect(cfg).toEqual(DEFAULT_RUNTIME);
     expect(cfg.limits.service.ytUnits).toBe(9000);
     expect(cfg.limits.service.ytSearchUser + cfg.limits.service.ytSearchJob).toBe(100);
-    expect(cfg.limits.service.aiCostMicroUsd).toBe(1_000_000);
+    expect(cfg.limits.service.aiCostMicroUsd).toBe(3_000_000); // $3 (D-039)
     expect(cfg.limits.user.playlists).toBe(10);
     expect(cfg.limits.user.searches).toBe(3);
     expect(cfg.limits.user.exports).toBe(1);

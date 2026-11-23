@@ -89,7 +89,8 @@ export function createFirebaseApi(): MusicwebApi {
       await call('playback-reportEmbedBlocked', { code });
     },
     getPlaylist: (id) => call<SharedPlaylist>('playlists-get', { id }),
-    siteConfig: () => call<{ openLink: OpenLinkMode }>('site-config', {}),
+    siteConfig: () =>
+      call<{ openLink: OpenLinkMode; savingMode?: boolean; noAi?: boolean }>('site-config', {}),
     status: () => call<StatusData>('status-get', {}),
     adminOverview: () => call<AdminOverview>('admin-overview', {}),
     admin: (action, data) => call<unknown>(`admin-${action}`, data),

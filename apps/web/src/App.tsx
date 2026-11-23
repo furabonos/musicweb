@@ -41,6 +41,7 @@ const FAIL_MESSAGE: Record<CreateFailReason, MessageKey> = {
   too_long: 'errors.parse',
   no_output: 'errors.parse',
   schema_invalid: 'errors.parse',
+  not_understood: 'errors.not_understood',
 };
 
 function errorMessage(err: unknown, locale: Locale): Message {
@@ -97,6 +98,8 @@ export function App({
   const player = useRef<PlayerHandle>(null);
 
   const [openLink, setOpenLink] = useState<OpenLinkMode>('direct');
+  /** AI 없이 동작 중: 절약 모드(오늘) 또는 AI 키 없음 */
+  const [aiOff, setAiOff] = useState<'saving' | 'noAi' | null>(null);
 
   useEffect(() => api.onUser(setUser), [api]);
   useEffect(() => {
@@ -106,7 +109,11 @@ export function App({
     // 설정을 못 읽으면 기본(direct)으로 둔다. 링크가 깨졌을 때만 fallback이 저장된다.
     api
       .siteConfig()
-      .then((c) => live && setOpenLink(c.openLink))
+      .then((c) => {
+        if (!live) return;
+        setOpenLink(c.openLink);
+        setAiOff(c.savingMode ? 'saving' : c.noAi ? 'noAi' : null);
+      })
       .catch(() => {});
     return () => {
       live = false;
@@ -248,6 +255,11 @@ export function App({
                   {t('search.counter', { used, max: MAX_REQUEST_CHARS })}
                 </span>
               </div>
+              {aiOff && (
+                <div className="notice notice-warn" role="status" data-testid="saving-mode">
+                  {t(aiOff === 'saving' ? 'savingMode.notice' : 'savingMode.noAi')}
+                </div>
+              )}
               {over && (
                 <div className="notice notice-error" role="alert">
                   {t('search.tooLong', { max: MAX_REQUEST_CHARS })}

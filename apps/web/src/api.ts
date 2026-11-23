@@ -15,7 +15,13 @@ export interface PlayableItem {
 
 export type UnsupportedCode = 'year' | 'mood' | 'exclude_artist' | 'genre' | 'other';
 export type CreateFailReason =
-  'empty' | 'too_long' | 'no_output' | 'schema_invalid' | 'no_seed' | 'seed_not_found';
+  | 'empty'
+  | 'too_long'
+  | 'no_output'
+  | 'schema_invalid'
+  | 'not_understood'
+  | 'no_seed'
+  | 'seed_not_found';
 
 export type CreateResult =
   | {
@@ -88,6 +94,7 @@ export interface StatusData {
 /** 관리자 화면(`/admin`, T22). 서버 `admin-overview` 응답 모양 */
 export interface AdminOverview {
   killSwitches: Record<'create' | 'ingest' | 'autoIssue', boolean>;
+  savingMode: boolean;
   limits: { service: Record<string, number>; user: Record<string, number> };
   usage: { day: string; used: Record<string, number> };
   jobs: { job: string; at: string | null; outcome: string; processed: number; failed: number }[];
@@ -133,7 +140,8 @@ export interface MusicwebApi {
   /** 재생목록 열기. 없거나 볼 수 없으면 ApiError('not-found') */
   getPlaylist(id: string): Promise<SharedPlaylist>;
   /** "YouTube에서 열기" 방식(D-006) */
-  siteConfig(): Promise<{ openLink: OpenLinkMode }>;
+  /** savingMode: 오늘 AI 비용 상한에 닿아 AI 없이 동작 중(SPEC 3.4) */
+  siteConfig(): Promise<{ openLink: OpenLinkMode; savingMode?: boolean; noAi?: boolean }>;
   /** 공개 현황판 수치와 운영 일지 (로그인 불필요) */
   status(): Promise<StatusData>;
   /** 관리자 화면 한눈에 보기. 관리자가 아니면 ApiError('permission-denied') */

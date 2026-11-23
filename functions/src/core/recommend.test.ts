@@ -263,8 +263,8 @@ describe('recommend — AI가 지어낸 곡·목록 밖 선택', () => {
     expect(stepOf(events, 'ai_pick')).toMatchObject({ hallucinated: 2, filtered: 3 });
   });
 
-  it('AI 고르기가 실패하면 점수 순으로 채우고 이유는 null', async () => {
-    const { ports } = setup(
+  it('AI 고르기가 실패하면 AI 없는 방식으로 고르고 고정 이유 문장(ai_fallback: ai_error)', async () => {
+    const { ports, events } = setup(
       world({
         pick: () => {
           throw new Error('llm down');
@@ -274,7 +274,12 @@ describe('recommend — AI가 지어낸 곡·목록 밖 선택', () => {
     const r = await recommend(ports, req(), { uid: 'u1' });
     if (!r.ok) throw new Error('fail');
     expect(r.items.length).toBeGreaterThan(0);
-    expect(r.items.every((i) => i.reason === null)).toBe(true);
+    expect(r.items.every((i) => i.reason === 'People who play Karma Police also play this.')).toBe(
+      true,
+    );
+    expect(events.filter((e) => e.type === 'ai_fallback').map((e) => e.attrs)).toEqual([
+      { reason: 'ai_error' },
+    ]);
   });
 
   it('이유는 한 줄·140자로 자름', async () => {
@@ -569,5 +574,101 @@ describe('recommend — 조회의 예외 경로', () => {
     const r = await recommend(b.ports, req(), { uid: 'u1' });
     if (!r.ok) throw new Error('fail');
     expect(r.seed.songId).toBe(mbid(901));
+  });
+});
+
+describe('recommend — AI 없는 방식 (절약 모드·키 없음·AI 오류, T22b)', () => {
+  const PORTISHEAD = {
+    mbid: mbid(20),
+    artist: 'Portishead',
+    artistMbid: null,
+    title: 'Glory Box',
+    releaseYear: 1994,
+  };
+  const variety = () =>
+    world({
+      catalog: [SEED, NO_SURPRISES, PARANOID, PORTISHEAD],
+      links: {
+        [SEED.mbid]: [link('seedVideo01')],
+        [NO_SURPRISES.mbid]: [link('noSurp00001')],
+        [PARANOID.mbid]: [link('paranoid001')],
+        [PORTISHEAD.mbid]: [link('gloryBox001')],
+      },
+      // 점수 순: No Surprises, Paranoid Android(같은 아티스트), Glory Box
+      lbSimilar: [NO_SURPRISES, PARANOID, PORTISHEAD],
+    });
+
+  it.each(['saving', 'no_key'] as const)(
+    '%s: AI 호출 0건, 재생목록은 나오고 같은 아티스트가 연달아 나오지 않는다',
+    async (mode) => {
+      const { ports, calls, events } = setup(variety());
+      const r = await recommend(ports, req({ count: 5 }), { uid: 'u1' }, { ai: { mode } });
+      if (!r.ok) throw new Error('fail');
+      expect(calls.filter((c) => c.startsWith('llm.'))).toEqual([]);
+      expect(r.items.map((i) => i.title)).toEqual([
+        'No Surprises',
+        'Glory Box',
+        'Paranoid Android',
+      ]);
+      expect(r.items[0]?.reason).toBe('People who play Karma Police also play this.');
+      expect(events.filter((e) => e.type === 'ai_fallback').map((e) => e.attrs)).toEqual([
+        { reason: mode },
+      ]);
+      expect(stepOf(events, 'rule_pick')).toMatchObject({ candidates: 3 });
+      expect(stepOf(events, 'ai_pick')).toBeUndefined();
+    },
+  );
+
+  it('AI 비용 상한에 닿으면 절약 모드를 켜고(onLimit) 그 요청은 AI 없이 끝낸다', async () => {
+    const w = variety();
+    const { ports, calls, events } = setup(w);
+    ports.llm = {
+      structured: async (q) => {
+        calls.push(q.op);
+        throw new BudgetExceededError('service', 'aiCostMicroUsd', 3_000_000, 3_000_000, NOW);
+      },
+    };
+    let limitHit = 0;
+    const r = await recommend(
+      ports,
+      req({ count: 5 }),
+      { uid: 'u1' },
+      { ai: { mode: 'on', onLimit: async () => void limitHit++ } },
+    );
+    if (!r.ok) throw new Error('fail');
+    expect(limitHit).toBe(1);
+    // 후보 단계에서 한 번 실패한 뒤 고르기 단계는 AI를 부르지 않는다
+    expect(calls.filter((c) => c.startsWith('llm.'))).toEqual(['llm.candidates']);
+    expect(r.items).toHaveLength(3);
+    expect(events.filter((e) => e.type === 'ai_fallback').map((e) => e.attrs)).toEqual([
+      { reason: 'saving' },
+    ]);
+  });
+
+  it('AI 오류(고르기 실패)여도 같은 아티스트가 연달아 나오지 않는다', async () => {
+    const w = variety();
+    w.pick = () => {
+      throw new Error('llm down');
+    };
+    const { ports } = setup(w);
+    const r = await recommend(ports, req({ count: 5 }), { uid: 'u1' });
+    if (!r.ok) throw new Error('fail');
+    const artists = r.items.map((i) => i.artist);
+    for (let i = 1; i < artists.length - 1; i++) expect(artists[i]).not.toBe(artists[i - 1]);
+    expect(r.items.map((i) => i.title)).toEqual(['No Surprises', 'Glory Box', 'Paranoid Android']);
+  });
+
+  it('한국어 화면은 한국어 고정 문장', async () => {
+    const { ports } = setup(variety());
+    const r = await recommend(
+      ports,
+      req({ count: 5, locale: 'ko' }),
+      { uid: 'u1' },
+      {
+        ai: { mode: 'no_key' },
+      },
+    );
+    if (!r.ok) throw new Error('fail');
+    expect(r.items[0]?.reason).toBe('「Karma Police」 청취자들이 함께 듣는 곡이에요.');
   });
 });

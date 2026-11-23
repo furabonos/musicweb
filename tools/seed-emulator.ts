@@ -123,13 +123,28 @@ export async function seedPlaylist(
   await commit(host, writes);
 }
 
-/** e2e용: config/runtime의 필드를 바꾼다(다른 필드는 그대로). */
+/** e2e용: config/runtime의 필드를 바꾼다(다른 필드는 그대로). savingMode: 오늘(태평양) 절약 모드 켜기(T22b) */
 export async function setRuntime(
-  fields: { youtubeOpenLink?: 'direct' | 'fallback' },
+  fields: { youtubeOpenLink?: 'direct' | 'fallback'; savingMode?: boolean },
   host = '127.0.0.1:8080',
 ) {
   const doc: Record<string, unknown> = {};
   if (fields.youtubeOpenLink) doc.youtubeOpenLink = str(fields.youtubeOpenLink);
+  if (fields.savingMode) {
+    const day = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Los_Angeles',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    doc.savingMode = toValue({
+      active: true,
+      day,
+      since: new Date(),
+      reason: 'ai_limit',
+      limitAtStart: 3_000_000,
+    });
+  }
   await commit(host, [
     {
       update: {

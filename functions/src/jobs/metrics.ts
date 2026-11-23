@@ -42,7 +42,13 @@ export interface EventCounts {
 }
 
 /** 해석 단계(parseRequest)가 남기는 실패 이유 */
-export const PARSE_STAGE_FAILURES = ['empty', 'too_long', 'no_output', 'schema_invalid'] as const;
+export const PARSE_STAGE_FAILURES = [
+  'empty',
+  'too_long',
+  'no_output',
+  'schema_invalid',
+  'not_understood',
+] as const;
 
 export function serviceMetrics(
   c: EventCounts,
