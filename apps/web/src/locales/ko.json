@@ -224,5 +224,12 @@
   "picker.include.remix": "리믹스",
   "picker.submit": "재생목록 만들기",
   "picker.orType": "…또는 말로 적어도 돼요:",
-  "errors.seedSongNotFound": "그 곡은 이제 목록에 없어요. 다른 곡을 골라 주세요."
+  "errors.seedSongNotFound": "그 곡은 이제 목록에 없어요. 다른 곡을 골라 주세요.",
+  "explain.button": "자세한 이유",
+  "explain.loading": "이유를 쓰는 중…",
+  "explain.off": "간단 모드에서는 자세한 이유가 잠시 꺼져 있어요.",
+  "explain.noAi": "자세한 이유는 AI가 필요한데, 지금 이 사이트는 AI를 쓰지 않아요.",
+  "explain.failed": "이번에는 이유를 쓰지 못했어요. 다시 눌러 주세요.",
+  "explain.done": "곡마다 이유를 붙였어요.",
+  "admin.userCounter.explains": "한 사람 하루 ‘자세한 이유’ 횟수"
 }

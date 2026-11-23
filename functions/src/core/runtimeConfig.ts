@@ -19,7 +19,7 @@ export const SERVICE_COUNTERS = [
   'linkChecks',
   'githubCalls',
 ] as const;
-export const USER_COUNTERS = ['playlists', 'searches', 'exports'] as const;
+export const USER_COUNTERS = ['playlists', 'searches', 'exports', 'explains'] as const;
 export const FEATURES = ['create', 'ingest', 'autoIssue'] as const;
 
 export type ServiceCounter = (typeof SERVICE_COUNTERS)[number];
@@ -62,7 +62,8 @@ export const DEFAULT_RUNTIME: RuntimeConfig = {
       linkChecks: 5, // "YouTube에서 열기" 링크 동작 확인(헤더만, D-006). 하루 1회 + 수동 재실행 여유 (T16)
       githubCalls: 50, // GitHub API 요청(자동 이슈 생성·조회·댓글, T19. 이후 GitHub 수치 T21). 도는 코드가 폭주하지 않게
     },
-    user: { playlists: 10, searches: 3, exports: 1 },
+    // explains: "자세한 이유" 버튼(AI 설명, T34)
+    user: { playlists: 10, searches: 3, exports: 1, explains: 10 },
   },
 };
 

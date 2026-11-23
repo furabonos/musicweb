@@ -86,7 +86,7 @@ export async function runPurge(deps: PurgeDeps): Promise<PurgeSummary> {
   // 기간 지난 저장된 해석(30일)·결과(7일) (T32, D-048)
   const nowTs = Timestamp.fromDate(now);
   let caches = 0;
-  for (const col of ['parseCache', 'resultCache']) {
+  for (const col of ['parseCache', 'resultCache', 'reasonCache']) {
     caches += await step(`cache_${col}`, () =>
       drain(db.collection(col).where('expiresAt', '<=', nowTs).orderBy('expiresAt'), (b, d) =>
         b.delete(d.ref),

@@ -519,3 +519,65 @@ describe('곡 고르기로 만들기 (T33)', () => {
     expect(bad.error?.status).toBe('INVALID_ARGUMENT');
   });
 });
+
+describe('자세한 이유 playlists-explain (T34, D-050)', () => {
+  it('곡별 이유를 돌려주고, 두 번째는 저장된 이유를 쓰며, 11번째 요청은 거부', async () => {
+    const { token } = await googleSignIn(ADMIN);
+    const out = await createOk(token, REQUEST, 'en');
+    const first = await callFunction('playlists-explain', { id: out.id }, token);
+    expect(first.error).toBeUndefined();
+    const reasons = (first.result as { reasons: Record<string, string> }).reasons;
+    expect(Object.keys(reasons).sort()).toEqual(out.items.map((i) => i.songId).sort());
+    expect(Object.values(reasons)[0]).toMatch(/^Demo detail: /);
+    expect((await db.collection('reasonCache').get()).size).toBe(out.items.length);
+    for (let i = 2; i <= 10; i++) {
+      expect(
+        (await callFunction('playlists-explain', { id: out.id }, token)).error,
+      ).toBeUndefined();
+    }
+    const eleventh = await callFunction('playlists-explain', { id: out.id }, token);
+    expect(eleventh.error?.status).toBe('RESOURCE_EXHAUSTED');
+    expect(eleventh.error?.details).toMatchObject({ reason: 'limit', counter: 'explains' });
+  });
+
+  it('절약 모드면 failed-precondition, 다른 사용자의 재생목록은 거부', async () => {
+    const owner = await googleSignIn(ADMIN);
+    const out = await createOk(owner.token, REQUEST, 'en');
+    const other = await googleSignIn('someone@example.com');
+    const denied = await callFunction('playlists-explain', { id: out.id }, other.token);
+    expect(denied.error?.status).toBe('PERMISSION_DENIED');
+
+    const { enterSavingMode } = await import('../core/savingMode.js');
+    const { memoryEvents } = await import('../testing/music.js');
+    await enterSavingMode(db, memoryEvents().sink, new Date());
+    const saving = await callFunction('playlists-explain', { id: out.id }, owner.token);
+    expect(saving.error?.status).toBe('FAILED_PRECONDITION');
+    expect(saving.error?.details).toEqual({ reason: 'savingMode' });
+  });
+
+  it('거부(남의 재생목록·절약 모드)는 explains를 쓰지 않는다, AI 비용 상한에 닿으면 절약 모드로 바뀌고 거부', async () => {
+    const owner = await googleSignIn(ADMIN);
+    const out = await createOk(owner.token, REQUEST, 'en');
+    const other = await googleSignIn('someone2@example.com');
+    await callFunction('playlists-explain', { id: out.id }, other.token);
+    const { pacificDay } = await import('../core/day.js');
+    const day = pacificDay(new Date());
+    expect((await db.doc(`users/${other.uid}/usage/${day}`).get()).get('explains')).toBeUndefined();
+
+    // AI 비용 상한 0: 가짜 AI도 예약하므로 닿는다
+    await db
+      .doc('config/runtime')
+      .set({ limits: { service: { aiCostMicroUsd: 0 } } }, { merge: true });
+    const limited = await callFunction('playlists-explain', { id: out.id }, owner.token);
+    expect(limited.error?.status).toBe('FAILED_PRECONDITION');
+    expect(limited.error?.details).toEqual({ reason: 'savingMode' });
+    expect((await db.doc('config/runtime').get()).get('savingMode.active')).toBe(true);
+    expect((await db.collection('reasonCache').get()).size).toBe(0);
+
+    // 이미 절약 모드: 카운터를 쓰지 않고 거부
+    const usageRef = db.doc(`users/${owner.uid}/usage/${day}`);
+    const before = (await usageRef.get()).get('explains') as number;
+    await callFunction('playlists-explain', { id: out.id }, owner.token);
+    expect((await usageRef.get()).get('explains')).toBe(before);
+  });
+});

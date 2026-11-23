@@ -65,6 +65,19 @@ export function fakeLlm(budget?: LlmBudget): Llm {
         return { songs: [] };
       case 'llm.judgeLink':
         return { choice: null };
+      case 'llm.explain': {
+        // 가짜 설명: 받은 곡마다 화면 언어로 한 줄
+        const songs = (req.input.songs ?? []) as { id: string; title: string }[];
+        const ko = req.input.locale === 'ko';
+        return {
+          reasons: songs.map((s) => ({
+            id: s.id,
+            reason: ko
+              ? `데모 설명: ${s.title}의 분위기가 이어집니다.`
+              : `Demo detail: ${s.title} keeps the same mood going.`,
+          })),
+        };
+      }
     }
   };
   return {

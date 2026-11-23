@@ -799,3 +799,22 @@ a.btn-ghost {
   margin: 22px 0 10px;
   font-size: 14px;
 }
+
+/* 자세한 이유 (T34) */
+.song-detail {
+  margin-top: 4px;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

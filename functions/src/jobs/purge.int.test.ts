@@ -160,8 +160,11 @@ describe('runPurge — 기간 지난 저장된 해석·결과 (T32, D-048)', () 
     await db.doc('parseCache/new').set({ value: {}, expiresAt: ago(-5) });
     await db.doc('resultCache/old').set({ items: [], expiresAt: ago(1) });
     await db.doc('resultCache/new').set({ items: [], expiresAt: ago(-5) });
+    await db.doc('reasonCache/old').set({ reason: 'x', expiresAt: ago(1) });
+    await db.doc('reasonCache/new').set({ reason: 'y', expiresAt: ago(-5) });
     const summary = await purge().run;
-    expect(summary.caches).toBe(2);
+    expect(summary.caches).toBe(3);
+    expect((await db.collection('reasonCache').get()).docs.map((d) => d.id)).toEqual(['new']);
     expect((await db.collection('parseCache').get()).docs.map((d) => d.id)).toEqual(['new']);
     expect((await db.collection('resultCache').get()).docs.map((d) => d.id)).toEqual(['new']);
   });

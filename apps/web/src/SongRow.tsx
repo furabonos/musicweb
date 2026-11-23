@@ -10,6 +10,8 @@ export function SongRow(props: {
   onPlay(): void;
   onRemove?(): void;
   onReplace?(): void;
+  /** AI가 쓴 자세한 이유(T34). 글자로만 그린다 */
+  detail?: string | undefined;
 }) {
   const { t } = useI18n();
   const { item } = props;
@@ -31,6 +33,7 @@ export function SongRow(props: {
         </div>
         {/* AI가 쓴 이유는 글자로만 그린다(React가 HTML로 해석하지 않음, D-030) */}
         <div className="song-reason">{item.reason ?? t('results.noReason')}</div>
+        {props.detail && <div className="song-detail">{props.detail}</div>}
         {!item.videoId && <div className="song-unavailable">{t('results.unavailable')}</div>}
       </div>
       {props.onReplace && props.onRemove && (

@@ -84,6 +84,7 @@ function fakeApi(over: Partial<MusicwebApi> = {}, signedIn = true) {
     }),
     admin: vi.fn(async () => ({})),
     createFromSong: vi.fn(async () => ok([1, 2, 3].map((n) => item(n)))),
+    explain: vi.fn(async () => ({ 'song-1': 'Detail one', 'song-2': 'Detail <b>two</b>' })),
     suggest: vi.fn(async (q: string) =>
       q.toLowerCase().startsWith('do')
         ? [{ songId: 's-doja', artist: 'Central Cee', title: 'Doja', releaseYear: 2022 }]
@@ -323,6 +324,7 @@ describe('플레이어 정리', () => {
       admin: async () => ({}),
       createFromSong: async () => ok([item(1)]),
       suggest: async () => [],
+      explain: async () => ({}),
     } as MusicwebApi;
     const { unmount } = render(
       <I18nProvider>
@@ -623,5 +625,60 @@ describe('곡 고르기 (T33)', () => {
     await screen.findByRole('option', { name: /Doja/ });
     fireEvent.keyDown(again, { key: 'Escape' });
     expect(screen.queryByRole('listbox')).toBeNull();
+  });
+});
+
+describe('자세한 이유 (T34)', () => {
+  it('버튼 → 곡마다 AI 이유를 글자로 보여 주고, 이유 없는 곡이 남으면 다시 눌러 새 몫만 합친다', async () => {
+    const api = fakeApi();
+    await ask();
+    const button = () => screen.getByRole('button', { name: 'More detail' });
+    await act(async () => {
+      fireEvent.click(button());
+    });
+    expect(api.explain).toHaveBeenCalledWith('pl1');
+    expect(await screen.findByText('Detail one')).toBeTruthy();
+    // HTML로 그리지 않는다
+    expect(screen.getByText('Detail <b>two</b>')).toBeTruthy();
+    expect(screen.getByText('Details added to each song.')).toBeTruthy();
+    // 3번 곡 이유가 없으니 다시 누를 수 있다
+    expect(button().getAttribute('aria-disabled')).toBe('false');
+    vi.mocked(api.explain).mockResolvedValueOnce({ 'song-3': 'Detail three' });
+    await act(async () => {
+      fireEvent.click(button());
+    });
+    expect(await screen.findByText('Detail three')).toBeTruthy();
+    expect(screen.getByText('Detail one')).toBeTruthy();
+    // 모두 받았으면 꺼지고, 눌러도 부르지 않는다(포커스는 남는다)
+    expect(button().getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(button());
+    expect(api.explain).toHaveBeenCalledTimes(2);
+  });
+
+  it('서버가 절약 모드로 거부하면 버튼을 끄고 안내를 보인다', async () => {
+    const api = fakeApi();
+    vi.mocked(api.explain).mockRejectedValueOnce(
+      new ApiError('failed-precondition', { reason: 'savingMode' }),
+    );
+    await ask();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'More detail' }));
+    });
+    expect(screen.getByRole('button', { name: 'More detail' }).getAttribute('aria-disabled')).toBe(
+      'true',
+    );
+    expect(screen.getByText('More detail is paused in simple mode.')).toBeTruthy();
+  });
+
+  it('절약 모드면 버튼이 꺼져 있고 안내가 보인다', async () => {
+    const api = fakeApi({
+      siteConfig: vi.fn(async () => ({ openLink: 'direct' as const, savingMode: true })),
+    });
+    await ask();
+    expect(screen.getByRole('button', { name: 'More detail' }).getAttribute('aria-disabled')).toBe(
+      'true',
+    );
+    expect(screen.getByText('More detail is paused in simple mode.')).toBeTruthy();
+    expect(api.explain).not.toHaveBeenCalled();
   });
 });

@@ -224,5 +224,12 @@
   "picker.include.remix": "Remixes",
   "picker.submit": "Make the set",
   "picker.orType": "…or describe it in your own words:",
-  "errors.seedSongNotFound": "That song is no longer in our catalog. Pick another one."
+  "errors.seedSongNotFound": "That song is no longer in our catalog. Pick another one.",
+  "explain.button": "More detail",
+  "explain.loading": "Writing details…",
+  "explain.off": "More detail is paused in simple mode.",
+  "explain.noAi": "More detail needs AI, which is off on this site right now.",
+  "explain.failed": "Couldn't write details this time. Please try again.",
+  "explain.done": "Details added to each song.",
+  "admin.userCounter.explains": "“More detail” uses per person per day"
 }

@@ -52,6 +52,7 @@ export const EXTERNAL_OPS = [
   'llm.judgeLink',
   'llm.candidates',
   'llm.pick',
+  'llm.explain',
   'watch_videos.check',
   'github.issues.create',
   'github.issues.get',
