@@ -1,320 +1,496 @@
 {
-  "id": "9e2ad5bc-c6f9-40d2-a36f-3122ee2072a3",
-  "first-release-date": "1997-05-21",
-  "video": false,
-  "title": "Karma Police",
   "length": 262426,
-  "genres": [
+  "id": "9e2ad5bc-c6f9-40d2-a36f-3122ee2072a3",
+  "tags": [
     {
-      "count": 13,
-      "disambiguation": "",
-      "id": "ceeaa283-5d7b-4202-8d1d-e25d116b2a18",
-      "name": "alternative rock"
+      "name": "alternative",
+      "count": 1
+    },
+    {
+      "name": "alternative & punk",
+      "count": 1
+    },
+    {
+      "name": "alternative and punk",
+      "count": 2
+    },
+    {
+      "name": "alternative pop/rock",
+      "count": 1
+    },
+    {
+      "name": "alternative rock",
+      "count": 13
     },
     {
       "name": "arena rock",
-      "id": "26af3760-750a-4b5e-a699-78c87697585a",
+      "count": 1
+    },
+    {
+      "count": 2,
+      "name": "art rock"
+    },
+    {
       "count": 1,
-      "disambiguation": ""
+      "name": "cold"
     },
     {
-      "id": "b7ef058e-6d83-4ca4-8123-9724bff4648b",
-      "name": "art rock",
-      "count": 2,
-      "disambiguation": ""
-    },
-    {
-      "name": "indie rock",
-      "id": "ccd19ebf-052c-4afe-8ad9-fbb0a73f94a7",
-      "disambiguation": "",
+      "name": "dark",
       "count": 1
     },
     {
-      "disambiguation": "",
-      "count": 2,
+      "count": 1,
+      "name": "indie rock"
+    },
+    {
+      "name": "lush",
+      "count": 1
+    },
+    {
       "name": "piano rock",
-      "id": "34cd43be-4711-4e77-a25c-c6d6a4bf3cb4"
+      "count": 2
     },
     {
-      "name": "pop",
-      "id": "911c7bbb-172d-4df8-9478-dbff4296e791",
-      "disambiguation": "",
+      "name": "poetic",
       "count": 1
     },
     {
-      "id": "a493b79c-4072-4371-a14c-446b1027982a",
+      "count": 1,
+      "name": "pop"
+    },
+    {
       "name": "post-britpop",
-      "disambiguation": "",
       "count": 2
     },
     {
       "count": 3,
-      "disambiguation": "",
-      "id": "0e3fc579-2d24-4f20-9dae-736e1ec78798",
       "name": "rock"
+    }
+  ],
+  "disambiguation": "",
+  "video": false,
+  "genres": [
+    {
+      "name": "alternative rock",
+      "disambiguation": "",
+      "id": "ceeaa283-5d7b-4202-8d1d-e25d116b2a18",
+      "count": 13
+    },
+    {
+      "disambiguation": "",
+      "name": "arena rock",
+      "id": "26af3760-750a-4b5e-a699-78c87697585a",
+      "count": 1
+    },
+    {
+      "name": "art rock",
+      "disambiguation": "",
+      "count": 2,
+      "id": "b7ef058e-6d83-4ca4-8123-9724bff4648b"
+    },
+    {
+      "id": "ccd19ebf-052c-4afe-8ad9-fbb0a73f94a7",
+      "count": 1,
+      "name": "indie rock",
+      "disambiguation": ""
+    },
+    {
+      "disambiguation": "",
+      "name": "piano rock",
+      "count": 2,
+      "id": "34cd43be-4711-4e77-a25c-c6d6a4bf3cb4"
+    },
+    {
+      "disambiguation": "",
+      "name": "pop",
+      "id": "911c7bbb-172d-4df8-9478-dbff4296e791",
+      "count": 1
+    },
+    {
+      "name": "post-britpop",
+      "disambiguation": "",
+      "count": 2,
+      "id": "a493b79c-4072-4371-a14c-446b1027982a"
+    },
+    {
+      "id": "0e3fc579-2d24-4f20-9dae-736e1ec78798",
+      "count": 3,
+      "disambiguation": "",
+      "name": "rock"
+    }
+  ],
+  "title": "Karma Police",
+  "artist-credit": [
+    {
+      "joinphrase": "",
+      "artist": {
+        "country": "GB",
+        "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
+        "name": "Radiohead",
+        "type": "Group",
+        "sort-name": "Radiohead",
+        "id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+        "tags": [
+          {
+            "name": "alternative",
+            "count": 2
+          },
+          {
+            "name": "alternative rock",
+            "count": 43
+          },
+          {
+            "name": "alternative rock music",
+            "count": 2
+          },
+          {
+            "count": 1,
+            "name": "ambient pop"
+          },
+          {
+            "count": 3,
+            "name": "art pop"
+          },
+          {
+            "count": 30,
+            "name": "art rock"
+          },
+          {
+            "name": "british",
+            "count": 14
+          },
+          {
+            "count": 2,
+            "name": "britpop"
+          },
+          {
+            "count": 1,
+            "name": "britrock"
+          },
+          {
+            "count": 1,
+            "name": "chamber pop"
+          },
+          {
+            "count": 1,
+            "name": "crossover prog"
+          },
+          {
+            "count": 14,
+            "name": "electronic"
+          },
+          {
+            "count": 1,
+            "name": "electronic rock"
+          },
+          {
+            "count": 2,
+            "name": "electronica"
+          },
+          {
+            "name": "english",
+            "count": 1
+          },
+          {
+            "name": "experimental",
+            "count": 3
+          },
+          {
+            "name": "experimental rock",
+            "count": 14
+          },
+          {
+            "count": 1,
+            "name": "idm"
+          },
+          {
+            "count": 5,
+            "name": "indie rock"
+          },
+          {
+            "name": "indietronica",
+            "count": 1
+          },
+          {
+            "name": "oxford",
+            "count": 1
+          },
+          {
+            "count": 2,
+            "name": "post-britpop"
+          },
+          {
+            "name": "post-grunge",
+            "count": 1
+          },
+          {
+            "count": 2,
+            "name": "progressive rock music"
+          },
+          {
+            "name": "rock",
+            "count": 19
+          },
+          {
+            "count": 1,
+            "name": "uk"
+          },
+          {
+            "count": 1,
+            "name": "vyrzukhisuc-artiest"
+          }
+        ],
+        "disambiguation": "",
+        "genres": [
+          {
+            "name": "alternative rock",
+            "disambiguation": "",
+            "id": "ceeaa283-5d7b-4202-8d1d-e25d116b2a18",
+            "count": 43
+          },
+          {
+            "disambiguation": "",
+            "name": "ambient pop",
+            "count": 1,
+            "id": "2cdcecfe-3e7c-4055-ab34-78eceabe4d9b"
+          },
+          {
+            "id": "930ef127-3653-4677-9b95-ecc90c7c1a14",
+            "count": 3,
+            "disambiguation": "",
+            "name": "art pop"
+          },
+          {
+            "disambiguation": "",
+            "name": "art rock",
+            "count": 30,
+            "id": "b7ef058e-6d83-4ca4-8123-9724bff4648b"
+          },
+          {
+            "id": "f1c9b874-7ef2-4e79-9419-c0bcb5f33a30",
+            "count": 2,
+            "disambiguation": "",
+            "name": "britpop"
+          },
+          {
+            "count": 1,
+            "id": "f0843e91-c025-4dd7-8aef-6fe3d35470d9",
+            "name": "chamber pop",
+            "disambiguation": ""
+          },
+          {
+            "name": "crossover prog",
+            "disambiguation": "",
+            "id": "eee90717-3eee-41bd-b463-003c180544bd",
+            "count": 1
+          },
+          {
+            "id": "89255676-1f14-4dd8-bbad-fca839d6aff4",
+            "count": 14,
+            "disambiguation": "",
+            "name": "electronic"
+          },
+          {
+            "name": "electronic rock",
+            "disambiguation": "",
+            "count": 1,
+            "id": "c4a69842-f891-4569-9506-1882aa5db433"
+          },
+          {
+            "count": 2,
+            "id": "53a3cea3-17af-4421-a07a-5824b540aeb5",
+            "disambiguation": "",
+            "name": "electronica"
+          },
+          {
+            "count": 3,
+            "id": "68c81274-5770-4e7b-a4bf-ab0d7d425d99",
+            "disambiguation": "",
+            "name": "experimental"
+          },
+          {
+            "id": "65c97e89-b42b-45c2-a70e-0eca1b8f0ff7",
+            "count": 14,
+            "name": "experimental rock",
+            "disambiguation": ""
+          },
+          {
+            "count": 1,
+            "id": "8eb583f1-4fd7-460c-8246-dcdccc0e3ef9",
+            "disambiguation": "",
+            "name": "idm"
+          },
+          {
+            "disambiguation": "",
+            "name": "indie rock",
+            "id": "ccd19ebf-052c-4afe-8ad9-fbb0a73f94a7",
+            "count": 5
+          },
+          {
+            "count": 1,
+            "id": "9e7ae1de-d5f2-46a5-b105-11c7367dc70d",
+            "disambiguation": "",
+            "name": "indietronica"
+          },
+          {
+            "disambiguation": "",
+            "name": "post-britpop",
+            "id": "a493b79c-4072-4371-a14c-446b1027982a",
+            "count": 2
+          },
+          {
+            "disambiguation": "",
+            "name": "post-grunge",
+            "count": 1,
+            "id": "bbb1310c-24cb-4fc9-97c4-f93e4549f1e2"
+          },
+          {
+            "name": "rock",
+            "disambiguation": "",
+            "count": 19,
+            "id": "0e3fc579-2d24-4f20-9dae-736e1ec78798"
+          }
+        ]
+      },
+      "name": "Radiohead"
     }
   ],
   "relations": [
     {
+      "begin": null,
+      "direction": "forward",
       "target-type": "url",
+      "attribute-values": {},
+      "type": "free streaming",
+      "target-credit": "",
+      "attribute-ids": {},
+      "type-id": "7e41ef12-a124-4324-afdb-fdbae687a89c",
+      "attributes": [],
+      "source-credit": "",
+      "ended": false,
       "end": null,
       "url": {
         "id": "af4942c8-badd-424a-af38-0879c085015b",
         "resource": "https://open.spotify.com/track/63OQupATfueTdZMWTxW03A"
-      },
-      "target-credit": "",
-      "ended": false,
-      "begin": null,
-      "type": "free streaming",
-      "type-id": "7e41ef12-a124-4324-afdb-fdbae687a89c",
-      "direction": "forward",
-      "attribute-ids": {},
-      "source-credit": "",
-      "attribute-values": {},
-      "attributes": []
+      }
     },
     {
-      "attributes": [],
-      "attribute-values": {},
-      "source-credit": "",
-      "type-id": "7e41ef12-a124-4324-afdb-fdbae687a89c",
-      "direction": "forward",
-      "attribute-ids": {},
-      "type": "free streaming",
-      "begin": null,
-      "ended": false,
       "url": {
         "id": "043e5d57-de1e-47aa-84e9-f0170f04ccea",
         "resource": "https://www.deezer.com/track/138539981"
       },
+      "end": null,
+      "source-credit": "",
+      "ended": false,
+      "attributes": [],
       "target-credit": "",
-      "target-type": "url",
-      "end": null
+      "attribute-ids": {},
+      "type-id": "7e41ef12-a124-4324-afdb-fdbae687a89c",
+      "attribute-values": {},
+      "type": "free streaming",
+      "begin": null,
+      "direction": "forward",
+      "target-type": "url"
     },
     {
-      "begin": null,
-      "target-type": "url",
       "end": null,
+      "source-credit": "",
       "ended": false,
-      "target-credit": "",
       "url": {
         "resource": "https://www.youtube.com/watch?v=1uYWYWPc9HU",
         "id": "4f3a98d2-de85-4fdc-bf12-1779fbf0281f"
       },
       "attribute-values": {},
-      "attributes": ["video"],
-      "type-id": "7e41ef12-a124-4324-afdb-fdbae687a89c",
+      "type": "free streaming",
       "direction": "forward",
+      "begin": null,
+      "target-type": "url",
+      "attributes": ["video"],
+      "target-credit": "",
       "attribute-ids": {
         "video": "112054d5-e706-4dd8-99ea-09aabee36cd6"
       },
-      "type": "free streaming",
+      "type-id": "7e41ef12-a124-4324-afdb-fdbae687a89c"
+    },
+    {
+      "source-credit": "",
+      "ended": false,
+      "end": null,
+      "url": {
+        "id": "e7248042-0dda-4f18-8801-b275746cb57a",
+        "resource": "https://music.apple.com/gb/song/1097861836"
+      },
+      "begin": null,
+      "direction": "forward",
+      "target-type": "url",
+      "attribute-values": {},
+      "type": "purchase for download",
+      "target-credit": "",
+      "attribute-ids": {},
+      "type-id": "92777657-504c-4acb-bd33-51a201bd57e1",
+      "attributes": []
+    },
+    {
+      "url": {
+        "resource": "https://music.apple.com/gb/song/1097861836",
+        "id": "e7248042-0dda-4f18-8801-b275746cb57a"
+      },
+      "end": null,
+      "source-credit": "",
+      "ended": false,
+      "attributes": [],
+      "target-credit": "",
+      "attribute-ids": {},
+      "type-id": "b5f3058a-666c-406f-aafb-f9249fc7b122",
+      "attribute-values": {},
+      "type": "streaming",
+      "direction": "forward",
+      "begin": null,
+      "target-type": "url"
+    },
+    {
+      "attributes": [],
+      "attribute-ids": {},
+      "type-id": "b5f3058a-666c-406f-aafb-f9249fc7b122",
+      "target-credit": "",
+      "type": "streaming",
+      "attribute-values": {},
+      "target-type": "url",
+      "begin": null,
+      "direction": "forward",
+      "url": {
+        "id": "3d6a9ce7-7732-418f-94cf-876593dd0ff4",
+        "resource": "https://tidal.com/track/58990516"
+      },
+      "end": null,
+      "ended": false,
       "source-credit": ""
     },
     {
-      "type": "purchase for download",
-      "attribute-ids": {},
-      "direction": "forward",
-      "type-id": "92777657-504c-4acb-bd33-51a201bd57e1",
-      "source-credit": "",
-      "attribute-values": {},
       "attributes": [],
-      "end": null,
-      "target-type": "url",
-      "url": {
-        "id": "e7248042-0dda-4f18-8801-b275746cb57a",
-        "resource": "https://music.apple.com/gb/song/1097861836"
+      "work": {
+        "attributes": [],
+        "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
+        "type": "Song",
+        "languages": ["eng"],
+        "id": "babefb9d-3d87-3378-bfac-e13f89ae7a48",
+        "iswcs": ["T-010.257.774-1"],
+        "language": "eng",
+        "disambiguation": "",
+        "title": "Karma Police"
       },
       "target-credit": "",
-      "ended": false,
-      "begin": null
-    },
-    {
-      "begin": null,
-      "ended": false,
-      "url": {
-        "id": "e7248042-0dda-4f18-8801-b275746cb57a",
-        "resource": "https://music.apple.com/gb/song/1097861836"
-      },
-      "target-credit": "",
-      "end": null,
-      "target-type": "url",
-      "attributes": [],
-      "attribute-values": {},
-      "source-credit": "",
       "attribute-ids": {},
-      "direction": "forward",
-      "type-id": "b5f3058a-666c-406f-aafb-f9249fc7b122",
-      "type": "streaming"
-    },
-    {
-      "source-credit": "",
-      "type": "streaming",
-      "direction": "forward",
-      "attribute-ids": {},
-      "type-id": "b5f3058a-666c-406f-aafb-f9249fc7b122",
-      "attributes": [],
+      "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
       "attribute-values": {},
-      "target-credit": "",
-      "url": {
-        "resource": "https://tidal.com/track/58990516",
-        "id": "3d6a9ce7-7732-418f-94cf-876593dd0ff4"
-      },
-      "ended": false,
-      "end": null,
-      "target-type": "url",
-      "begin": null
-    },
-    {
-      "ended": true,
-      "target-credit": "",
+      "type": "performance",
+      "direction": "forward",
+      "begin": "1996-07",
       "target-type": "work",
       "end": "1997-03",
-      "work": {
-        "id": "babefb9d-3d87-3378-bfac-e13f89ae7a48",
-        "type-id": "f061270a-2fd6-32f1-a641-f0f8676d14e6",
-        "language": "eng",
-        "type": "Song",
-        "title": "Karma Police",
-        "iswcs": ["T-010.257.774-1"],
-        "languages": ["eng"],
-        "attributes": [],
-        "disambiguation": ""
-      },
-      "begin": "1996-07",
       "source-credit": "",
-      "type-id": "a3005666-a872-32c3-ad06-98af558e99b0",
-      "attribute-ids": {},
-      "direction": "forward",
-      "type": "performance",
-      "attributes": [],
-      "attribute-values": {}
+      "ended": true
     }
   ],
-  "artist-credit": [
-    {
-      "joinphrase": "",
-      "name": "Radiohead",
-      "artist": {
-        "country": "GB",
-        "genres": [
-          {
-            "disambiguation": "",
-            "count": 43,
-            "name": "alternative rock",
-            "id": "ceeaa283-5d7b-4202-8d1d-e25d116b2a18"
-          },
-          {
-            "name": "ambient pop",
-            "id": "2cdcecfe-3e7c-4055-ab34-78eceabe4d9b",
-            "count": 1,
-            "disambiguation": ""
-          },
-          {
-            "id": "930ef127-3653-4677-9b95-ecc90c7c1a14",
-            "name": "art pop",
-            "count": 3,
-            "disambiguation": ""
-          },
-          {
-            "disambiguation": "",
-            "count": 30,
-            "name": "art rock",
-            "id": "b7ef058e-6d83-4ca4-8123-9724bff4648b"
-          },
-          {
-            "disambiguation": "",
-            "count": 2,
-            "id": "f1c9b874-7ef2-4e79-9419-c0bcb5f33a30",
-            "name": "britpop"
-          },
-          {
-            "count": 1,
-            "disambiguation": "",
-            "name": "chamber pop",
-            "id": "f0843e91-c025-4dd7-8aef-6fe3d35470d9"
-          },
-          {
-            "count": 1,
-            "disambiguation": "",
-            "id": "eee90717-3eee-41bd-b463-003c180544bd",
-            "name": "crossover prog"
-          },
-          {
-            "id": "89255676-1f14-4dd8-bbad-fca839d6aff4",
-            "name": "electronic",
-            "disambiguation": "",
-            "count": 14
-          },
-          {
-            "disambiguation": "",
-            "count": 1,
-            "name": "electronic rock",
-            "id": "c4a69842-f891-4569-9506-1882aa5db433"
-          },
-          {
-            "id": "53a3cea3-17af-4421-a07a-5824b540aeb5",
-            "name": "electronica",
-            "count": 2,
-            "disambiguation": ""
-          },
-          {
-            "count": 3,
-            "disambiguation": "",
-            "name": "experimental",
-            "id": "68c81274-5770-4e7b-a4bf-ab0d7d425d99"
-          },
-          {
-            "id": "65c97e89-b42b-45c2-a70e-0eca1b8f0ff7",
-            "name": "experimental rock",
-            "disambiguation": "",
-            "count": 14
-          },
-          {
-            "disambiguation": "",
-            "count": 1,
-            "id": "8eb583f1-4fd7-460c-8246-dcdccc0e3ef9",
-            "name": "idm"
-          },
-          {
-            "id": "ccd19ebf-052c-4afe-8ad9-fbb0a73f94a7",
-            "name": "indie rock",
-            "count": 5,
-            "disambiguation": ""
-          },
-          {
-            "id": "9e7ae1de-d5f2-46a5-b105-11c7367dc70d",
-            "name": "indietronica",
-            "disambiguation": "",
-            "count": 1
-          },
-          {
-            "count": 2,
-            "disambiguation": "",
-            "name": "post-britpop",
-            "id": "a493b79c-4072-4371-a14c-446b1027982a"
-          },
-          {
-            "disambiguation": "",
-            "count": 1,
-            "id": "bbb1310c-24cb-4fc9-97c4-f93e4549f1e2",
-            "name": "post-grunge"
-          },
-          {
-            "id": "0e3fc579-2d24-4f20-9dae-736e1ec78798",
-            "name": "rock",
-            "disambiguation": "",
-            "count": 19
-          }
-        ],
-        "type": "Group",
-        "id": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
-        "name": "Radiohead",
-        "type-id": "e431f5f6-b5d2-343d-8b36-72607fffb74b",
-        "sort-name": "Radiohead",
-        "disambiguation": ""
-      }
-    }
-  ],
-  "disambiguation": ""
+  "first-release-date": "1997-05-21"
 }

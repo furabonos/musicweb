@@ -183,6 +183,7 @@ function setup(w: World) {
           youtubeVideoIds: w.recordings?.[id]?.youtubeVideoIds ?? [],
           workMbids: [],
           genres: [],
+          tags: [],
         };
       },
       works: async () => new Map(),
@@ -536,6 +537,7 @@ describe('recommend — 조회의 예외 경로', () => {
         youtubeVideoIds: [],
         workMbids: [],
         genres: [],
+        tags: [],
       };
     };
     await recommend(ports, req(), { uid: 'u1' });

@@ -275,6 +275,11 @@
           "queryScope": "COLLECTION_GROUP"
         }
       ]
+    },
+    {
+      "collectionGroup": "artistVectors",
+      "fieldPath": "songs",
+      "indexes": []
     }
   ]
 }

@@ -384,7 +384,7 @@
 
 요청 때 AI를 부르지 않는 구조. T23 배포 전에 끝낸다.
 
-- [ ] **T28 음악 데이터 태그와 곡 숫자 묶음** — SPEC 4.3, 5 / 스킬 `music-data-terms`
+- [x] **T28 음악 데이터 태그와 곡 숫자 묶음** — SPEC 4.3, 5 / 스킬 `music-data-terms`
   - 의존: T08, T13
   - 산출물:
     - `adapters/musicbrainz.ts`: 녹음·아티스트의 태그·장르 조회(`inc=tags+genres`), 녹화 응답 추가(`tools/record-music-fixtures.ts`)
