@@ -7,6 +7,7 @@ import {
   type MusicwebApi,
   type PlayableItem,
   type StatusData,
+  type AdminOverview,
 } from './api';
 import { App, countChars, MAX_REQUEST_CHARS } from './App';
 import { I18nProvider } from './i18n';
@@ -78,6 +79,10 @@ function fakeApi(over: Partial<MusicwebApi> = {}, signedIn = true) {
     status: vi.fn(async () => {
       throw new Error('not used');
     }),
+    adminOverview: vi.fn(async () => {
+      throw new Error('not used');
+    }),
+    admin: vi.fn(async () => ({})),
     ...over,
   };
   render(
@@ -306,6 +311,10 @@ describe('플레이어 정리', () => {
       status: async () => {
         throw new Error('not used');
       },
+      adminOverview: async () => {
+        throw new Error('not used');
+      },
+      admin: async () => ({}),
     } as MusicwebApi;
     const { unmount } = render(
       <I18nProvider>
@@ -458,5 +467,96 @@ describe('현황판 /status (T21)', () => {
       throw new Error('down');
     });
     expect(await screen.findByRole('alert')).toBeTruthy();
+  });
+});
+
+describe('관리자 화면 /admin (T22)', () => {
+  const overview: AdminOverview = {
+    killSwitches: { create: true, ingest: true, autoIssue: false },
+    limits: { service: { ytUnits: 9000 }, user: { playlists: 10 } },
+    usage: { day: '2026-11-23', used: { ytUnits: 1200 } },
+    jobs: [{ job: 'ingest', at: null, outcome: 'error', processed: 5, failed: 1 }],
+    artists: [
+      {
+        id: 'a1',
+        name: 'Central Cee',
+        status: 'failed',
+        failCount: 3,
+        channelId: null,
+        lastScannedAt: null,
+      },
+    ],
+    testers: [{ uid: 't1', email: 'tester@example.com' }],
+    blocked: [],
+  };
+
+  function showAdmin(over: Partial<MusicwebApi>, signedIn = true) {
+    music = fakeMusic();
+    const api = {
+      onUser: (cb: (u: { uid: string } | null) => void) => {
+        cb(signedIn ? { uid: 'u1' } : null);
+        return () => {};
+      },
+      siteConfig: vi.fn(async () => ({ openLink: 'direct' as const })),
+      adminOverview: vi.fn(async () => overview),
+      admin: vi.fn(async () => ({})),
+      ...over,
+    } as unknown as MusicwebApi;
+    render(
+      <I18nProvider>
+        <App api={api} music={music.service} path="/admin" />
+      </I18nProvider>,
+    );
+    return api;
+  }
+
+  it('관리자가 아니면(서버 거부) 접근 거부 화면만', async () => {
+    const api = showAdmin({
+      adminOverview: vi.fn(async () => {
+        throw new ApiError('permission-denied', { reason: 'notAdmin' });
+      }),
+    });
+    expect((await screen.findByRole('alert')).textContent).toContain('Access denied');
+    expect(screen.queryByText('Kill switches')).toBeNull();
+    expect(api.admin).not.toHaveBeenCalled();
+  });
+
+  it('로그인 전에는 서버를 부르지 않고 로그인 안내', async () => {
+    const api = showAdmin({}, false);
+    expect((await screen.findByRole('alert')).textContent).toContain('Sign in with an admin');
+    expect(api.adminOverview).not.toHaveBeenCalled();
+  });
+
+  it('긴급 정지 끄기 → 서버에 그 값만 보내고 다시 불러온다, 거부 이유는 문구로', async () => {
+    const api = showAdmin({});
+    const create = await screen.findByRole('checkbox', { name: 'Making sets' });
+    await act(async () => {
+      fireEvent.click(create);
+    });
+    expect(api.admin).toHaveBeenCalledWith('setKillSwitch', { feature: 'create', enabled: false });
+    expect(api.adminOverview).toHaveBeenCalledTimes(2);
+    expect(await screen.findByText('Saved.')).toBeTruthy();
+
+    (api.admin as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new ApiError('resource-exhausted', { reason: 'testersFull' }),
+    );
+    fireEvent.change(screen.getByLabelText('Test user email'), {
+      target: { value: 'new@example.com' },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    });
+    expect(await screen.findByText(/already 100 test users/)).toBeTruthy();
+  });
+
+  it('사용량·작업 결과·실패한 아티스트 다시 켜기·테스트 사용자 이메일', async () => {
+    const api = showAdmin({});
+    expect(await screen.findByText('7,800')).toBeTruthy(); // 9000 - 1200
+    expect(screen.getByText('error')).toBeTruthy();
+    expect(screen.getByText('tester@example.com')).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Re-enable' }));
+    });
+    expect(api.admin).toHaveBeenCalledWith('setArtistStatus', { id: 'a1', status: 'active' });
   });
 });

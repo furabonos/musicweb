@@ -2,11 +2,33 @@ import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { z } from 'zod';
-import { ADMIN_EMAILS } from '../config/secrets.js';
+import {
+  createEvalCaseFiler,
+  createGitHubReader,
+  firestoreGitHubReadBudget,
+  firestoreIssueBudget,
+} from '../adapters/github.js';
+import { createOpenLinkChecker, firestoreOpenLinkBudget } from '../adapters/youtube-openlink.js';
+import { fakeExternalEnabled } from '../config/runtimeEnv.js';
+import { ADMIN_EMAILS, secrets } from '../config/secrets.js';
+import {
+  addArtist,
+  adminOverview,
+  setArtistStatus,
+  setLinkStatus,
+  setUserFlag,
+} from '../core/adminOps.js';
+import type { EventSink } from '../core/events.js';
+import { errName } from '../core/jobErrors.js';
+import { runGithubStats } from '../jobs/githubStats.js';
+import { firestoreLinkHealthPorts, runLinkHealth } from '../jobs/linkHealth.js';
+import { runMetrics } from '../jobs/metrics.js';
+import { callableEventSink } from './eventSink.js';
 import { syncAdminClaim, verifyAdmin, type CallerAuth } from '../core/auth.js';
 import { addOpsLogInTx, opsLogEntry } from '../core/opsLog.js';
 import {
   FEATURES,
+  KillSwitchError,
   limitsPatchSchema,
   parseRuntimeConfig,
   RUNTIME_DOC,
@@ -14,7 +36,9 @@ import {
   type Feature,
   type LimitsPatch,
   type RuntimeConfig,
+  type ServiceCounter,
 } from '../core/runtimeConfig.js';
+import { BudgetExceededError } from '../core/budget.js';
 import { handle } from './errors.js';
 
 /**
@@ -170,7 +194,7 @@ export async function syncUserClaims(db: Firestore, adminUid: string, targetUid:
     adminUid,
     at: FieldValue.serverTimestamp(),
     action: 'syncUserClaims',
-    targetUid,
+    target: { uid: targetUid },
     before,
     after,
   });
@@ -202,32 +226,229 @@ function parseInput<S extends z.ZodType>(schema: S, data: unknown): z.infer<S> {
   return parsed.data;
 }
 
+const MBID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const addArtistInput = z.strictObject({
+  mbid: z.string().regex(MBID),
+  name: z.string().trim().min(1).max(200),
+  channelId: z
+    .string()
+    .regex(/^UC[A-Za-z0-9_-]{22}$/)
+    .optional(),
+});
+const setArtistStatusInput = z.strictObject({
+  id: z.string().regex(MBID),
+  status: z.enum(['active', 'paused']),
+});
+const setLinkStatusInput = z.strictObject({
+  songId: z.string().regex(/^[A-Za-z0-9-]{1,64}$/),
+  videoId: z.string().regex(/^[A-Za-z0-9_-]{11}$/),
+  status: z.enum(['active', 'blocked']),
+  suggestEvalCase: z.boolean().optional(),
+});
+const userFlagInput = z.strictObject({
+  email: z.string().trim().email().max(254),
+  value: z.boolean(),
+});
+const runJobInput = z.strictObject({ job: z.enum(['metrics', 'githubStats', 'linkHealth']) });
+
+/** 이메일 → uid (관리자 화면 입력용). 이메일은 저장하지 않는다. */
+async function uidByEmail(email: string): Promise<string> {
+  try {
+    return (await getAuth().getUserByEmail(email)).uid;
+  } catch (err) {
+    if ((err as { code?: unknown }).code === 'auth/user-not-found') {
+      throw new HttpsError('not-found', 'user not found', { reason: 'userNotFound' });
+    }
+    throw err;
+  }
+}
+
+/** uid → 이메일 (관리자 화면에 테스트 사용자·차단 계정 보여 주기). 없는 계정은 빈 값 */
+async function emailsOf(uids: string[]): Promise<{ uid: string; email: string | null }[]> {
+  if (!uids.length) return [];
+  const found = new Map<string, string | null>();
+  for (let i = 0; i < uids.length; i += 100) {
+    const r = await getAuth().getUsers(uids.slice(i, i + 100).map((uid) => ({ uid })));
+    for (const u of r.users) found.set(u.uid, u.email ?? null);
+  }
+  return uids.map((uid) => ({ uid, email: found.get(uid) ?? null }));
+}
+
+/** 바꾼 뒤 admin_change 이벤트(작업 이름만, 관리자는 해시). 기록 실패는 변경을 되돌리지 않는다. */
+async function changed<T>(events: EventSink, adminUid: string, action: string, result: T) {
+  await events.record({
+    type: 'admin_change',
+    attrs: { action },
+    outcome: 'ok',
+    actorUid: adminUid,
+  });
+  return result;
+}
+
+/** 관리자 함수 공통: 관리자 확인 → 입력 검사 → 처리 → admin_change 이벤트 */
+function adminCall<S extends z.ZodType, T>(
+  schema: S,
+  action: string,
+  run: (ctx: { db: Firestore; uid: string; events: EventSink; input: z.infer<S> }) => Promise<T>,
+  opts: {
+    secrets?: (typeof secrets)[keyof typeof secrets][];
+    timeoutSeconds?: number;
+    /** 한 번에 하나만 (maxInstances 1, concurrency 1) */
+    single?: boolean;
+  } = {},
+) {
+  return onCall(
+    {
+      secrets: [secrets.ACTOR_HASH_KEY, ...(opts.secrets ?? [])],
+      ...(opts.timeoutSeconds ? { timeoutSeconds: opts.timeoutSeconds } : {}),
+      ...(opts.single ? { maxInstances: 1, concurrency: 1 } : {}),
+    },
+    (req) =>
+      handle(async () => {
+        const uid = await requireAdmin(req.auth as CallerAuth | undefined);
+        const input = parseInput(schema, req.data);
+        const db = getFirestore();
+        const events = callableEventSink(db);
+        return changed(events, uid, action, await run({ db, uid, events, input }));
+      }),
+  );
+}
+
 // TODO(T23): App Check 설정 후 enforceAppCheck: true (SPEC 6.1).
 export const admin = {
-  setKillSwitch: onCall((req) =>
+  /** 관리자 화면 한눈에 보기: 긴급 정지·한도·오늘 사용량·작업 결과·수집 대상·테스트 사용자·차단 계정. 바꾸지 않음 */
+  overview: onCall((req) =>
     handle(async () => {
-      const uid = await requireAdmin(req.auth as CallerAuth | undefined);
-      return setKillSwitch(getFirestore(), uid, parseInput(setKillSwitchInput, req.data));
+      await requireAdmin(req.auth as CallerAuth | undefined);
+      const o = await adminOverview(getFirestore());
+      const { testerUids, blockedUids, ...rest } = o;
+      return { ...rest, testers: await emailsOf(testerUids), blocked: await emailsOf(blockedUids) };
     }),
   ),
-  setLimits: onCall((req) =>
-    handle(async () => {
-      const uid = await requireAdmin(req.auth as CallerAuth | undefined);
-      return setLimits(getFirestore(), uid, parseInput(setLimitsInput, req.data) as LimitsPatch);
-    }),
+  setKillSwitch: adminCall(setKillSwitchInput, 'setKillSwitch', ({ db, uid, input }) =>
+    setKillSwitch(db, uid, input),
   ),
-  syncUserClaims: onCall((req) =>
-    handle(async () => {
-      const uid = await requireAdmin(req.auth as CallerAuth | undefined);
-      const { uid: target } = parseInput(syncUserClaimsInput, req.data);
-      try {
-        return await syncUserClaims(getFirestore(), uid, target);
-      } catch (err) {
-        if ((err as { code?: unknown }).code === 'auth/user-not-found') {
-          throw new HttpsError('not-found', 'user not found', { reason: 'userNotFound' });
-        }
-        throw err;
+  setLimits: adminCall(setLimitsInput, 'setLimits', ({ db, uid, input }) =>
+    setLimits(db, uid, input as LimitsPatch),
+  ),
+  syncUserClaims: adminCall(syncUserClaimsInput, 'syncUserClaims', async ({ db, uid, input }) => {
+    try {
+      return await syncUserClaims(db, uid, input.uid);
+    } catch (err) {
+      if ((err as { code?: unknown }).code === 'auth/user-not-found') {
+        throw new HttpsError('not-found', 'user not found', { reason: 'userNotFound' });
       }
-    }),
+      throw err;
+    }
+  }),
+  addArtist: adminCall(addArtistInput, 'addArtist', async ({ db, uid, input }) => {
+    await addArtist(db, uid, input);
+    return { ok: true };
+  }),
+  setArtistStatus: adminCall(
+    setArtistStatusInput,
+    'setArtistStatus',
+    async ({ db, uid, input }) => {
+      await setArtistStatus(db, uid, input);
+      return { ok: true };
+    },
+  ),
+  /** 잘못된 연결 고치기. suggestEvalCase면 시험 문제 추가 이슈를 연다(토큰이 없으면 건너뜀) */
+  setLinkStatus: adminCall(
+    setLinkStatusInput,
+    'setLinkStatus',
+    async ({ db, uid, events, input }) => {
+      const r = await setLinkStatus(db, uid, input);
+      let evalCase: { url: string } | { skipped: string } | null = null;
+      if (input.suggestEvalCase) {
+        const token = fakeExternalEnabled() ? '' : secrets.GITHUB_ISSUE_TOKEN.value();
+        // 같은 곡·영상·결정으로는 이슈를 한 번만 연다(서버 전용 기록)
+        const seenRef = db.doc(`evalCaseIssues/${input.songId}_${input.videoId}_${input.status}`);
+        const seen = (await seenRef.get()).get('url') as string | undefined;
+        if (seen) evalCase = { url: seen };
+        else if (!token) evalCase = { skipped: 'noToken' };
+        else {
+          try {
+            const filer = createEvalCaseFiler({ token, events, budget: firestoreIssueBudget(db) });
+            const { url } = await filer.file({
+              songId: input.songId,
+              videoId: input.videoId,
+              action: input.status,
+            });
+            await seenRef.set({ url, at: FieldValue.serverTimestamp() });
+            evalCase = { url };
+          } catch (err) {
+            // 연결은 이미 고쳤다. 이슈만 못 열었다고 알린다. 정지·한도는 원래 이벤트 종류로
+            if (err instanceof KillSwitchError) {
+              await events.record({
+                type: 'kill_switch_blocked',
+                attrs: { feature: err.feature },
+                outcome: 'rejected',
+              });
+            } else if (err instanceof BudgetExceededError) {
+              await events.record({
+                type: 'limit_reached',
+                attrs: { scope: err.scope, counter: err.counter as ServiceCounter },
+                outcome: 'rejected',
+              });
+            } else {
+              await events.record({
+                type: 'error',
+                attrs: { code: errName(err), where: 'admin.evalCase' },
+                outcome: 'error',
+              });
+            }
+            evalCase = { skipped: errName(err) };
+          }
+        }
+      }
+      return { ...r, evalCase };
+    },
+    { secrets: [secrets.GITHUB_ISSUE_TOKEN] },
+  ),
+  setUserBlocked: adminCall(userFlagInput, 'setUserBlocked', async ({ db, uid, input }) => {
+    await setUserFlag(db, uid, {
+      uid: await uidByEmail(input.email),
+      flag: 'blocked',
+      value: input.value,
+    });
+    return { ok: true };
+  }),
+  setExportTester: adminCall(userFlagInput, 'setExportTester', async ({ db, uid, input }) => {
+    await setUserFlag(db, uid, {
+      uid: await uidByEmail(input.email),
+      flag: 'exportTester',
+      value: input.value,
+    });
+    return { ok: true };
+  }),
+  /** 예약 작업 수동 재실행(짧은 작업만). 수집·재확인은 아티스트를 다시 켜서 다음 밤에 돌린다 */
+  runJob: adminCall(
+    runJobInput,
+    'runJob',
+    async ({ db, events, input }) => {
+      if (input.job === 'metrics') {
+        await runMetrics({ db, events });
+        return { ok: true };
+      }
+      if (input.job === 'githubStats') {
+        const token = fakeExternalEnabled() ? '' : secrets.GITHUB_ISSUE_TOKEN.value();
+        const reader = token
+          ? createGitHubReader({ token, events, budget: firestoreGitHubReadBudget(db) })
+          : null;
+        await runGithubStats({ db, events, reader });
+        return { ok: true };
+      }
+      if (fakeExternalEnabled()) {
+        throw new HttpsError('failed-precondition', 'not in emulator', { reason: 'fakeMode' });
+      }
+      const checker = createOpenLinkChecker({ events, budget: firestoreOpenLinkBudget(db) });
+      await runLinkHealth(
+        firestoreLinkHealthPorts(db, { check: (ids) => checker.check(ids), events }),
+      );
+      return { ok: true };
+    },
+    // 수동 실행끼리 겹치지 않게 한 번에 하나(예약 작업과 겹치는 것은 githubStats가 일지를 한 batch로 써서 줄 단위 중복만 남을 수 있음)
+    { secrets: [secrets.GITHUB_ISSUE_TOKEN], timeoutSeconds: 120, single: true },
   ),
 };

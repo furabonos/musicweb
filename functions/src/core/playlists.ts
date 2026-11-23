@@ -53,7 +53,14 @@ export type CreateOutcome =
   | { ok: false; reason: ParseFailReason | SeedFailReason };
 
 export type PlaylistErrorReason =
-  'notFound' | 'notOwner' | 'alreadySaved' | 'badPosition' | 'lastSong' | 'noSpare';
+  'notFound' | 'notOwner' | 'alreadySaved' | 'badPosition' | 'lastSong' | 'noSpare' | 'blocked';
+
+/** 관리자가 차단한 계정은 재생목록을 만들거나 바꾸거나 저장하지 못한다 (T22, D-043) */
+export async function assertNotBlocked(db: Firestore, uid: string): Promise<void> {
+  if ((await db.doc(`users/${uid}`).get()).get('blocked') === true) {
+    throw new PlaylistError('blocked');
+  }
+}
 
 /** 재생목록 조작 거부. api 계층이 callable 오류 코드로 바꾼다. */
 export class PlaylistError extends Error {
@@ -88,6 +95,9 @@ export async function createPlaylist(
     const r = await deps.parse(input.text, input.locale);
     if (!r.ok) return { ok: false, reason: r.reason };
   }
+
+  // 0-1. 관리자가 차단한 계정은 만들 수 없다(SPEC 4.11, T22). 한도도 쓰지 않는다
+  await assertNotBlocked(db, uid);
 
   // 1. 한도·긴급 정지 먼저 (AI 호출 전). AI가 해석에 실패해도 1회로 센다(AI 비용은 이미 썼으므로).
   try {
@@ -234,6 +244,7 @@ export async function updatePlaylist(
 ): Promise<{ items: PlayableItem[] }> {
   const { db } = deps;
   const now = (deps.now ?? (() => new Date()))();
+  await assertNotBlocked(db, uid);
   const ref = db.doc(`playlists/${input.id}`);
   const privRef = ref.collection('private').doc('request');
 
@@ -298,6 +309,7 @@ export async function savePlaylist(
   uid: string,
   input: { id: string },
 ): Promise<{ id: string; state: 'saved' }> {
+  await assertNotBlocked(deps.db, uid);
   const ref = deps.db.doc(`playlists/${input.id}`);
   await deps.db.runTransaction(async (tx) => {
     const p = readPlaylist(await tx.get(ref), uid);

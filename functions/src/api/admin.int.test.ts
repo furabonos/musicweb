@@ -15,6 +15,7 @@ const db = getFirestore();
 const auth = getAuth();
 
 const ADMIN = 'admin@example.com';
+const ARTIST = '0c6c4e57-1e2e-4d7a-8d4a-2b2a8f1e9c11';
 
 async function clearEmulators() {
   if (!authHost || !firestoreHost) throw new Error('pnpm test:int로 실행하세요.');
@@ -84,10 +85,24 @@ const opsLogs = async () => (await db.collection('opsLog').get()).docs.map((d) =
 beforeEach(clearEmulators);
 
 describe('관리자 callable: 권한', () => {
+  // 모든 관리자 callable (T22): 하나라도 빠지면 아래 '목록이 모든 함수를 덮는다' 테스트가 실패한다
   const CALLS: [string, unknown][] = [
+    ['admin-overview', {}],
     ['admin-setKillSwitch', { feature: 'create', enabled: false }],
     ['admin-setLimits', { user: { playlists: 1 } }],
+    ['admin-syncUserClaims', { uid: 'someone' }],
+    ['admin-addArtist', { mbid: ARTIST, name: 'Central Cee' }],
+    ['admin-setArtistStatus', { id: ARTIST, status: 'paused' }],
+    ['admin-setLinkStatus', { songId: 'song1', videoId: 'aaaaaaaaaaa', status: 'blocked' }],
+    ['admin-setUserBlocked', { email: 'x@example.com', value: true }],
+    ['admin-setExportTester', { email: 'x@example.com', value: true }],
+    ['admin-runJob', { job: 'metrics' }],
   ];
+
+  it('목록이 모든 관리자 함수를 덮는다', async () => {
+    const { admin } = await import('./admin.js');
+    expect(CALLS.map(([n]) => n.replace('admin-', '')).sort()).toEqual(Object.keys(admin).sort());
+  });
 
   it.each(CALLS)('로그인 안 한 호출은 permission-denied: %s', async (name, data) => {
     const r = await call(name, data);
@@ -317,7 +332,7 @@ describe('리뷰 반영: 설정 저장 방식·끊긴 계정·클레임 정리',
     expect(audit).toMatchObject({
       adminUid,
       action: 'syncUserClaims',
-      targetUid: former.uid,
+      target: { uid: former.uid },
       before: { admin: true },
       after: { admin: false },
     });
@@ -336,6 +351,236 @@ describe('리뷰 반영: 설정 저장 방식·끊긴 계정·클레임 정리',
       'NOT_FOUND',
     );
     expect((await call('admin-syncUserClaims', { uid: 'a/b' }, token)).error?.status).toBe(
+      'INVALID_ARGUMENT',
+    );
+  });
+});
+
+describe('관리자 화면 기능 (T22): 바꾸면 adminAudit·운영 일지·admin_change 이벤트', () => {
+  const adminEvents = async () =>
+    (await db.collection('events').where('type', '==', 'admin_change').get()).docs.map((d) =>
+      d.get('attrs.action'),
+    );
+
+  it('아티스트 추가(D-028: lastScannedAt null, 채널이면 ytVerifiedAt) → 빼기 → 다시 켜기', async () => {
+    const { token } = await googleSignIn(ADMIN);
+    const channelId = `UC${'a'.repeat(22)}`;
+    const add = await call(
+      'admin-addArtist',
+      { mbid: ARTIST, name: 'Central Cee', channelId },
+      token,
+    );
+    expect(add.error).toBeUndefined();
+    const doc = (await db.doc(`artists/${ARTIST}`).get()).data();
+    expect(doc).toMatchObject({ status: 'active', failCount: 0, lastScannedAt: null, channelId });
+    expect(doc?.ytVerifiedAt).toBeDefined();
+    expect(
+      (await call('admin-addArtist', { mbid: ARTIST, name: 'x' }, token)).error?.details,
+    ).toEqual({
+      reason: 'artistExists',
+    });
+
+    expect(
+      (await call('admin-setArtistStatus', { id: ARTIST, status: 'paused' }, token)).error,
+    ).toBeUndefined();
+    expect((await db.doc(`artists/${ARTIST}`).get()).get('status')).toBe('paused');
+    await db.doc(`artists/${ARTIST}`).update({ status: 'failed', failCount: 3 });
+    await call('admin-setArtistStatus', { id: ARTIST, status: 'active' }, token);
+    expect((await db.doc(`artists/${ARTIST}`).get()).data()).toMatchObject({
+      status: 'active',
+      failCount: 0,
+      lastScannedAt: null,
+    });
+
+    expect((await audits()).map((a) => a.action).sort()).toEqual([
+      'addArtist',
+      'setArtistStatus',
+      'setArtistStatus',
+    ]);
+    const log = (await opsLogs()).map((l) => l.message as string);
+    expect(log).toHaveLength(3);
+    expect(log.join(' ')).not.toContain('Central Cee'); // 일지에 대상 이름을 넣지 않는다
+    expect((await adminEvents()).sort()).toEqual([
+      'addArtist',
+      'setArtistStatus',
+      'setArtistStatus',
+    ]);
+  });
+
+  it('연결 고치기: 막기, 다른 영상으로 바꾸면 기존 active는 막힘, 오래된 연결은 거부', async () => {
+    const { token } = await googleSignIn(ADMIN);
+    const fresh = new Date();
+    await db.doc('songs/song1/links/aaaaaaaaaaa').set({ status: 'active', verifiedAt: fresh });
+    await db
+      .doc('songs/song1/links/bbbbbbbbbbb')
+      .set({ status: 'rejected', verifiedAt: fresh, embeddable: true, linkedBy: 'rule' });
+    await db
+      .doc('songs/song1/links/ddddddddddd')
+      .set({ status: 'rejected', verifiedAt: fresh, embeddable: false });
+    await db.doc('songs/song1/links/eeeeeeeeeee').set({ status: 'gone' });
+    await db
+      .doc('songs/song1/links/ccccccccccc')
+      .set({ status: 'rejected', verifiedAt: new Date(Date.now() - 26 * 86400_000) });
+
+    const sw = await call(
+      'admin-setLinkStatus',
+      { songId: 'song1', videoId: 'bbbbbbbbbbb', status: 'active', suggestEvalCase: true },
+      token,
+    );
+    expect(sw.error).toBeUndefined();
+    // 에뮬레이터(가짜 외부)에서는 GitHub 토큰이 없어 이슈는 건너뛴다
+    expect(sw.result).toMatchObject({
+      after: 'active',
+      blockedOthers: 1,
+      evalCase: { skipped: 'noToken' },
+    });
+    const status = async (v: string) =>
+      (await db.doc(`songs/song1/links/${v}`).get()).get('status');
+    expect(await status('bbbbbbbbbbb')).toBe('active');
+    expect(await status('aaaaaaaaaaa')).toBe('blocked');
+
+    const stale = await call(
+      'admin-setLinkStatus',
+      { songId: 'song1', videoId: 'ccccccccccc', status: 'active' },
+      token,
+    );
+    expect(stale.error?.details).toEqual({ reason: 'linkStale' });
+    // 퍼가기가 안 되는 영상으로는 바꾸지 않는다(곡이 조용히 빠지지 않게)
+    const notPlayable = await call(
+      'admin-setLinkStatus',
+      { songId: 'song1', videoId: 'ddddddddddd', status: 'active' },
+      token,
+    );
+    expect(notPlayable.error?.details).toEqual({ reason: 'linkNotPlayable' });
+    // 영상이 없어진(gone) 연결은 막기 대상이 아니다
+    const gone = await call(
+      'admin-setLinkStatus',
+      { songId: 'song1', videoId: 'eeeeeeeeeee', status: 'blocked' },
+      token,
+    );
+    expect(gone.error?.details).toEqual({ reason: 'badTransition' });
+    // 원래 누가 연결했는지는 감사 기록 before에 남는다
+    expect((await audits()).find((a) => a.action === 'setLinkStatus')?.before).toEqual({
+      status: 'rejected',
+      linkedBy: 'rule',
+    });
+    expect(
+      (
+        await call(
+          'admin-setLinkStatus',
+          { songId: 'song1', videoId: 'zzzzzzzzzzz', status: 'blocked' },
+          token,
+        )
+      ).error?.status,
+    ).toBe('NOT_FOUND');
+    expect(await adminEvents()).toEqual(['setLinkStatus']);
+  });
+
+  it('차단된 계정은 만들기 거부(한도도 쓰지 않음), 풀면 다시 된다', async () => {
+    const admin = await googleSignIn(ADMIN);
+    const input = { text: 'songs like Doja by Central Cee', locale: 'en' };
+    expect(
+      (await call('admin-setUserBlocked', { email: ADMIN, value: true }, admin.token)).error,
+    ).toBeUndefined();
+    expect((await db.doc(`users/${admin.uid}`).get()).get('blocked')).toBe(true);
+    const r = await call('playlists-create', input, admin.token);
+    expect(r.error?.status).toBe('PERMISSION_DENIED');
+    expect(r.error?.details).toEqual({ reason: 'blocked' });
+    expect((await db.collection(`users/${admin.uid}/usage`).get()).size).toBe(0);
+
+    // 차단된 계정은 저장·바꾸기도 못 한다
+    expect((await call('playlists-save', { id: 'nope' }, admin.token)).error?.details).toEqual({
+      reason: 'blocked',
+    });
+    await call('admin-setUserBlocked', { email: ADMIN, value: false }, admin.token);
+    expect((await call('playlists-create', input, admin.token)).error).toBeUndefined();
+    // 감사 기록에는 대상 uid, 운영 일지에는 없음
+    expect((await audits()).filter((a) => a.action === 'setUserBlocked')[0]?.target).toEqual({
+      uid: admin.uid,
+    });
+    expect(JSON.stringify(await opsLogs())).not.toContain(admin.uid);
+    expect(JSON.stringify(await opsLogs())).not.toContain(ADMIN);
+    expect(
+      (
+        await call(
+          'admin-setUserBlocked',
+          { email: 'nobody@example.com', value: true },
+          admin.token,
+        )
+      ).error?.details,
+    ).toEqual({ reason: 'userNotFound' });
+  });
+
+  it('테스트 사용자는 100명까지: 101번째 등록 거부, 이미 등록된 사람은 다시 켜도 됨', async () => {
+    const admin = await googleSignIn(ADMIN);
+    const batch = db.batch();
+    for (let i = 0; i < 99; i++) batch.set(db.doc(`users/tester${i}`), { exportTester: true });
+    await batch.commit();
+    const t100 = await googleSignIn('tester100@example.com');
+    expect(
+      (
+        await call(
+          'admin-setExportTester',
+          { email: 'tester100@example.com', value: true },
+          admin.token,
+        )
+      ).error,
+    ).toBeUndefined();
+    expect((await db.doc(`users/${t100.uid}`).get()).get('exportTester')).toBe(true);
+
+    await googleSignIn('tester101@example.com');
+    const over = await call(
+      'admin-setExportTester',
+      { email: 'tester101@example.com', value: true },
+      admin.token,
+    );
+    expect(over.error?.status).toBe('RESOURCE_EXHAUSTED');
+    expect(over.error?.details).toEqual({ reason: 'testersFull' });
+    // 이미 테스트 사용자인 100번째는 다시 켜도 거부되지 않는다
+    expect(
+      (
+        await call(
+          'admin-setExportTester',
+          { email: 'tester100@example.com', value: true },
+          admin.token,
+        )
+      ).error,
+    ).toBeUndefined();
+  });
+
+  it('한눈에 보기: 설정·오늘 사용량·작업별 마지막 결과·아티스트·테스트 사용자 이메일, 검색 문장 없음', async () => {
+    const admin = await googleSignIn(ADMIN);
+    const t = await googleSignIn('tester@example.com');
+    await db.doc(`users/${t.uid}`).set({ exportTester: true });
+    await db.doc(`artists/${ARTIST}`).set({ name: 'Central Cee', status: 'active', failCount: 0 });
+    await db.collection('events').add({
+      type: 'job_finished',
+      attrs: { job: 'ingest', processed: 5, failed: 1 },
+      outcome: 'error',
+      at: new Date(),
+    });
+    await db.collection('playlists').doc('p1').set({ ownerUid: 'u' });
+    await db.doc('playlists/p1/private/request').set({ text: 'my secret search sentence' });
+
+    const r = await call('admin-overview', {}, admin.token);
+    expect(r.error).toBeUndefined();
+    const o = r.result as Record<string, unknown>;
+    expect(o.killSwitches).toEqual({ create: true, ingest: true, autoIssue: true });
+    expect(o.jobs).toEqual([
+      expect.objectContaining({ job: 'ingest', outcome: 'error', processed: 5, failed: 1 }),
+    ]);
+    expect(o.artists).toEqual([expect.objectContaining({ id: ARTIST, name: 'Central Cee' })]);
+    expect(o.testers).toEqual([{ uid: t.uid, email: 'tester@example.com' }]);
+    expect(JSON.stringify(o)).not.toContain('my secret search sentence');
+  });
+
+  it('작업 재실행: 지표 작업은 바로 돌고 기록이 남는다', async () => {
+    const { token } = await googleSignIn(ADMIN);
+    const r = await call('admin-runJob', { job: 'metrics' }, token);
+    expect(r.error).toBeUndefined();
+    expect((await db.doc('metrics/current').get()).get('service.parseSuccessRate')).toBeDefined();
+    expect(await adminEvents()).toEqual(['runJob']);
+    expect((await call('admin-runJob', { job: 'ingest' }, token)).error?.status).toBe(
       'INVALID_ARGUMENT',
     );
   });

@@ -87,3 +87,10 @@ test('현황판', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Station status' })).toBeVisible();
   await shot(page, '04-status');
 });
+
+test('관리자 화면', async ({ page }) => {
+  await page.goto('/admin');
+  await signIn(page);
+  await expect(page.getByRole('heading', { name: 'Station control room' })).toBeVisible();
+  await shot(page, '05-admin');
+});
