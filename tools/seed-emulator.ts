@@ -141,6 +141,42 @@ export async function setRuntime(
   ]);
 }
 
+/** JS 값 → Firestore REST 값 (e2e 시드용: 문자열·숫자·불·null·Date·배열·객체) */
+function toValue(v: unknown): unknown {
+  if (v === null) return { nullValue: null };
+  if (v instanceof Date) return { timestampValue: v.toISOString() };
+  if (typeof v === 'string') return { stringValue: v };
+  if (typeof v === 'boolean') return { booleanValue: v };
+  if (typeof v === 'number')
+    return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+  if (Array.isArray(v)) return { arrayValue: { values: v.map(toValue) } };
+  if (typeof v === 'object') {
+    return {
+      mapValue: {
+        fields: Object.fromEntries(Object.entries(v as object).map(([k, x]) => [k, toValue(x)])),
+      },
+    };
+  }
+  throw new Error(`시드에 넣을 수 없는 값: ${String(v)}`);
+}
+
+/** e2e·화면 보기용: 현황판 문서(metrics/current)와 운영 일지 줄을 넣는다 (T21). */
+export async function seedStatus(
+  data: { current: Record<string, unknown>; opsLog: Record<string, unknown>[] },
+  host = '127.0.0.1:8080',
+) {
+  const name = (path: string) =>
+    `projects/${EMULATOR_PROJECT}/databases/(default)/documents/${path}`;
+  const fields = (o: Record<string, unknown>) =>
+    (toValue(o) as { mapValue: { fields: unknown } }).mapValue.fields;
+  await commit(host, [
+    { update: { name: name('metrics/current'), fields: fields(data.current) } },
+    ...data.opsLog.map((e, i) => ({
+      update: { name: name(`opsLog/e2e${i}`), fields: fields(e) },
+    })),
+  ]);
+}
+
 async function commit(host: string, writes: unknown[]) {
   const res = await fetch(`${base(host)}:commit`, {
     method: 'POST',

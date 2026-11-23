@@ -1,0 +1,86 @@
+[
+  {
+    "number": 50,
+    "state": "closed",
+    "created_at": "2026-11-21T15:00:00Z",
+    "closed_at": "2026-11-21T18:00:00Z",
+    "merged_at": "2026-11-21T18:00:00Z",
+    "merge_commit_sha": "aaaa000000000000000000000000000000000001",
+    "head": {
+      "ref": "claude/issue-40-20261121-1500",
+      "sha": "bbbb000000000000000000000000000000000001"
+    },
+    "body": "## 쉬운 말 요약\n...\nFixes #40\n",
+    "labels": [],
+    "html_url": "https://github.com/furabonos/musicweb/pull/50"
+  },
+  {
+    "number": 51,
+    "state": "closed",
+    "created_at": "2026-11-22T13:30:00Z",
+    "closed_at": "2026-11-22T20:00:00Z",
+    "merged_at": null,
+    "merge_commit_sha": "aaaa000000000000000000000000000000000002",
+    "head": {
+      "ref": "claude/issue-41-20261122-1330",
+      "sha": "bbbb000000000000000000000000000000000002"
+    },
+    "body": "Fixes #41",
+    "labels": [{ "name": "reject: wrong fix" }],
+    "html_url": "https://github.com/furabonos/musicweb/pull/51"
+  },
+  {
+    "number": 52,
+    "state": "closed",
+    "created_at": "2026-11-22T21:00:00Z",
+    "closed_at": "2026-11-23T01:00:00Z",
+    "merged_at": "2026-11-23T01:00:00Z",
+    "merge_commit_sha": "aaaa000000000000000000000000000000000003",
+    "head": {
+      "ref": "claude/issue-41-20261122-2100",
+      "sha": "bbbb000000000000000000000000000000000003"
+    },
+    "body": "Closes #41",
+    "labels": [],
+    "html_url": "https://github.com/furabonos/musicweb/pull/52"
+  },
+  {
+    "number": 53,
+    "state": "open",
+    "created_at": "2026-11-23T10:00:00Z",
+    "closed_at": null,
+    "merged_at": null,
+    "merge_commit_sha": null,
+    "head": {
+      "ref": "claude/issue-42-20261123-1000",
+      "sha": "bbbb000000000000000000000000000000000004"
+    },
+    "body": "Fixes #42",
+    "labels": [],
+    "html_url": "https://github.com/furabonos/musicweb/pull/53"
+  },
+  {
+    "number": 54,
+    "state": "closed",
+    "created_at": "2026-11-22T09:00:00Z",
+    "closed_at": "2026-11-22T10:00:00Z",
+    "merged_at": "2026-11-22T10:00:00Z",
+    "merge_commit_sha": "aaaa000000000000000000000000000000000009",
+    "head": { "ref": "t21-status", "sha": "bbbb000000000000000000000000000000000009" },
+    "body": "사람이 만든 작업 PR",
+    "labels": [],
+    "html_url": "https://github.com/furabonos/musicweb/pull/54"
+  },
+  {
+    "number": 20,
+    "state": "closed",
+    "created_at": "2026-09-01T09:00:00Z",
+    "closed_at": "2026-09-01T10:00:00Z",
+    "merged_at": "2026-09-01T10:00:00Z",
+    "merge_commit_sha": "aaaa000000000000000000000000000000000020",
+    "head": { "ref": "claude/issue-1-old", "sha": "bbbb000000000000000000000000000000000020" },
+    "body": "Fixes #1",
+    "labels": [],
+    "html_url": "https://github.com/furabonos/musicweb/pull/20"
+  }
+]

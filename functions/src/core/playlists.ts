@@ -160,6 +160,12 @@ export async function createPlaylist(
     spares: spares.map(toItem),
   });
   await batch.commit();
+  await events.record({
+    type: 'playlist_created',
+    attrs: { songs: chosen.length },
+    outcome: 'ok',
+    actorUid: uid,
+  });
 
   return {
     ok: true,

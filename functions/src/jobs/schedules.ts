@@ -16,11 +16,15 @@ import { createOpenLinkChecker, firestoreOpenLinkBudget } from '../adapters/yout
 import { firestoreLinkHealthPorts, runLinkHealth } from './linkHealth.js';
 import { runDailyEval } from './dailyEval.js';
 import {
+  createGitHubReader,
   createIssueFiler,
   firestoreFingerprintStore,
+  firestoreGitHubReadBudget,
   firestoreIssueBudget,
 } from '../adapters/github.js';
 import { runAutoIssue } from './autoIssue.js';
+import { runGithubStats } from './githubStats.js';
+import { runMetrics } from './metrics.js';
 
 /**
  * 예약 작업 (SPEC 4.4). 태평양 시간 기준, YouTube 할당 초기화(자정) 뒤에 차례로 돈다:
@@ -193,6 +197,46 @@ export const autoIssueNightly = onSchedule(
         })
       : null;
     await runAutoIssue({ db, events, filer });
+  },
+);
+
+/**
+ * 현황판 GitHub 수치 (T21, D-042). 05:15, 하루 한 번. 자동 이슈와 같은 토큰(이 저장소 이슈·PR 읽기)과 githubCalls 상한.
+ * 토큰이 없으면 수치 없이 "토큰 없음"으로 남긴다.
+ */
+export const githubStatsNightly = onSchedule(
+  {
+    schedule: 'every day 05:15',
+    timeZone: 'America/Los_Angeles',
+    maxInstances: 1,
+    timeoutSeconds: 120,
+    retryCount: 0,
+    secrets: [secrets.ACTOR_HASH_KEY, secrets.GITHUB_ISSUE_TOKEN],
+  },
+  async () => {
+    const db = getFirestore();
+    const events = firestoreEventSink(db, secrets.ACTOR_HASH_KEY.value());
+    const token = secrets.GITHUB_ISSUE_TOKEN.value();
+    const reader = token
+      ? createGitHubReader({ token, events, budget: firestoreGitHubReadBudget(db) })
+      : null;
+    await runGithubStats({ db, events, reader });
+  },
+);
+
+/** 현황판 서비스·곡 목록 지표 (T21, D-042). 05:30, 매일 시험(05:00) 뒤. 외부 호출 없음. */
+export const metricsNightly = onSchedule(
+  {
+    schedule: 'every day 05:30',
+    timeZone: 'America/Los_Angeles',
+    maxInstances: 1,
+    timeoutSeconds: 120,
+    retryCount: 0,
+    secrets: [secrets.ACTOR_HASH_KEY],
+  },
+  async () => {
+    const db = getFirestore();
+    await runMetrics({ db, events: firestoreEventSink(db, secrets.ACTOR_HASH_KEY.value()) });
   },
 );
 

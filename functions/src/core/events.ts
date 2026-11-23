@@ -56,6 +56,10 @@ export const EXTERNAL_OPS = [
   'github.issues.create',
   'github.issues.get',
   'github.issues.comment',
+  'github.issues.list',
+  'github.pulls.list',
+  'github.commits.list',
+  'github.checks.list',
 ] as const;
 export type ExternalOp = (typeof EXTERNAL_OPS)[number];
 
@@ -79,7 +83,11 @@ export const EVENT_SCHEMAS = {
     candidates: count,
     filtered: count,
     hallucinated: count,
+    // 곡 찾기(lookup) 단계에서 YouTube 검색을 한 번이라도 했는지 (현황판 "검색 없이 처리된 요청 비율", T21)
+    usedSearch: z.boolean().optional(),
   }),
+  // 재생목록을 만들었다: 보여 준 곡 수 (현황판 "사용자가 뺀 곡 비율"의 분모, T21)
+  playlist_created: z.strictObject({ songs: count }),
   song_linked: z.strictObject({
     kind: z.enum(['official_audio', 'mv', 'live', 'cover', 'remix', 'other']),
     // 소수 둘째 자리까지만(숫자에 다른 정보를 싣지 못하게)

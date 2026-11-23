@@ -1,7 +1,13 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { MusicService, PlayerEvents } from '@musicweb/shared';
-import { ApiError, type CreateResult, type MusicwebApi, type PlayableItem } from './api';
+import {
+  ApiError,
+  type CreateResult,
+  type MusicwebApi,
+  type PlayableItem,
+  type StatusData,
+} from './api';
 import { App, countChars, MAX_REQUEST_CHARS } from './App';
 import { I18nProvider } from './i18n';
 
@@ -69,6 +75,9 @@ function fakeApi(over: Partial<MusicwebApi> = {}, signedIn = true) {
       throw new ApiError('not-found');
     }),
     siteConfig: vi.fn(async () => ({ openLink: 'direct' as const })),
+    status: vi.fn(async () => {
+      throw new Error('not used');
+    }),
     ...over,
   };
   render(
@@ -294,6 +303,9 @@ describe('플레이어 정리', () => {
         throw new ApiError('not-found');
       },
       siteConfig: async () => ({ openLink: 'direct' as const }),
+      status: async () => {
+        throw new Error('not used');
+      },
     } as MusicwebApi;
     const { unmount } = render(
       <I18nProvider>
@@ -358,5 +370,93 @@ describe('공유 주소 /p/:id (보기 전용)', () => {
       },
     });
     expect((await screen.findByRole('alert')).textContent).toContain("doesn't exist");
+  });
+});
+
+describe('현황판 /status (T21)', () => {
+  const data: StatusData = {
+    updatedAt: '2026-11-23T13:30:00.000Z',
+    service: {
+      parseSuccessRate: { value: 0.9, unit: 'rate', method: 'Requests understood divided by all.' },
+      removedSongRate: { value: null, unit: 'rate', method: 'Removed divided by shown.' },
+    },
+    catalog: { playableSongs: { value: 1500, unit: 'count', method: 'Songs with a video.' } },
+    github: {
+      updatedAt: null,
+      metrics: { hoursToFix: { value: 32.5, unit: 'hours', method: 'Median hours to merge.' } },
+      rejectReasons: [{ reason: 'wrong fix', count: 1 }],
+      recent: [
+        {
+          number: 53,
+          url: 'https://github.com/furabonos/musicweb/pull/53',
+          state: 'merged',
+          ci: 'success',
+          openedAt: null,
+          reverted: true,
+          rejectReason: null,
+        },
+      ],
+    },
+    opsLog: [
+      {
+        at: '2026-11-23T13:00:00.000Z',
+        kind: 'pr',
+        message: 'Auto-fix PR merged; CI success.',
+        links: ['https://github.com/furabonos/musicweb/pull/53'],
+      },
+    ],
+  };
+
+  function showStatus(status: MusicwebApi['status']) {
+    music = fakeMusic();
+    const api = {
+      onUser: (cb: (u: null) => void) => {
+        cb(null);
+        return () => {};
+      },
+      siteConfig: vi.fn(async () => ({ openLink: 'direct' as const })),
+      status: vi.fn(status),
+    } as unknown as MusicwebApi;
+    render(
+      <I18nProvider>
+        <App api={api} music={music.service} path="/status" />
+      </I18nProvider>,
+    );
+    return api;
+  }
+
+  it('수치·계산 방법·없는 값·GitHub 링크·운영 일지를 보여 주고 검색창은 없다', async () => {
+    const api = showStatus(async () => data);
+    expect(await screen.findByRole('heading', { name: 'Station status' })).toBeTruthy();
+    const metric = (name: string) =>
+      document.querySelector(`[data-metric="${name}"]`)?.textContent ?? '';
+    expect(metric('parseSuccessRate')).toContain('90%');
+    expect(metric('parseSuccessRate')).toContain('Requests understood divided by all.');
+    expect(metric('removedSongRate')).toContain('No data yet');
+    expect(metric('playableSongs')).toContain('1,500');
+    expect(metric('hoursToFix')).toContain('32.5 h');
+    expect(screen.getByText(/wrong fix: 1/)).toBeTruthy();
+    expect(
+      screen
+        .getAllByRole('link', { name: 'Pull request #53 (opens in a new tab)' })[0]
+        ?.getAttribute('href'),
+    ).toBe('https://github.com/furabonos/musicweb/pull/53');
+    expect(document.querySelector('.status-list a')?.parentElement?.textContent).toContain(
+      'reverted',
+    );
+    expect(screen.getByText('Auto-fix PR merged; CI success.')).toBeTruthy();
+    expect(screen.getAllByRole('link', { name: /#53/ })).toHaveLength(2);
+    expect(screen.queryByLabelText('Describe the music you want')).toBeNull();
+    expect(api.siteConfig).not.toHaveBeenCalled();
+  });
+
+  it('GitHub 수치가 없으면 안내, 불러오기 실패는 오류 안내', async () => {
+    showStatus(async () => ({ ...data, github: { unavailable: 'no GitHub token' } }));
+    expect(await screen.findByText('GitHub numbers are not available yet.')).toBeTruthy();
+    cleanup();
+    showStatus(async () => {
+      throw new Error('down');
+    });
+    expect(await screen.findByRole('alert')).toBeTruthy();
   });
 });

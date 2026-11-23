@@ -16,6 +16,7 @@ import {
   type OpenLinkMode,
   type PlayableItem,
   type SharedPlaylist,
+  type StatusData,
 } from './api';
 
 /**
@@ -88,5 +89,6 @@ export function createFirebaseApi(): MusicwebApi {
     },
     getPlaylist: (id) => call<SharedPlaylist>('playlists-get', { id }),
     siteConfig: () => call<{ openLink: OpenLinkMode }>('site-config', {}),
+    status: () => call<StatusData>('status-get', {}),
   };
 }

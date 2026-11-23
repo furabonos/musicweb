@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
-import { seedPlaylist } from '../../../tools/seed-emulator.ts';
+import { seedPlaylist, seedStatus } from '../../../tools/seed-emulator.ts';
 import { useFakeYouTube } from './fakeYouTube';
 import { ask, resetCatalog, signIn } from './helpers';
 
@@ -42,4 +42,48 @@ test('공유 화면', async ({ page }) => {
   await page.goto('/p/capture1');
   await expect(page.getByRole('heading', { name: 'Shared set' })).toBeVisible();
   await shot(page, '03-shared');
+});
+
+test('현황판', async ({ page }) => {
+  const m = (value: number | null, unit: string, method: string) => ({ value, unit, method });
+  await seedStatus({
+    current: {
+      updatedAt: new Date('2026-11-23T13:30:00Z'),
+      service: {
+        parseSuccessRate: m(
+          0.9,
+          'rate',
+          'Requests understood divided by all requests in the last 24 hours.',
+        ),
+        madeUpSongsFiltered: m(
+          3,
+          'count',
+          'Songs the AI suggested that were not in the candidate list.',
+        ),
+        officialLinkAccuracy: m(0.98, 'score', "Today's song-matching test score."),
+        removedSongRate: m(null, 'rate', 'Songs removed divided by songs shown.'),
+        recommendTestScore: m(1, 'score', 'Recommendation test, last measured 2026-11-22.'),
+      },
+      catalog: {
+        playableSongs: m(1500, 'count', 'Songs with a playable official video.'),
+        songsAdded: m(20, 'count', 'Change since the previous update.'),
+        searchFreeRate: m(0.75, 'rate', 'Sets made without any YouTube search.'),
+        ytUnitsLeft: m(7800, 'count', 'YouTube API units left today.'),
+        ytUserSearchesLeft: m(75, 'count', 'Searches left for user requests.'),
+        ytJobSearchesLeft: m(0, 'count', 'Searches left for nightly jobs.'),
+      },
+      github: { unavailable: 'no GitHub token' },
+    },
+    opsLog: [
+      {
+        at: new Date('2026-11-23T13:16:00Z'),
+        kind: 'job',
+        message: 'Nightly ingest finished: 120 videos checked.',
+        links: [],
+      },
+    ],
+  });
+  await page.goto('/status');
+  await expect(page.getByRole('heading', { name: 'Station status' })).toBeVisible();
+  await shot(page, '04-status');
 });

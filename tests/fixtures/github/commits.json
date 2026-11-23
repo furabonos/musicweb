@@ -1,0 +1,18 @@
+[
+  {
+    "sha": "cccc000000000000000000000000000000000001",
+    "commit": {
+      "message": "Revert \"Merge pull request #50 from furabonos/claude/issue-40\"\n\nThis reverts commit aaaa000000000000000000000000000000000001, reversing\nchanges made to dddd000000000000000000000000000000000001."
+    }
+  },
+  {
+    "sha": "cccc000000000000000000000000000000000002",
+    "commit": { "message": "Merge pull request #52 from furabonos/claude/issue-41" }
+  },
+  {
+    "sha": "cccc000000000000000000000000000000000003",
+    "commit": {
+      "message": "Revert \"something else\"\n\nThis reverts commit eeee000000000000000000000000000000000001."
+    }
+  }
+]
