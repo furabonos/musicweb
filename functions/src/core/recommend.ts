@@ -111,8 +111,9 @@ export const RECOMMEND_LIMITS = {
   precomputedArtists: 10,
   /** 숫자 묶음을 더 읽을 (후보 곡의) 아티스트 수 */
   extraVectorArtists: 10,
-  /** 한 재생목록에 기준 곡 아티스트의 다른 곡 상한 */
-  seedArtistSongs: 2,
+  /** 보이는 목록에 기준 곡 아티스트의 다른 곡 상한: 곡 수의 20%, 최소 2곡 (10곡이면 2, 15곡이면 3) */
+  seedArtistShare: 0.2,
+  seedArtistMin: 2,
 };
 
 export interface RecommendItem {
@@ -820,8 +821,12 @@ async function rulePick(
   const left = [...pool];
   const chosen: RecommendItem[] = [];
   let lastArtist: string | null = null;
+  const cap = Math.max(
+    RECOMMEND_LIMITS.seedArtistMin,
+    Math.floor(req.count * RECOMMEND_LIMITS.seedArtistShare),
+  );
   while (left.length && chosen.length < pickCount) {
-    const capped = chosen.length < req.count && seedArtistUsed >= RECOMMEND_LIMITS.seedArtistSongs;
+    const capped = chosen.length < req.count && seedArtistUsed >= cap;
     const allowed = (p: (typeof pool)[number]) =>
       !(capped && compareKey(p.song.artist) === seedArtist);
     let idx = left.findIndex((p) => allowed(p) && compareKey(p.song.artist) !== lastArtist);

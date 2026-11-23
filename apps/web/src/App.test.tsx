@@ -83,6 +83,12 @@ function fakeApi(over: Partial<MusicwebApi> = {}, signedIn = true) {
       throw new Error('not used');
     }),
     admin: vi.fn(async () => ({})),
+    createFromSong: vi.fn(async () => ok([1, 2, 3].map((n) => item(n)))),
+    suggest: vi.fn(async (q: string) =>
+      q.toLowerCase().startsWith('do')
+        ? [{ songId: 's-doja', artist: 'Central Cee', title: 'Doja', releaseYear: 2022 }]
+        : [],
+    ),
     ...over,
   };
   render(
@@ -315,6 +321,8 @@ describe('플레이어 정리', () => {
         throw new Error('not used');
       },
       admin: async () => ({}),
+      createFromSong: async () => ok([item(1)]),
+      suggest: async () => [],
     } as MusicwebApi;
     const { unmount } = render(
       <I18nProvider>
@@ -559,5 +567,61 @@ describe('관리자 화면 /admin (T22)', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Re-enable' }));
     });
     expect(api.admin).toHaveBeenCalledWith('setArtistStatus', { id: 'a1', status: 'active' });
+  });
+});
+
+describe('곡 고르기 (T33)', () => {
+  it('곡 찾기 → 고르기 → 곡 수 15 → 라이브 → 만들기: 해석 없이 곡 ID로 부른다', async () => {
+    const api = fakeApi();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Song or artist' }), {
+      target: { value: 'Doj' },
+    });
+    const option = await screen.findByRole('option', { name: /Doja/ });
+    fireEvent.mouseDown(option);
+    expect(screen.getByText('Doja — Central Cee')).toBeTruthy();
+    // 고른 뒤 포커스는 "바꾸기" 버튼에(사라진 요소에 남지 않게)
+    expect(document.activeElement?.textContent).toBe('Change');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Songs' }), { target: { value: '15' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Live' }));
+    expect(screen.getByRole('button', { name: 'Live' }).getAttribute('aria-pressed')).toBe('true');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Make the set' }));
+    });
+    expect(api.createFromSong).toHaveBeenCalledWith(
+      { seedSongId: 's-doja', count: 15, include: { live: true, cover: false, remix: false } },
+      'en',
+    );
+    expect(api.create).not.toHaveBeenCalled();
+    expect(await screen.findByRole('heading', { name: 'Your set' })).toBeTruthy();
+  });
+
+  it('곡을 고르기 전에는 만들기 버튼이 꺼져 있고, 한 글자로는 제안을 부르지 않는다', async () => {
+    const api = fakeApi();
+    expect(screen.getByRole('button', { name: 'Make the set' })).toHaveProperty('disabled', true);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Song or artist' }), {
+      target: { value: 'D' },
+    });
+    await new Promise((r) => setTimeout(r, 300));
+    expect(api.suggest).not.toHaveBeenCalled();
+  });
+
+  it('키보드: 아래 화살표로 옮기고 Enter로 고르고, Esc로 닫고, 바꾸기면 입력칸으로', async () => {
+    fakeApi();
+    const box = screen.getByRole('combobox', { name: 'Song or artist' });
+    fireEvent.change(box, { target: { value: 'Doj' } });
+    await screen.findByRole('option', { name: /Doja/ });
+    fireEvent.keyDown(box, { key: 'ArrowDown' });
+    const opt = screen.getByRole('option', { name: /Doja/ });
+    expect(opt.getAttribute('aria-selected')).toBe('true');
+    expect(box.getAttribute('aria-activedescendant')).toBe(opt.id);
+    fireEvent.keyDown(box, { key: 'Enter' });
+    expect(screen.getByText('Doja — Central Cee')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }));
+    const again = screen.getByRole('combobox', { name: 'Song or artist' });
+    expect(document.activeElement).toBe(again);
+    fireEvent.change(again, { target: { value: 'Doj' } });
+    await screen.findByRole('option', { name: /Doja/ });
+    fireEvent.keyDown(again, { key: 'Escape' });
+    expect(screen.queryByRole('listbox')).toBeNull();
   });
 });

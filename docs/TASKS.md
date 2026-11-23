@@ -444,7 +444,7 @@
     - integration `functions/src/api/playlists.int.test.ts`(확장) — 같은 문장 두 번째 요청은 AI 호출 0건, 규칙으로 읽히는 문장은 처음부터 AI 0건, 같은 조합 두 번째 결과는 추천 계산 없이 같은 곡, 7일 지난 결과는 다시 계산
     - integration — 저장된 결과에 영상 ID 필드 없음
 
-- [ ] **T33 AI 없는 곡 고르기 화면** — SPEC 4.2, 4.13
+- [x] **T33 AI 없는 곡 고르기 화면** — SPEC 4.2, 4.13
   - 의존: T14, T32
   - 산출물:
     - callable `songs-suggest`(이름 비교 키 앞부분 일치, 최대 10개, App Check, 입력 50자)
@@ -483,7 +483,7 @@
     - Secret Manager 등록, 예약 작업 등록(`precomputeNightly` 포함). 첫 배포 전에 인기 아티스트 미리 계산을 한 번 돌린다(T29). `playlists-create`는 `ANTHROPIC_API_KEY`·`YOUTUBE_API_KEY`·`LASTFM_API_KEY`·`ACTOR_HASH_KEY`를 연결하므로(D-031) Last.fm 키를 안 쓰더라도 비밀값은 만들어 둬야 배포된다(코드는 값이 비면 Last.fm 없이 동작하지만, Secret Manager가 빈 값을 받는지는 배포 때 확인)
     - 실제 YouTube 플레이어로 재생·다음 곡·오류 건너뛰기를 손으로 한 번 확인(e2e는 가짜 플레이어, D-032)
     - API 키 결정(D-034): 서비스 AI·매일 시험·CI AI 시험에 필요. 구독은 서버·CI에 쓰지 않는다
-    - 모든 callable의 App Check 강제. 특히 로그인 없이 부르는 `playback-reportEmbedBlocked`(D-032), `playlists-get`, `site-config`(D-033)
+    - 모든 callable의 App Check 강제. 특히 로그인 없이 부르는 `playback-reportEmbedBlocked`(D-032), `playlists-get`, `site-config`(D-033), `status-get`(D-042), `songs-suggest`(D-049)
     - `linkHealthNightly`(04:00) 등록 후 운영 일지에 결과가 남는지 확인. 실제 YouTube가 303·`list=TL`을 주는지 그날 다시 확인(D-006, D-033)
     - 화면 설정 `apps/web/.env.local`(`.env.example` 참고, `VITE_USE_EMULATORS`는 비움)
     - `.github/workflows/deploy.yml`(main 합침 시), `docs/OPERATIONS.md`(복구·키 교체·긴급 정지 절차)

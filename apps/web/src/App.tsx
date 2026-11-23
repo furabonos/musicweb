@@ -14,6 +14,7 @@ import { OpenInYouTube } from './OpenInYouTube';
 import { Player, type PlayerHandle } from './player/Player';
 import { SharedView } from './SharedView';
 import { StatusView } from './StatusView';
+import { Picker } from './Picker';
 import { AdminView } from './AdminView';
 import { SongRow } from './SongRow';
 
@@ -62,6 +63,7 @@ function errorMessage(err: unknown, locale: Locale): Message {
   }
   if (reason === 'noSpare') return { key: 'errors.noSpare' };
   if (reason === 'blocked') return { key: 'errors.blocked' };
+  if (reason === 'seedSongNotFound') return { key: 'errors.seedSongNotFound' };
   if (reason === 'lastSong') return { key: 'errors.lastSong' };
   if (reason === 'alreadySaved') return { key: 'errors.alreadySaved' };
   return { key: 'errors.generic' };
@@ -96,6 +98,18 @@ export function App({
   const [savedId, setSavedId] = useState<string | null>(null);
   const [playing, setPlaying] = useState(-1);
   const player = useRef<PlayerHandle>(null);
+  const resultsRef = useRef<HTMLElement>(null);
+  // 새 재생목록이 나오면 결과로 화면을 내린다(곡 고르기·검색창 아래에 있어 안 보일 수 있다).
+  // 플레이어는 절반 이상 보일 때만 다음 곡을 자동 재생하므로(youtube-policy) 보이게 두는 것이 중요하다.
+  const resultId = result?.id;
+  useEffect(() => {
+    if (!resultId) return;
+    resultsRef.current?.scrollIntoView?.({ block: 'start' });
+    // 키보드·화면 읽기 사용자도 결과로 옮긴다
+    resultsRef.current
+      ?.querySelector<HTMLElement>('#results-title')
+      ?.focus({ preventScroll: true });
+  }, [resultId]);
 
   const [openLink, setOpenLink] = useState<OpenLinkMode>('direct');
   /** AI 없이 동작 중: 절약 모드(오늘) 또는 AI 키 없음 */
@@ -126,6 +140,12 @@ export function App({
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (creating || over || used === 0) return;
+    await run(() => api.create(text, locale));
+  }
+
+  /** 곡 고르기와 검색창이 같이 쓰는 만들기 흐름 */
+  async function run(make: () => Promise<CreateResult>) {
+    if (creating) return;
     setError(null);
     setFail(null);
     if (!user) {
@@ -134,7 +154,7 @@ export function App({
     }
     setCreating(true);
     try {
-      const r = await api.create(text, locale);
+      const r = await make();
       if (r.ok) {
         setResult(r);
         setPlaying(-1);
@@ -227,6 +247,12 @@ export function App({
               <div className="kicker">{t('hero.kicker')}</div>
               <h1>{t('hero.title')}</h1>
               <p>{t('hero.subtitle')}</p>
+              <Picker
+                api={api}
+                busy={creating}
+                onPick={(input) => void run(() => api.createFromSong(input, locale))}
+              />
+              <p className="picker-or">{t('picker.orType')}</p>
               <form className="search" onSubmit={(e) => void submit(e)}>
                 <label htmlFor="request" className="visually-hidden">
                   {t('search.label')}
@@ -289,10 +315,12 @@ export function App({
             </section>
 
             {result && (
-              <section className="wrap results" aria-labelledby="results-title">
+              <section className="wrap results" aria-labelledby="results-title" ref={resultsRef}>
                 <div className="card">
                   <div className="card-head">
-                    <h2 id="results-title">{t('results.title')}</h2>
+                    <h2 id="results-title" tabIndex={-1}>
+                      {t('results.title')}
+                    </h2>
                     <span className="based-on">
                       {t('results.basedOn', {
                         title: result.seed.title,

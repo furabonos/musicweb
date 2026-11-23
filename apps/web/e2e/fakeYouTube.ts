@@ -37,10 +37,13 @@ export async function useFakeYouTube(page: Page) {
   );
 }
 
-/** 영상 호출(cue·load)만. 개발 서버의 React StrictMode는 플레이어를 한 번 만들었다 지우므로 destroy는 뺀다. */
+/**
+ * 영상 호출(cue·load)만. 개발 서버의 React StrictMode는 플레이어를 한 번 만들었다 지우므로 destroy는 뺀다.
+ * 가짜 API가 아직 안 올라왔으면 빈 목록(expect.poll이 기다리게).
+ */
 export const fakeCalls = (page: Page) =>
   page.evaluate(() =>
-    (window as unknown as { __fakeYT: { calls: string[] } }).__fakeYT.calls.filter(
+    ((window as unknown as { __fakeYT?: { calls: string[] } }).__fakeYT?.calls ?? []).filter(
       (c) => c !== 'destroy',
     ),
   );

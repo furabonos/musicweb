@@ -19,6 +19,7 @@ import { withResultCache } from '../core/resultCache.js';
 import { errName } from '../core/jobErrors.js';
 import { touchRequested } from '../core/precomputeOnDemand.js';
 import { parseFallback, parseWithFallback } from '../core/parseFallback.js';
+import { COUNT_MAX, COUNT_MIN, type Locale, type ParsedRequest } from '../core/parseRequest.js';
 import { enterSavingMode, readSavingMode, savingModeState } from '../core/savingMode.js';
 import { createPlaylist, getPlaylist, savePlaylist, updatePlaylist } from '../core/playlists.js';
 import { readRuntimeConfig, RuntimeConfigError } from '../core/runtimeConfig.js';
@@ -27,6 +28,7 @@ import { firestoreRecommendPorts } from '../core/recommendPorts.js';
 import { fakeLlm, fakeMusicAndYt } from '../dev/fakeWorld.js';
 import { requireAdmin } from './admin.js';
 import { handle } from './errors.js';
+import { isPickable } from './songs.js';
 import { callableEventSink, serverHashKey } from './eventSink.js';
 
 /**
@@ -37,11 +39,46 @@ import { callableEventSink, serverHashKey } from './eventSink.js';
  * - 에뮬레이터의 가짜 프로젝트에서는 가짜 AI·음악 데이터·YouTube를 쓴다(config/runtimeEnv.ts).
  */
 
-const createInput = z.strictObject({
-  // 200자(코드 포인트) 검사는 parseRequest가 한다(넘으면 too_long). 여기서는 터무니없이 긴 값만 막는다.
-  text: z.string().max(2000),
-  locale: z.enum(SUPPORTED_LOCALES),
-});
+const createInput = z.union([
+  z.strictObject({
+    // 200자(코드 포인트) 검사는 parseRequest가 한다(넘으면 too_long). 여기서는 터무니없이 긴 값만 막는다.
+    text: z.string().max(2000),
+    locale: z.enum(SUPPORTED_LOCALES),
+  }),
+  // 곡 고르기 화면(T33): 해석 단계 없이 곡 ID·곡 수·조건
+  z.strictObject({
+    seedSongId: z.string().regex(/^[A-Za-z0-9-]{1,64}$/),
+    count: z.number().int().min(COUNT_MIN).max(COUNT_MAX),
+    include: z.strictObject({ live: z.boolean(), cover: z.boolean(), remix: z.boolean() }),
+    locale: z.enum(SUPPORTED_LOCALES),
+  }),
+]);
+
+/**
+ * 곡 고르기 입력을 해석 결과로 바꾼다(AI·규칙 없음). 곡 목록에 없거나 정보가 적은 곡이면 거부.
+ * 저장되는 요청 글은 사용자가 쓴 문장이 아니라 "아티스트 - 제목"이다.
+ */
+async function pickedRequest(
+  db: Firestore,
+  input: { seedSongId: string; count: number; include: ParsedRequest['include']; locale: Locale },
+): Promise<{ text: string; value: ParsedRequest }> {
+  const snap = await db.doc(`songs/${input.seedSongId}`).get();
+  if (!isPickable(snap)) {
+    throw new HttpsError('not-found', 'song not found', { reason: 'seedSongNotFound' });
+  }
+  const artist = snap.get('artist') as string;
+  const title = snap.get('title') as string;
+  return {
+    text: `${artist} - ${title}`.slice(0, 200),
+    value: {
+      seed: { artist, title },
+      count: input.count,
+      include: input.include,
+      locale: input.locale,
+      unsupported: [],
+    },
+  };
+}
 const playlistId = z
   .string()
   .min(1)
@@ -143,8 +180,12 @@ export const playlists = {
         requireUid(req.auth);
         // D-015: 로그인 기능(T24) 전까지 만들기는 관리자만
         const uid = await requireAdmin(req.auth as CallerAuth | undefined);
-        const input = parseInput(createInput, req.data);
+        const raw = parseInput(createInput, req.data);
         const db = getFirestore();
+        const picked = 'seedSongId' in raw ? await pickedRequest(db, raw) : null;
+        const input = picked
+          ? { text: picked.text, locale: raw.locale }
+          : (raw as { text: string; locale: Locale });
         const events = callableEventSink(db);
         const { ports, llm } = buildPorts(db, events);
         // 절약 모드·키 없음이면 AI 없이 (SPEC 3.4, D-039). AI 비용 상한에 닿으면 절약 모드를 켠다
@@ -180,20 +221,23 @@ export const playlists = {
           {
             db,
             events,
-            parse: (text, locale) =>
-              parseWithFallback(
-                { llm, events, actorUid: uid, aiMode, onAiLimit, cache: parseCache },
-                text,
-                locale,
-              ),
+            parse: async (text, locale) =>
+              picked
+                ? { ok: true, value: picked.value, via: 'pick' as const }
+                : parseWithFallback(
+                    { llm, events, actorUid: uid, aiMode, onAiLimit, cache: parseCache },
+                    text,
+                    locale,
+                  ),
             // AI를 못 쓸 때 규칙으로도 못 읽고 저장된 해석도 없는 문장은 한도를 쓰기 전에 다시 묻는다
             rejectBeforeLimit: async (text, locale) =>
+              picked ||
               aiMode === 'on' ||
               parseFallback(text, locale) ||
               (await parseCache.get(text, locale).catch(() => null))
                 ? null
                 : parseWithFallback({ llm, events, actorUid: uid, aiMode }, text, locale),
-            ...(aiMode === 'on'
+            ...(aiMode === 'on' && !picked
               ? {
                   reparseWithAi: (text: string, locale: 'en' | 'ko') =>
                     parseWithFallback(
