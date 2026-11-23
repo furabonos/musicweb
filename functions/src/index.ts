@@ -15,6 +15,7 @@ export {
   ingestNightly,
   linkHealthNightly,
   metricsNightly,
+  precomputeNightly,
   purgeNightly,
   refreshNightly,
 } from './jobs/schedules.js';

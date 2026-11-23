@@ -46,8 +46,16 @@ describe('computeArtistVectors', () => {
       },
     };
 
-    expect(await computeArtistVectors({ db, mb }, RADIOHEAD)).toEqual({ songs: 2, kept: 0 });
-    expect(await computeArtistVectors({ db, mb }, PORTISHEAD)).toEqual({ songs: 1, kept: 0 });
+    expect(await computeArtistVectors({ db, mb }, RADIOHEAD)).toMatchObject({
+      songs: 2,
+      kept: 0,
+      complete: true,
+    });
+    expect(await computeArtistVectors({ db, mb }, PORTISHEAD)).toMatchObject({
+      songs: 1,
+      kept: 0,
+      complete: true,
+    });
     expect(calls.sort()).toEqual([GLORY, KARMA, NO_TAGS].sort());
     expect((await db.collection('artistVectors').get()).size).toBe(2);
 
@@ -86,7 +94,10 @@ describe('computeArtistVectors', () => {
     await computeArtistVectors({ db, mb: ok }, RADIOHEAD);
     const before = (await db.doc(`songs/${KARMA}`).get()).get('tags');
     const gone = { getRecording: async () => null };
-    expect(await computeArtistVectors({ db, mb: gone }, RADIOHEAD)).toEqual({ songs: 1, kept: 1 });
+    expect(await computeArtistVectors({ db, mb: gone }, RADIOHEAD, { reuseMs: 0 })).toMatchObject({
+      songs: 1,
+      kept: 1,
+    });
     expect((await db.doc(`songs/${KARMA}`).get()).get('tags')).toEqual(before);
     const v = (await db.doc(`artistVectors/${RADIOHEAD}`).get()).get('songs');
     expect(v[0].w[String(vocabIndex('alternative rock'))]).toBeGreaterThan(0);
@@ -109,11 +120,19 @@ describe('computeArtistVectors', () => {
         return { ...karma, mbid: m };
       },
     };
-    expect(await computeArtistVectors({ db, mb }, RADIOHEAD, { maxSongs: 2 })).toEqual({
+    expect(await computeArtistVectors({ db, mb }, RADIOHEAD, { maxSongs: 2 })).toMatchObject({
       songs: 2,
       kept: 0,
+      calls: 2,
+      complete: false, // 상한으로 끊겼으니 완료 아님(다음 실행이 이어 한다)
     });
     expect(calls).toEqual([id(14), id(13)]);
+    expect((await db.doc(`artistVectors/${RADIOHEAD}`).get()).get('computedAt')).toBeUndefined();
+    // 다음 실행: 이미 한 두 곡은 재사용하고 나머지만 묻는다
+    calls.length = 0;
+    const r = await computeArtistVectors({ db, mb }, RADIOHEAD, { maxSongs: 10 });
+    expect(r).toMatchObject({ songs: 5, kept: 2, calls: 3, complete: true });
+    expect(calls).toEqual([id(12), id(11), id(10)]);
   });
 
   it('mergeTags: 같은 낱말은 투표 수가 큰 쪽 하나', () => {

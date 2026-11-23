@@ -33,6 +33,8 @@ export interface StoredSongVector {
   songId: string;
   w: Record<string, number>;
   decade: number | null;
+  /** 이 곡을 계산한 시각(ms). 30일 안이면 다시 묻지 않는다 */
+  at?: number;
 }
 
 /** 장르와 태그를 합친다: 같은 낱말(정규화)이면 투표 수가 큰 쪽 */
@@ -48,13 +50,29 @@ export function mergeTags(...lists: readonly Genre[][]): MusicTag[] {
   return [...best.values()].sort((a, b) => (b.count ?? 1) - (a.count ?? 1));
 }
 
+export interface VectorRunOptions {
+  /** 이번 실행에서 MusicBrainz에 새로 물을 곡 수 상한 */
+  maxSongs?: number;
+  /** 마감 시간이 지났나(곡마다 확인). 지나면 그때까지 만든 것만 저장하고 완료로 표시하지 않는다 */
+  pastDeadline?: () => boolean;
+  /** 곡 단위 재사용 기간 (ms). 이 안에 계산한 곡은 다시 묻지 않는다 */
+  reuseMs?: number;
+  now?: Date;
+}
+
+/**
+ * 계산 결과. complete면 artistVectors.computedAt을 쓴다(신선도 판정용).
+ * 곡 수 상한·마감 시간으로 끊기면 complete가 아니고, 다음 실행이 이어서 계산한다(이미 한 곡은 재사용).
+ */
 export async function computeArtistVectors(
   deps: { db: Firestore; mb: VectorPorts },
   artistMbid: string,
-  opts: { maxSongs?: number } = {},
-): Promise<{ songs: number; kept: number }> {
+  opts: VectorRunOptions = {},
+): Promise<{ songs: number; kept: number; calls: number; complete: boolean }> {
   const { db } = deps;
   const max = opts.maxSongs ?? MAX_SONGS_PER_ARTIST;
+  const now = (opts.now ?? new Date()).getTime();
+  const reuseMs = opts.reuseMs ?? 30 * 24 * 60 * 60 * 1000;
   const ref = db.doc(`artistVectors/${artistMbid}`);
   const [snap, prevDoc] = await Promise.all([
     db.collection('songs').where('artistMbid', '==', artistMbid).get(),
@@ -65,22 +83,40 @@ export async function computeArtistVectors(
     for (const s of (prevDoc.get('songs') ?? []) as StoredSongVector[]) prev.set(s.songId, s);
   }
   const millis = (v: unknown) => (v instanceof Timestamp ? v.toMillis() : 0);
-  // 정보가 적은 곡(mbid 없음)은 MusicBrainz에 물을 수 없다. 최근 조회된 곡부터 상한까지
+  // 정보가 적은 곡(mbid 없음)은 MusicBrainz에 물을 수 없다. 최근 조회된 곡부터, 문서 크기 상한까지
   const docs = snap.docs
     .filter((d) => MBID.test(d.id) && d.get('mbid') !== null)
     .sort((a, b) => millis(b.get('lastRequestedAt')) - millis(a.get('lastRequestedAt')))
-    .slice(0, max);
+    .slice(0, MAX_SONGS_PER_ARTIST);
 
   const out: StoredSongVector[] = [];
   let kept = 0;
+  let calls = 0;
+  let complete = true;
+  const keep = (id: string) => {
+    const old = prev.get(id);
+    if (old) {
+      out.push(old);
+      kept++;
+    }
+  };
   for (const doc of docs) {
+    const old = prev.get(doc.id);
+    if (old?.at && now - old.at < reuseMs) {
+      out.push(old);
+      kept++;
+      continue;
+    }
+    if (calls >= max || opts.pastDeadline?.()) {
+      // 이번에는 여기까지. 계산하지 못한 곡은 이전 값을 지키고 다음 실행이 이어 한다
+      complete = false;
+      keep(doc.id);
+      continue;
+    }
+    calls++;
     const rec = await deps.mb.getRecording(doc.id);
     if (!rec) {
-      const old = prev.get(doc.id);
-      if (old) {
-        out.push(old);
-        kept++;
-      }
+      keep(doc.id);
       continue;
     }
     const tags = mergeTags(rec.genres, rec.tags);
@@ -95,11 +131,16 @@ export async function computeArtistVectors(
       },
       { merge: true },
     );
-    out.push({ songId: doc.id, w: toSparse(v.tags), decade: v.decade });
+    out.push({ songId: doc.id, w: toSparse(v.tags), decade: v.decade, at: now });
   }
   await ref.set(
-    { vocabVersion: VOCAB_VERSION, songs: out, updatedAt: FieldValue.serverTimestamp() },
+    {
+      vocabVersion: VOCAB_VERSION,
+      songs: out,
+      updatedAt: FieldValue.serverTimestamp(),
+      ...(complete ? { computedAt: FieldValue.serverTimestamp() } : {}),
+    },
     { merge: true },
   );
-  return { songs: out.length, kept };
+  return { songs: out.length, kept, calls, complete };
 }
