@@ -1,5 +1,6 @@
 import { getFirestore } from 'firebase-admin/firestore';
-import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { HttpsError } from 'firebase-functions/v2/https';
+import { onCall } from './callable.js';
 import { z } from 'zod';
 import { secrets } from '../config/secrets.js';
 import { handle } from './errors.js';
@@ -15,7 +16,6 @@ import { callableEventSink } from './eventSink.js';
  */
 const input = z.strictObject({ code: z.union([z.literal(101), z.literal(150)]) });
 
-// TODO(T23): App Check 설정 후 enforceAppCheck: true (SPEC 6.1).
 export const playback = {
   reportEmbedBlocked: onCall(
     { secrets: [secrets.ACTOR_HASH_KEY], maxInstances: 2, concurrency: 1 },

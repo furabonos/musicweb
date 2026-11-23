@@ -1,4 +1,4 @@
-import { onCall } from 'firebase-functions/v2/https';
+import { onCall } from './callable.js';
 
 export interface HealthResult {
   ok: true;
@@ -10,5 +10,4 @@ export function healthCheck(): HealthResult {
   return { ok: true, service: 'musicweb' };
 }
 
-// TODO(T23): 실제 프로젝트에 App Check를 설정하면 callable 공통 옵션으로 enforceAppCheck: true를 켠다 (SPEC 6.1).
 export const health = onCall(() => healthCheck());

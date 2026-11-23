@@ -1,6 +1,7 @@
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore, type Firestore } from 'firebase-admin/firestore';
-import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { HttpsError } from 'firebase-functions/v2/https';
+import { onCall } from './callable.js';
 import { z } from 'zod';
 import {
   createEvalCaseFiler,
@@ -10,7 +11,7 @@ import {
 } from '../adapters/github.js';
 import { createOpenLinkChecker, firestoreOpenLinkBudget } from '../adapters/youtube-openlink.js';
 import { fakeExternalEnabled } from '../config/runtimeEnv.js';
-import { ADMIN_EMAILS, secrets } from '../config/secrets.js';
+import { ADMIN_EMAILS, optionalSecret, secrets } from '../config/secrets.js';
 import {
   addArtist,
   adminOverview,
@@ -322,7 +323,6 @@ function adminCall<S extends z.ZodType, T>(
   );
 }
 
-// TODO(T23): App Check 설정 후 enforceAppCheck: true (SPEC 6.1).
 export const admin = {
   /** 관리자 화면 한눈에 보기: 긴급 정지·한도·오늘 사용량·작업 결과·수집 대상·테스트 사용자·차단 계정. 바꾸지 않음 */
   overview: onCall((req) =>
@@ -369,7 +369,7 @@ export const admin = {
       const r = await setLinkStatus(db, uid, input);
       let evalCase: { url: string } | { skipped: string } | null = null;
       if (input.suggestEvalCase) {
-        const token = fakeExternalEnabled() ? '' : secrets.GITHUB_ISSUE_TOKEN.value();
+        const token = fakeExternalEnabled() ? '' : optionalSecret('GITHUB_ISSUE_TOKEN');
         // 같은 곡·영상·결정으로는 이슈를 한 번만 연다(서버 전용 기록)
         const seenRef = db.doc(`evalCaseIssues/${input.songId}_${input.videoId}_${input.status}`);
         const seen = (await seenRef.get()).get('url') as string | undefined;
@@ -440,7 +440,7 @@ export const admin = {
         return { ok: true };
       }
       if (input.job === 'githubStats') {
-        const token = fakeExternalEnabled() ? '' : secrets.GITHUB_ISSUE_TOKEN.value();
+        const token = fakeExternalEnabled() ? '' : optionalSecret('GITHUB_ISSUE_TOKEN');
         const reader = token
           ? createGitHubReader({ token, events, budget: firestoreGitHubReadBudget(db) })
           : null;

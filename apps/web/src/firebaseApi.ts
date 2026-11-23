@@ -20,6 +20,7 @@ import {
   type SongSuggestion,
   type StatusData,
 } from './api';
+import { appCheckSiteKey, startAppCheck } from './appCheck';
 
 /**
  * Firebase로 서버를 부른다 (T14). 클라이언트는 Firestore에 쓰지 않는다: 모든 변경은 callable(SPEC 6.2).
@@ -40,6 +41,9 @@ export function createFirebaseApi(): MusicwebApi {
         appId: env.VITE_FIREBASE_APP_ID ?? '',
       };
   const app = initializeApp(config);
+  // 실제 서버는 App Check 토큰 없는 호출을 거부한다(T23). 에뮬레이터에서는 켜지 않는다.
+  if (!USE_EMULATORS)
+    startAppCheck(app, appCheckSiteKey(env.VITE_RECAPTCHA_SITE_KEY, USE_EMULATORS));
   const auth = getAuth(app);
   const functions = getFunctions(app);
   if (USE_EMULATORS) {

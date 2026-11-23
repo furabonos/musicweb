@@ -447,13 +447,14 @@ firestore.rules, firebase.json
 | `MB_CONTACT`                                      | Functions 매개변수                                                              | MusicBrainz User-Agent 연락처                                                                                          |
 | `MUSICWEB_FAKE_EXTERNAL`                          | `functions/.env.demo-musicweb`(`tools/emulator-env.sh`가 만듦)                  | `true`면 가짜 AI·음악 데이터·YouTube. Functions 에뮬레이터 + `demo-` 프로젝트에서만 효과(D-031)                        |
 | `EVAL_LLM`, `EVAL_SUITES`, `EVAL_UPDATE_BASELINE` | `pnpm eval` 실행할 때 셸에서                                                    | 시험의 AI 호출 방식(`cli`: 이 컴퓨터의 Claude Code 구독, `api`: `ANTHROPIC_API_KEY`), 돌릴 시험, 기준 다시 쓰기(D-034) |
-| `VITE_FIREBASE_*`                                 | `apps/web/.env.local` (공개 설정값, 비밀 아님)                                  | Firebase 웹 설정                                                                                                       |
-| `VITE_RECAPTCHA_SITE_KEY`                         | `apps/web/.env.local`                                                           | App Check                                                                                                              |
+| `VITE_FIREBASE_*`                                 | `apps/web/.env.production.local` (공개 설정값, 비밀 아님, 배포 빌드만 읽음)     | Firebase 웹 설정                                                                                                       |
+| `VITE_RECAPTCHA_SITE_KEY`                         | `apps/web/.env.production.local`                                                | App Check(reCAPTCHA Enterprise). 없으면 `pnpm deploy:prepare`가 배포를 막음                                            |
 | `VITE_USE_EMULATORS`                              | `apps/web/.env.local` 또는 `dev:emulators` 스크립트                             | `true`면 로컬 에뮬레이터에 붙음. 개발 서버에서만 효과, 배포 빌드에서는 비움(`scan:bundle`이 흔적 검사, D-031)          |
 | `CLAUDE_CODE_OAUTH_TOKEN`                         | GitHub Secrets                                                                  | 자동 수정(`auto-fix.yml`)의 Claude Code. 관리자 구독 토큰(`claude setup-token`), Claude GitHub App 설치 필요 (D-038)   |
-| `FIREBASE_SERVICE_ACCOUNT`                        | GitHub Secrets                                                                  | 배포                                                                                                                   |
+| `FIREBASE_SERVICE_ACCOUNT`                        | GitHub 환경 `production`의 Secrets                                              | 배포(`deploy.yml`, D-053)                                                                                              |
+| `WEB_ENV_PRODUCTION`, `FUNCTIONS_ENV`             | GitHub 환경 `production`의 Secrets                                              | 배포 때 쓰는 `apps/web/.env.production.local`·`functions/.env.<프로젝트 ID>` 내용                                      |
 
-비밀값은 저장소에 두지 않는다. 로컬 에뮬레이터용 값은 `functions/.secret.local`에 둔다(gitignore). 에뮬레이터용 매개변수(`ADMIN_EMAILS`, `MB_CONTACT`, `MUSICWEB_FAKE_EXTERNAL`)는 `tools/emulator-env.sh`가 `functions/.env.demo-musicweb`(gitignore)에 만든다.
+비밀값은 저장소에 두지 않는다. 아직 쓰지 않는 비밀값(AI·Last.fm·GitHub 토큰)은 `none`을 넣어 둔다(없음으로 동작, D-053). 배포용 서버 매개변수는 `functions/.env.<프로젝트 ID>`(gitignore)에 둔다. 로컬 에뮬레이터용 값은 `functions/.secret.local`에 둔다(gitignore). 에뮬레이터용 매개변수(`ADMIN_EMAILS`, `MB_CONTACT`, `MUSICWEB_FAKE_EXTERNAL`)는 `tools/emulator-env.sh`가 `functions/.env.demo-musicweb`(gitignore)에 만든다.
 
 ## 9. 나중에 할 기능
 

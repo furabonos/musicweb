@@ -1,6 +1,7 @@
 import { compareKey } from '@musicweb/shared';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
-import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { HttpsError } from 'firebase-functions/v2/https';
+import { onCall } from './callable.js';
 import { z } from 'zod';
 import { handle } from './errors.js';
 

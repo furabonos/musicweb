@@ -78,3 +78,41 @@ describe('모든 워크플로', () => {
     }
   });
 });
+
+describe('deploy.yml (T23, D-053)', () => {
+  const deploy = readFileSync(join(DIR, 'deploy.yml'), 'utf8')
+    .split('\n')
+    .filter((l) => !l.trim().startsWith('#'))
+    .join('\n');
+  const on = deploy.slice(deploy.indexOf('\non:'), deploy.indexOf('\npermissions:'));
+
+  it('지금은 손으로만 돈다: push·PR로 배포하지 않는다(첫 배포를 사람이 확인한 뒤 바꿈)', () => {
+    expect(on).toContain('workflow_dispatch');
+    expect(on).not.toMatch(/push|pull_request|schedule/);
+  });
+
+  it('배포 전에 설정 검사·묶음 확인, 배포 뒤 App Check 점검을 돈다', () => {
+    const order = [
+      'pnpm deploy:prepare prod --check',
+      'firebase deploy --config firebase.deploy.json',
+      'tools/smoke.ts',
+    ];
+    const at = order.map((c) => deploy.indexOf(c));
+    for (const [i, c] of order.entries()) expect(at[i], c).toBeGreaterThan(-1);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
+  });
+
+  it('main에서만, production 환경(승인·비밀값)으로, 키 파일은 빌드·검사 뒤에 만든다', () => {
+    expect(deploy).toContain("if: github.ref == 'refs/heads/main'");
+    expect(deploy).toContain('environment: production');
+    const key = deploy.indexOf('GOOGLE_APPLICATION_CREDENTIALS');
+    expect(key).toBeGreaterThan(deploy.indexOf('pnpm deploy:prepare'));
+    expect(deploy).toContain('rm -f "$RUNNER_TEMP/sa.json"');
+  });
+
+  it('지우는 옵션(--force)을 쓰지 않고, 권한은 읽기만', () => {
+    expect(deploy).not.toContain('--force');
+    expect(deploy).toMatch(/permissions:\n {2}contents: read/);
+    expect(deploy).not.toMatch(/: write/);
+  });
+});

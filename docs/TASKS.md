@@ -485,8 +485,9 @@
     - API 키 결정(D-034): 서비스 AI·매일 시험·CI AI 시험에 필요. 구독은 서버·CI에 쓰지 않는다
     - 모든 callable의 App Check 강제. 특히 로그인 없이 부르는 `playback-reportEmbedBlocked`(D-032), `playlists-get`, `site-config`(D-033), `status-get`(D-042), `songs-suggest`(D-049)
     - `linkHealthNightly`(04:00) 등록 후 운영 일지에 결과가 남는지 확인. 실제 YouTube가 303·`list=TL`을 주는지 그날 다시 확인(D-006, D-033)
-    - 화면 설정 `apps/web/.env.local`(`.env.example` 참고, `VITE_USE_EMULATORS`는 비움)
+    - 화면 설정 `apps/web/.env.production.local`(`.env.example` 참고, `VITE_USE_EMULATORS`는 비움, D-053)
     - `.github/workflows/deploy.yml`(main 합침 시), `docs/OPERATIONS.md`(복구·키 교체·긴급 정지 절차)
+  - 진행(D-053, 2026-11-24): 배포 전 코드는 끝났다. callable App Check 강제(`api/callable.ts`, ESLint), 화면 App Check, `tools/prepare-deploy.ts`(`pnpm deploy:prepare`), `tools/smoke.ts`, 손으로만 도는 `deploy.yml`, `docs/OPERATIONS.md` 7절. **남은 것**(사람): reCAPTCHA 키, 서버 매개변수·비밀값 넣기, YouTube 녹화본 교체, 예산 설정, 실제 배포와 확인
   - 완료 기준:
     - `*.web.app` 주소 접속, `/status`에 실제 데이터 표시
     - 야간 작업 1회 실행 결과가 운영 일지에 기록

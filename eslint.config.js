@@ -87,6 +87,9 @@ function youtubeWriteBan(mode, { fragments = false } = {}) {
   };
 }
 
+const ON_CALL_MESSAGE =
+  "callable을 firebase-functions의 onCall로 직접 만들지 않습니다(App Check 강제가 빠짐, T23). functions/src/api/callable.ts의 onCall을 import하세요: import { onCall } from './callable.js'";
+
 const GLOBAL_OBJECT_MESSAGE =
   '전역 객체(globalThis·global)를 직접 쓰지 않습니다. 비밀값·설정은 functions/src/config/secrets.ts 등 config/에서 읽고, 외부 호출은 functions/src/adapters/의 함수를 쓰세요.';
 
@@ -96,6 +99,7 @@ function functionsRules({
   network: banNetwork,
   youtubeWrite = 'ban',
   ytExports = 'ban',
+  onCall = 'ban',
 }) {
   // globalThis·global을 통째로 막는다: const g = globalThis; g.process / g.fetch 같은 우회 방지.
   const globalsBan = [
@@ -163,6 +167,17 @@ function functionsRules({
       importPaths.push(...yt.paths);
       importPatterns.push(...yt.patterns);
     }
+  }
+  if (onCall === 'ban') {
+    // 같은 onCall을 내보내는 다른 경로도 막는다(firebase-functions 7의 exports)
+    importPaths.push(
+      { name: 'firebase-functions/v2/https', importNames: ['onCall'], message: ON_CALL_MESSAGE },
+      { name: 'firebase-functions/https', importNames: ['onCall'], message: ON_CALL_MESSAGE },
+      { name: 'firebase-functions/v2', importNames: ['https'], message: ON_CALL_MESSAGE },
+      { name: 'firebase-functions', importNames: ['https'], message: ON_CALL_MESSAGE },
+      { name: 'firebase-functions/v1', message: ON_CALL_MESSAGE },
+      { name: 'firebase-functions/v1/https', message: ON_CALL_MESSAGE },
+    );
   }
   const rules = { 'no-restricted-globals': ['error', ...globalsBan] };
   if (syntaxBan.length) rules['no-restricted-syntax'] = ['error', ...syntaxBan];
@@ -242,9 +257,15 @@ export default tseslint.config(
       'functions/src/config/**',
       'functions/src/adapters/**',
       'functions/src/jobs/purge.ts',
+      'functions/src/api/callable.ts',
       ...FUNCTIONS_TEST_FILES,
     ],
     rules: functionsRules({ process: true, network: true }),
+  },
+  {
+    // callable을 만드는 유일한 곳(App Check 강제를 여기서 넣는다, T23)
+    files: ['functions/src/api/callable.ts'],
+    rules: functionsRules({ process: true, network: true, onCall: 'allow' }),
   },
   {
     // 30일 정리(T11, D-028)는 만든 지 30일 지난 ytExports 기록을 지운다. 예외는 이 파일 전체에 걸리므로

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fakeExternalEnabled } from './runtimeEnv.js';
+import { appCheckEnforced, fakeExternalEnabled } from './runtimeEnv.js';
 
 const ON = {
   FUNCTIONS_EMULATOR: 'true',
@@ -20,5 +20,17 @@ describe('fakeExternalEnabled — 가짜 외부 서비스는 에뮬레이터의 
     ['스위치가 true 아님', { ...ON, MUSICWEB_FAKE_EXTERNAL: '1' }],
   ])('%s → 꺼짐', (_l, env) => {
     expect(fakeExternalEnabled(env)).toBe(false);
+  });
+});
+
+describe('appCheckEnforced — App Check는 에뮬레이터 밖에서 항상 강제', () => {
+  it('에뮬레이터 밖(배포 분석·실제 실행) → 켜짐', () => {
+    expect(appCheckEnforced({})).toBe(true);
+    expect(appCheckEnforced({ GCLOUD_PROJECT: 'aimusicwebs' })).toBe(true);
+    expect(appCheckEnforced({ FUNCTIONS_EMULATOR: 'false' })).toBe(true);
+  });
+
+  it('Functions 에뮬레이터 안 → 꺼짐', () => {
+    expect(appCheckEnforced({ FUNCTIONS_EMULATOR: 'true' })).toBe(false);
   });
 });

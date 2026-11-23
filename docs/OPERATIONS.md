@@ -90,3 +90,58 @@
 
 - Last.fm 응답은 `lastfmCache`에만 HTTP 캐시 기간 동안 두고, 매일 정리 작업이 기간 지난 것을 지운다(D-024). 전체 100MB 상한.
 - **Last.fm 사용을 그만두면** `lastfmCache` 컬렉션을 전부 지운다(Firestore 콘솔 또는 `firebase firestore:delete lastfmCache --recursive`). 이용 조건상 종료 후 남겨 두지 않는다.
+
+## 7. 첫 배포 (T23, D-053)
+
+배포는 사람이 마지막 명령을 직접 친다. 아래 1~6은 한 번만 한다. 값은 채팅·PR에 붙이지 않는다.
+
+**프로젝트**: `.firebaserc`의 `prod` 별칭(`aimusicwebs`). 기본(`default`)은 에뮬레이터용 가짜 프로젝트라 실수로 실제 프로젝트에 쓰지 않는다.
+
+1. **콘솔에서 켤 것** (확인 2026-11-24)
+   - Blaze 요금제, Firestore(Native, Standard, `nam5`), Storage, Authentication의 Google 로그인
+   - 예산 알림·Functions 예산 정지: 위 2절
+2. **App Check (reCAPTCHA Enterprise)**
+   - Firebase 콘솔 → App Check → 앱 `musicweb` → reCAPTCHA Enterprise로 등록한다. 도메인은 `aimusicwebs.web.app`, `aimusicwebs.firebaseapp.com`.
+   - 받은 사이트 키(공개값)를 `apps/web/.env.production.local`의 `VITE_RECAPTCHA_SITE_KEY`에 넣는다.
+   - 서버 함수는 코드에서 App Check를 강제한다(`functions/src/api/callable.ts`). 콘솔의 Firestore·Storage "적용"은 켜지 않아도 된다(화면은 Firestore·Storage를 직접 쓰지 않음).
+3. **화면 설정** `apps/web/.env.production.local`(gitignore): 배포 빌드만 읽는다. Firebase 웹 설정은 `pnpm exec firebase apps:sdkconfig WEB --project prod`로 받는다.
+4. **서버 매개변수** `functions/.env.aimusicwebs`(gitignore):
+
+   ```
+   ADMIN_EMAILS=["관리자@gmail.com"]
+   MB_CONTACT=https://aimusicwebs.web.app
+   ```
+
+5. **비밀값** (Secret Manager). 함수가 연결하는 5개는 모두 있어야 배포된다. 아직 안 쓰는 것은 `none`을 넣는다(코드가 없음으로 다룬다).
+
+   ```
+   ! pnpm exec firebase functions:secrets:set YOUTUBE_API_KEY --project prod
+   ! openssl rand -base64 32 | tr -d '\n' | pnpm exec firebase functions:secrets:set ACTOR_HASH_KEY --project prod --data-file -
+   ! printf none | pnpm exec firebase functions:secrets:set ANTHROPIC_API_KEY --project prod --data-file -
+   ! printf none | pnpm exec firebase functions:secrets:set LASTFM_API_KEY --project prod --data-file -
+   ! printf none | pnpm exec firebase functions:secrets:set GITHUB_ISSUE_TOKEN --project prod --data-file -
+   ```
+
+   - YouTube 키는 Google Cloud 콘솔 → API 및 서비스에서 "YouTube Data API v3"를 사용 설정하고 만든다. **API 제한을 YouTube Data API v3 하나로** 건다.
+   - `ACTOR_HASH_KEY`는 한 번 정하면 바꾸지 않는다(바꾸면 이벤트 로그의 사용자 묶음이 끊김).
+   - AI 키를 나중에 넣으면 같은 명령으로 값을 바꾸고 다시 배포한다(D-039: 그 전에는 AI 없는 방식).
+
+6. **배포 준비**: `pnpm deploy:prepare prod --check`
+   - 설정 검사 → functions 빌드 → 화면 빌드와 비밀값 검사(`scan:bundle`) → `.deploy/functions`(묶지 않은 패키지만 정확한 버전으로 적은 package.json) → `firebase.deploy.json`(빌드 단계 없음)
+   - 설정을 바꿨으면 배포 전에 이 명령을 다시 돌린다(배포는 이때 만든 결과를 그대로 올린다).
+   - `--check`는 그 묶음을 임시 폴더에 npm으로 설치해 불러와 본다. 배포하지 않는다.
+7. **배포** (사람이 직접): `pnpm exec firebase deploy --config firebase.deploy.json --project prod`
+   - 처음 배포는 API 사용 설정·권한 질문이 나올 수 있다. 읽고 답한다.
+   - `--force`(코드에 없는 함수 지우기)는 쓰지 않는다.
+8. **배포 뒤 확인**
+   - `node --experimental-strip-types tools/smoke.ts aimusicwebs`: 모든 callable이 App Check 없는 호출을 거부(401)해야 한다.
+   - 손 확인:
+     - `https://aimusicwebs.web.app` 접속, `/status`
+     - 관리자로 로그인해 재생목록 만들기
+     - 관리자 아닌 계정은 만들기 거부(D-015)
+     - 실제 YouTube 플레이어로 재생·다음 곡·오류 건너뛰기(D-032)
+   - 다음 날: 야간 작업 결과가 운영 일지에 남았는지, `linkHealthNightly` 결과
+9. **GitHub 배포**(`.github/workflows/deploy.yml`): 지금은 손으로만 돌고, main에서만 돈다.
+   - 저장소 Settings → Environments에서 `production`을 만들고 "Required reviewers"(관리자)와 "Deployment branches: main"을 건다.
+   - `FIREBASE_SERVICE_ACCOUNT`, `WEB_ENV_PRODUCTION`, `FUNCTIONS_ENV`는 **그 환경의 Secrets에만** 넣는다. 저장소 Secrets에 넣으면 다른 워크플로·같은 저장소 PR 실행이 읽을 수 있다.
+   - 서비스 계정 키 대신 Workload Identity Federation을 쓰면 더 낫다(키 파일 없음). 바꾸면 D-053에 적는다.

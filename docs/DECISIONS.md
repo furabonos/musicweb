@@ -1148,3 +1148,27 @@
   - 없으면 미리 계산으로 만들고 미리 계산 키에만 저장한다. AI 결과 자리를 차지하지 않게 하기 위해서다.
 - AI 추천 시험의 기준 점수를 이번 측정(0.99)으로 다시 썼다. 문제가 바뀐 뒤 처음 잰 값이다.
 - 에뮬레이터는 가짜 AI가 늘 있어 기본이 AI 방식이 된다. 출처 문장을 보는 테스트는 `recommendMode: 'precomputed'`를 명시한다.
+
+## D-053 배포 준비: App Check는 코드에서 강제, 배포 묶음은 따로 만든다, 배포는 사람이 (T23, 2026-11-24)
+
+- **App Check**
+  - 모든 callable은 `functions/src/api/callable.ts`의 `onCall`로 만든다. 에뮬레이터 밖에서는 `enforceAppCheck: true`를 넣는다.
+  - firebase-functions의 `onCall`을 직접 쓰면 ESLint가 막는다.
+  - 에뮬레이터(가짜 프로젝트)는 App Check 토큰을 만들 수 없어 그 안에서만 끈다.
+  - 테스트는 내보낸 모든 callable을 토큰 없이 불러 App Check 거부(401, message `Unauthenticated`)인지 본다.
+  - 로그인 확인의 401(`sign in required`)과 구분한다. 그래야 로그인이 필요한 함수에서 강제가 빠진 것을 잡는다. 배포 뒤 점검(`tools/smoke.ts`)도 같다.
+  - 화면은 `VITE_RECAPTCHA_SITE_KEY`(reCAPTCHA Enterprise)로 App Check를 켠다.
+- **배포 묶음**
+  - `functions/package.json`의 `workspace:` 개발 의존성은 Cloud Build(npm)가 설치하지 못한다(D-027).
+  - 그래서 `tools/prepare-deploy.ts`가 `.deploy/functions`에 묶은 `lib/`와 실행 의존성만 담은 package.json을 만든다.
+  - `firebase.deploy.json`(functions 위치만 바꾼 복사본)도 만든다.
+  - package.json에는 esbuild가 묶지 않은 패키지만, 지금 설치해 테스트한 정확한 버전으로 적는다(Cloud Build가 범위로 다른 버전을 받지 않게).
+  - 화면 빌드와 비밀값 검사(`scan:bundle`)도 이 도구가 한다. 배포 설정에는 빌드 단계(predeploy)를 두지 않는다: 검사하지 않은 설정으로 다시 빌드되거나 배포 키가 있는 단계에서 빌드 도구가 도는 것을 막는다.
+  - 에뮬레이터·테스트는 그대로 `firebase.json`과 `functions/`를 쓴다. 다른 방법(package.json을 배포 때 고쳐 쓰기, isolate 도구 추가)보다 원본을 건드리지 않고 의존성이 늘지 않는다.
+- **화면 배포 설정**은 `apps/web/.env.production.local`에 둔다. 배포 빌드만 읽으므로 개발 서버·e2e가 실제 프로젝트에 붙지 않는다.
+- **아직 없는 비밀값**(AI·Last.fm·GitHub 토큰)은 `none`으로 넣는다. Secret Manager가 빈 값을 받는지 확인하지 못했고, 함수가 연결한 비밀값은 있어야 배포된다. `optionalSecret`이 `none`과 빈 값을 "없음"으로 다룬다.
+- **배포는 사람이 한다**: 사용자가 먼저 써 보고 배포하기로 했다.
+  - `.github/workflows/deploy.yml`은 지금은 손으로만, main에서만 돈다(테스트로 확인).
+  - 배포 키는 GitHub 환경 `production`의 Secrets에만 두고 그 환경에 승인자·main 제한을 건다. 저장소 Secrets는 다른 워크플로가 읽을 수 있다.
+  - 첫 배포를 사람이 확인한 뒤 main 합침 때 자동으로 바꾼다.
+- T23의 완료 기준(접속, 야간 작업 기록, 점검 스크립트, 관리자 아닌 계정 거부)은 실제 배포 뒤에만 확인할 수 있다. 그래서 T23은 열어 둔다.

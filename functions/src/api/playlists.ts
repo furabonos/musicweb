@@ -1,5 +1,6 @@
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
-import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { HttpsError } from 'firebase-functions/v2/https';
+import { onCall } from './callable.js';
 import { SUPPORTED_LOCALES } from '@musicweb/shared';
 import { z } from 'zod';
 import { createLastfm, firestoreLastfmCache } from '../adapters/lastfm.js';
@@ -10,7 +11,7 @@ import { createMusicBrainz } from '../adapters/musicbrainz.js';
 import { createWikidata } from '../adapters/wikidata.js';
 import { createYouTubeRead, firestoreYtBudget } from '../adapters/youtube-read.js';
 import { fakeExternalEnabled } from '../config/runtimeEnv.js';
-import { MB_CONTACT, secrets } from '../config/secrets.js';
+import { MB_CONTACT, optionalSecret, secrets } from '../config/secrets.js';
 import type { CallerAuth } from '../core/auth.js';
 import type { EventSink } from '../core/events.js';
 import { enqueueArtist } from '../core/ingestQueue.js';
@@ -134,7 +135,7 @@ function buildLlm(db: Firestore, events: EventSink): Llm | null {
   if (fake()) return fakeLlm(firestoreLlmBudget(db));
   try {
     return createLlm({
-      apiKey: secrets.ANTHROPIC_API_KEY.value(),
+      apiKey: optionalSecret('ANTHROPIC_API_KEY'),
       events,
       budget: firestoreLlmBudget(db),
     });
@@ -160,7 +161,7 @@ function buildPorts(db: Firestore, events: EventSink): { ports: RecommendPorts; 
   }
   const music = { events, budget: firestoreCallBudget(db), contact: MB_CONTACT.value() };
   const llm = buildLlm(db, events);
-  const lastfmKey = secrets.LASTFM_API_KEY.value();
+  const lastfmKey = optionalSecret('LASTFM_API_KEY');
   const ports = firestoreRecommendPorts({
     db,
     mb: createMusicBrainz(music),
@@ -181,7 +182,6 @@ function buildPorts(db: Firestore, events: EventSink): { ports: RecommendPorts; 
   return { ports, llm };
 }
 
-// TODO(T23): App Check 설정 후 enforceAppCheck: true (SPEC 6.1).
 export const playlists = {
   create: onCall(
     {
@@ -378,7 +378,7 @@ export const site = {
   config: onCall({ secrets: [secrets.ANTHROPIC_API_KEY] }, () =>
     handle(async () => {
       const db = getFirestore();
-      const noAi = !fake() && !secrets.ANTHROPIC_API_KEY.value().trim();
+      const noAi = !fake() && !optionalSecret('ANTHROPIC_API_KEY');
       return {
         openLink: await openLinkMode(db),
         savingMode: await savingModeOn(db),
