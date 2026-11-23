@@ -67,7 +67,8 @@ describe('playlists-create (가짜 AI·음악 데이터)', () => {
     expect(out.shortfall).toBeNull();
     expect(out.items.every((i) => i.videoId?.startsWith('demoVid'))).toBe(true);
     expect(out.items.map((i) => i.songId)).not.toContain(DEMO_SEED.mbid);
-    expect(out.items[0]?.reason).toBe(FAKE_REASON.en('Doja'));
+    // 기본은 미리 계산한 방식(AI 없이 고르기, D-040): 출처 문장. AI가 고르는 이유는 recommendMode ai에서
+    expect(out.items[0]?.reason).toBe('People who play Doja also play this.');
 
     const doc = (await db.doc(`playlists/${out.id}`).get()).data();
     expect(doc).toMatchObject({ ownerUid: uid, state: 'draft', locale: 'en' });
@@ -86,10 +87,17 @@ describe('playlists-create (가짜 AI·음악 데이터)', () => {
     expect(all.join('\n')).not.toContain(ADMIN);
   });
 
-  it('화면 언어가 한국어면 곡 이유도 한국어로 요청됨', async () => {
+  it('화면 언어가 한국어면 곡 이유도 한국어', async () => {
     const { token } = await googleSignIn(ADMIN);
     const out = await createOk(token, REQUEST, 'ko');
-    expect(out.items[0]?.reason).toBe(FAKE_REASON.ko('Doja'));
+    expect(out.items[0]?.reason).toBe('「Doja」 청취자들이 함께 듣는 곡이에요.');
+  });
+
+  it('recommendMode ai면 AI가 화면 언어로 이유를 쓴다', async () => {
+    await db.doc('config/runtime').set({ recommendMode: 'ai' }, { merge: true });
+    const { token } = await googleSignIn(ADMIN);
+    expect((await createOk(token, REQUEST, 'en')).items[0]?.reason).toBe(FAKE_REASON.en('Doja'));
+    expect((await createOk(token, REQUEST, 'ko')).items[0]?.reason).toBe(FAKE_REASON.ko('Doja'));
   });
 
   it('지원하지 않는 조건은 코드로 돌려줌', async () => {

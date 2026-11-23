@@ -30,7 +30,12 @@ export type Feature = (typeof FEATURES)[number];
 export const OPEN_LINK_MODES = ['direct', 'fallback'] as const;
 export type OpenLinkMode = (typeof OPEN_LINK_MODES)[number];
 
+/** 추천 방식(D-040): 미리 계산한 값으로 고르기(기본) 또는 AI가 고르기. 시험 비교(T31) 뒤에 정한다 */
+export const RECOMMEND_MODES = ['precomputed', 'ai'] as const;
+export type RecommendMode = (typeof RECOMMEND_MODES)[number];
+
 export interface RuntimeConfig {
+  recommendMode: RecommendMode;
   killSwitches: Record<Feature, boolean>;
   youtubeOpenLink: OpenLinkMode;
   limits: { service: Record<ServiceCounter, number>; user: Record<UserCounter, number> };
@@ -41,6 +46,7 @@ export const YOUTUBE_DAILY_UNITS = 10_000;
 export const YOUTUBE_DAILY_SEARCHES = 100;
 
 export const DEFAULT_RUNTIME: RuntimeConfig = {
+  recommendMode: 'precomputed',
   killSwitches: { create: true, ingest: true, autoIssue: true },
   youtubeOpenLink: 'direct',
   limits: {
@@ -96,6 +102,7 @@ const docSchema = z.strictObject({
   youtubeOpenLink: z.enum(OPEN_LINK_MODES).optional(),
   limits: limitsPatchSchema.optional(),
   savingMode: savingModeSchema.optional(),
+  recommendMode: z.enum(RECOMMEND_MODES).optional(),
 });
 
 export class RuntimeConfigError extends Error {
@@ -111,6 +118,7 @@ export function parseRuntimeConfig(doc: unknown): RuntimeConfig {
     );
   }
   const d = parsed.data as {
+    recommendMode?: RecommendMode;
     killSwitches?: Partial<Record<Feature, boolean>>;
     youtubeOpenLink?: OpenLinkMode;
     limits?: {
@@ -119,6 +127,7 @@ export function parseRuntimeConfig(doc: unknown): RuntimeConfig {
     };
   };
   const cfg: RuntimeConfig = {
+    recommendMode: d.recommendMode ?? DEFAULT_RUNTIME.recommendMode,
     killSwitches: { ...DEFAULT_RUNTIME.killSwitches, ...d.killSwitches },
     youtubeOpenLink: d.youtubeOpenLink ?? DEFAULT_RUNTIME.youtubeOpenLink,
     limits: {

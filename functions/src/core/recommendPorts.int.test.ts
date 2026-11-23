@@ -72,3 +72,24 @@ describe('firestoreRecommendPorts', () => {
     expect(await ports().officialChannels(null)).toEqual([]);
   });
 });
+
+describe('firestorePrecomputed (T30)', () => {
+  it('문서가 없으면 null, 깨진 items는 거르고, 낱말 목록 버전이 다른 숫자 묶음은 버린다', async () => {
+    const { firestorePrecomputed } = await import('./recommendPorts.js');
+    const { VOCAB_VERSION } = await import('@musicweb/shared/similarity');
+    const pc = firestorePrecomputed(db);
+    expect(await pc.similar('nope')).toBeNull();
+    await db.doc('artistSimilar/a1').set({
+      items: [{ artistMbid: 'b1', score: 5 }, { artistMbid: 3, score: 'x' }, null],
+    });
+    expect(await pc.similar('a1')).toEqual([{ artistMbid: 'b1', score: 5 }]);
+    await db
+      .doc('artistVectors/v1')
+      .set({ vocabVersion: VOCAB_VERSION, songs: [{ songId: 's1', w: { 0: 1 }, decade: null }] });
+    await db
+      .doc('artistVectors/v2')
+      .set({ vocabVersion: VOCAB_VERSION - 1, songs: [{ songId: 's2', w: {}, decade: null }] });
+    const m = await pc.vectors(['v1', 'v2', 'v3', 'v1']);
+    expect([...m.keys()]).toEqual(['v1']);
+  });
+});

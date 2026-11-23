@@ -16,9 +16,15 @@ import { memoryEvents } from '../functions/src/testing/music.js';
 import { createCliLlm } from './claudeCli.js';
 import { scoreMatchingCase, summarizeMatching, type MatchingCase } from './matching/score.js';
 import { scoreCase, summarize, type ParseCase } from './parse/score.js';
-import { runRecommendCase, summarizeRecommend, type RecommendCase } from './recommend/score.js';
+import {
+  artistGenres,
+  runPrecomputedCase,
+  runRecommendCase,
+  summarizeRecommend,
+  type RecommendCase,
+} from './recommend/score.js';
 
-export const SUITES = ['matching', 'parse', 'recommend'] as const;
+export const SUITES = ['matching', 'parse', 'recommend', 'recommend-precomputed'] as const;
 export type SuiteName = (typeof SUITES)[number];
 
 export interface SuiteResult {
@@ -103,6 +109,16 @@ export async function runRecommend(llm: Llm): Promise<SuiteResult> {
   return summarizeRecommend(results);
 }
 
+/** 미리 계산한 방식(AI 없음, 결정적). CI에서 항상 돈다(T30) */
+export async function runRecommendPrecomputed(): Promise<SuiteResult> {
+  const { cases } = read<{ cases: RecommendCase[] }>('recommend/cases.json');
+  const genres = artistGenres(cases);
+  const results = [];
+  for (const c of cases) results.push(await runPrecomputedCase(c, genres));
+  const s = summarizeRecommend(results);
+  return { score: s.score, cases: s.cases, failedIds: s.failedIds };
+}
+
 export class EvalConfigError extends Error {
   override name = 'EvalConfigError';
 }
@@ -170,6 +186,8 @@ export async function runAll(
       results.parse = llm ? await runParse(llm) : { score: 0, cases: 0, skipped: noLlm };
     if (want('recommend'))
       results.recommend = llm ? await runRecommend(llm) : { score: 0, cases: 0, skipped: noLlm };
+    if (want('recommend-precomputed'))
+      results['recommend-precomputed'] = await runRecommendPrecomputed();
     return { results, label, ...(stats ? { stats: stats() } : {}) };
   } finally {
     cleanup?.();
@@ -180,6 +198,7 @@ export const TOLERANCE: Record<SuiteName, number> = {
   matching: 0, // 결정적: 1문제라도 떨어지면 실패
   parse: 0.05, // 실제 AI라 같은 입력에도 답이 조금씩 다를 수 있음(20문항 중 1문항)
   recommend: 0.05,
+  'recommend-precomputed': 0, // 결정적
 };
 
 /** 결과로 기준 파일 내용을 만든다(이번에 잰 시험만 바꾸고 나머지 기준은 그대로). */
@@ -192,7 +211,7 @@ export function nextBaseline(prev: Baseline, results: Results, label: string, no
         ...r,
         tolerance: TOLERANCE[name],
         // 곡 연결은 AI를 쓰지 않는다
-        llm: name === 'matching' ? 'none' : label,
+        llm: name === 'matching' || name === 'recommend-precomputed' ? 'none' : label,
         measuredAt: now.toISOString(),
       };
   }

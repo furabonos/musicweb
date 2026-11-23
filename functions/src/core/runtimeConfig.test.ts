@@ -54,3 +54,11 @@ describe('youtubeOpenLink (T16, D-006)', () => {
     expect(() => parseRuntimeConfig({ youtubeOpenLink: 'off' })).toThrow(RuntimeConfigError);
   });
 });
+
+describe('recommendMode (T30)', () => {
+  it('기본은 precomputed, 저장된 값은 그대로, 모르는 값은 거부', () => {
+    expect(parseRuntimeConfig(undefined).recommendMode).toBe('precomputed');
+    expect(parseRuntimeConfig({ recommendMode: 'ai' }).recommendMode).toBe('ai');
+    expect(() => parseRuntimeConfig({ recommendMode: 'magic' })).toThrow(RuntimeConfigError);
+  });
+});

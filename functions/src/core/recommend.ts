@@ -5,7 +5,21 @@ import type { LbRecording, SimilarArtist, SimilarRecording } from '../adapters/l
 import type { SimilarTrack } from '../adapters/lastfm.js';
 import type { WorkInfo } from '../adapters/wikidata.js';
 import type { VideoDetail } from '../adapters/youtube-read.js';
+import {
+  closeness,
+  closenessSparse,
+  fromSparse,
+  toSparse,
+  sharedTags,
+  tagReason,
+  toVector,
+  VOCAB_VERSION,
+  yearCloseness,
+  type SongVector,
+} from '@musicweb/shared/similarity';
 import { BudgetExceededError } from './budget.js';
+import { KillSwitchError } from './runtimeConfig.js';
+import type { StoredSongVector } from './vectors.js';
 import { pickLink, songKey, type PlayableLink, type SongDoc } from './catalog.js';
 import type { EventSink } from './events.js';
 import { errName, isOutage } from './jobErrors.js';
@@ -70,6 +84,14 @@ export interface RecommendPorts {
   llm: Llm;
   events: EventSink;
   now?: () => Date;
+  /**
+   * 미리 계산한 값(T29). 없으면(계산 전) 요청 때 ListenBrainz 비슷한 아티스트로 대신한다.
+   * similar: 아티스트의 비슷한 아티스트(점수), vectors: 아티스트별 곡 숫자 묶음
+   */
+  precomputed?: {
+    similar(artistMbid: string): Promise<{ artistMbid: string; score: number }[] | null>;
+    vectors(artistMbids: string[]): Promise<Map<string, StoredSongVector[]>>;
+  };
 }
 
 export const RECOMMEND_LIMITS = {
@@ -85,6 +107,12 @@ export const RECOMMEND_LIMITS = {
   /** 요청 하나에서 쓸 검색 횟수 */
   maxSearches: 3,
   maxReason: 140,
+  /** 미리 계산한 비슷한 아티스트 중 곡을 볼 아티스트 수 */
+  precomputedArtists: 10,
+  /** 숫자 묶음을 더 읽을 (후보 곡의) 아티스트 수 */
+  extraVectorArtists: 10,
+  /** 한 재생목록에 기준 곡 아티스트의 다른 곡 상한 */
+  seedArtistSongs: 2,
 };
 
 export interface RecommendItem {
@@ -119,6 +147,13 @@ interface Candidate {
   score: number;
 }
 
+/**
+ * 숫자 묶음 가까움의 무게: 가장 센 출처(ListenBrainz 1위 = 3)와 같게 둔다. 그래야 태그가 전혀 안 맞는 곡이
+ * 비슷한 곡 순위만으로 앞서지 못한다(D-047, 시험 recommend-precomputed로 정함). 연도 가까움은 보조.
+ */
+const CLOSENESS_WEIGHT = 3;
+const YEAR_WEIGHT = 0.5;
+
 const WEIGHT: Record<Source, number> = { listenbrainz: 3, similar_artist: 1.5, lastfm: 1, ai: 1 };
 
 export async function recommend(
@@ -128,9 +163,11 @@ export async function recommend(
   /**
    * spares: 요청 수 밖에 더 고를 예비 곡 수(바꾸기용, D-031). 조회·검색은 요청 수(req.count)까지만 한다.
    * ai: AI를 쓸 수 있는가(절약 모드·키 없음이면 아님). AI 비용 상한에 닿으면 onLimit(절약 모드 켜기)을 부른다.
+   * mode: 'precomputed'(기본 설정, D-040)면 AI 후보·AI 고르기를 쓰지 않는다. 'ai'면 AI를 쓸 수 있을 때 쓴다.
    */
   opts: {
     spares?: number;
+    mode?: 'ai' | 'precomputed';
     ai?: { mode: 'on' | 'saving' | 'no_key'; onLimit?: () => Promise<void> };
   } = {},
 ): Promise<RecommendResult> {
@@ -138,7 +175,7 @@ export async function recommend(
   const L = RECOMMEND_LIMITS;
   const include: Include = req.include;
   const actor = { actorUid: user.uid };
-  const ai = new AiState(ports, opts.ai, user.uid);
+  const ai = new AiState(ports, opts.ai, user.uid, opts.mode ?? 'ai');
   await ai.start();
 
   // 1. 기준 곡
@@ -193,7 +230,11 @@ export async function recommend(
     'listenbrainz',
     await soft(ports, () => ports.music.similarRecordings(seed.lbMbid, L.similarRecordings), []),
   );
-  if (seed.artistMbid) {
+  // 미리 계산한 비슷한 아티스트·숫자 묶음 (T30). 없으면 요청 때 ListenBrainz로 대신한다
+  const pre = await precomputedFor(ports, seed);
+  if (pre?.similar.length) {
+    add('similar_artist', await closestSongs(ports, pre, L));
+  } else if (seed.artistMbid) {
     const artists = await soft(
       ports,
       () => ports.music.similarArtists(seed.artistMbid as string, L.similarArtists),
@@ -267,10 +308,16 @@ export async function recommend(
   }
 
   // 5. AI가 목록 안에서 고르고 정렬
+  // 점수 = 출처 가중치 + 아티스트 유사도 × 숫자 묶음 가까움 + 연도 가까움 (SPEC 4.3 5단계)
+  // 보강은 출처 점수 상위 후보에만(읽기 수를 묶는다)
+  playable.sort((a, b) => b.c.score - a.c.score);
+  const tagInfo = pre
+    ? await enrichScores(ports, pre, playable.slice(0, L.maxPickPool), L)
+    : new Map<string, TagInfo>();
   const pool = playable.sort((a, b) => b.c.score - a.c.score).slice(0, L.maxPickPool);
   const pickCount = req.count + (opts.spares ?? 0);
   let items = ai.on ? await aiPick(ports, seed, req, pickCount, pool, user.uid, ai) : null;
-  if (!items) items = await rulePick(ports, seed, req, pickCount, pool, user.uid);
+  if (!items) items = await rulePick(ports, seed, req, pickCount, pool, user.uid, tagInfo);
   return {
     ok: true,
     seed: {
@@ -697,12 +744,14 @@ class AiState {
     private readonly opts:
       { mode: 'on' | 'saving' | 'no_key'; onLimit?: () => Promise<void> } | undefined,
     private readonly uid: string,
+    private readonly recommendMode: 'ai' | 'precomputed' = 'ai',
   ) {
-    this.on = (opts?.mode ?? 'on') === 'on';
+    // 미리 계산한 방식이면 AI를 처음부터 쓰지 않는다(대체가 아니므로 ai_fallback도 남기지 않음)
+    this.on = recommendMode === 'ai' && (opts?.mode ?? 'on') === 'on';
   }
   async start() {
     const mode = this.opts?.mode ?? 'on';
-    if (mode !== 'on') await this.fallback(mode);
+    if (this.recommendMode === 'ai' && mode !== 'on') await this.fallback(mode);
   }
   async failed(err: unknown) {
     this.on = false;
@@ -757,16 +806,29 @@ async function rulePick(
   pickCount: number,
   pool: { c: Candidate; song: SongDoc; link: PlayableLink }[],
   uid: string,
+  tagInfo: Map<string, TagInfo> = new Map(),
 ): Promise<RecommendItem[]> {
+  // 보이는 목록(요청 곡 수)에는 기준 곡 아티스트의 다른 곡을 몇 곡까지만(리뷰 지적). 예비 곡에는 상한 없음
+  const seedArtist = compareKey(seed.artist);
+  let seedArtistUsed = 0;
   const left = [...pool];
   const chosen: RecommendItem[] = [];
   let lastArtist: string | null = null;
   while (left.length && chosen.length < pickCount) {
-    let idx = left.findIndex((p) => compareKey(p.song.artist) !== lastArtist);
+    const capped = chosen.length < req.count && seedArtistUsed >= RECOMMEND_LIMITS.seedArtistSongs;
+    const allowed = (p: (typeof pool)[number]) =>
+      !(capped && compareKey(p.song.artist) === seedArtist);
+    let idx = left.findIndex((p) => allowed(p) && compareKey(p.song.artist) !== lastArtist);
+    if (idx < 0) idx = left.findIndex(allowed);
+    if (idx < 0 && chosen.length < req.count) {
+      // 보이는 목록을 다른 아티스트로 더 못 채우면 상한을 넘기지 않고 멈춘다(모자란 대로)
+      if (left.every((p) => !allowed(p))) break;
+    }
     if (idx < 0) idx = 0;
     const [p] = left.splice(idx, 1);
     if (!p) break;
     lastArtist = compareKey(p.song.artist);
+    if (lastArtist === seedArtist && chosen.length < req.count) seedArtistUsed++;
     chosen.push({
       songId: p.song.mbid,
       artist: p.song.artist,
@@ -775,9 +837,136 @@ async function rulePick(
       videoId: p.link.videoId,
       kind: p.link.kind,
       madeForKids: p.link.madeForKids,
-      reason: ruleReason(mainSource(p.c), seed, req.locale),
+      // 겹치는 태그로 조립한 문장, 없으면 출처 문장 (D-047)
+      reason:
+        tagReasonFor(tagInfo.get(p.song.mbid), req.locale) ??
+        ruleReason(mainSource(p.c), seed, req.locale),
     });
   }
   await step(ports, 'rule_pick', pool.length, 0, 0, uid);
   return chosen;
+}
+
+interface Precomputed {
+  /** 비슷한 아티스트(점수 0~1로 맞춤), 점수 큰 순 */
+  similar: { artistMbid: string; score: number }[];
+  /** 기준 곡 숫자 묶음 (없으면 가까움 계산 없이 출처 점수만) */
+  seedVec: SongVector | null;
+  seedArtist: string | null;
+  /** 읽은 아티스트별 곡 숫자 묶음 */
+  vectors: Map<string, StoredSongVector[]>;
+}
+interface TagInfo {
+  tags: string[];
+  decade: number | null;
+}
+
+/** 미리 계산한 값 읽기. 기준 곡 숫자 묶음이 없으면 그 녹음의 태그로 한 번 만든다(MusicBrainz 1회) */
+async function precomputedFor(ports: RecommendPorts, seed: Seed): Promise<Precomputed | null> {
+  if (!ports.precomputed || !seed.artistMbid) return null;
+  try {
+    const raw = (await ports.precomputed.similar(seed.artistMbid)) ?? [];
+    const top = Math.max(1, ...raw.map((a) => a.score));
+    const similar = raw
+      .map((a) => ({ artistMbid: a.artistMbid, score: a.score / top }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, RECOMMEND_LIMITS.precomputedArtists);
+    const vectors = await ports.precomputed.vectors([
+      seed.artistMbid,
+      ...similar.map((a) => a.artistMbid),
+    ]);
+    const stored = vectors.get(seed.artistMbid)?.find((s) => s.songId === seed.songId);
+    let seedVec = stored ? fromSparse(stored.w, VOCAB_VERSION, stored.decade) : null;
+    if (!seedVec) {
+      const rec = await soft(ports, () => ports.music.getRecording(seed.songId), null);
+      if (rec) seedVec = toVector([...rec.genres, ...rec.tags], rec.firstReleaseYear);
+    }
+    return { similar, seedVec, seedArtist: seed.artistMbid, vectors };
+  } catch (err) {
+    // 한도·긴급 정지는 그대로 올린다(soft와 같은 규칙). 그 밖의 읽기 실패는 요청 때 계산으로 대신한다
+    if (err instanceof BudgetExceededError || err instanceof KillSwitchError) throw err;
+    await ports.events.record({
+      type: 'error',
+      attrs: { code: errName(err), where: 'recommend.precomputed' },
+      outcome: 'error',
+    });
+    return null;
+  }
+}
+
+/** 비슷한 아티스트마다 기준 곡과 숫자 묶음이 가까운 곡(가까움 순, 아티스트 점수 순) */
+async function closestSongs(
+  ports: RecommendPorts,
+  pre: Precomputed,
+  L: typeof RECOMMEND_LIMITS,
+): Promise<SongDoc[]> {
+  const picked: { songId: string; rank: number }[] = [];
+  const seedW = pre.seedVec ? toSparse(pre.seedVec.tags) : null;
+  for (const a of pre.similar) {
+    // 곡이 많은 아티스트도 배열을 만들지 않고 희소 모양끼리 바로 곱한다
+    const songs = (pre.vectors.get(a.artistMbid) ?? []).map((s) => ({
+      songId: s.songId,
+      close: seedW ? closenessSparse(seedW, s.w) : 0,
+    }));
+    songs
+      .sort((x, y) => y.close - x.close)
+      .slice(0, L.songsPerArtist)
+      .forEach((s) => picked.push({ songId: s.songId, rank: a.score * (1 + s.close) }));
+  }
+  picked.sort((x, y) => y.rank - x.rank);
+  const docs = await ports.songs.byIds(picked.map((p) => p.songId));
+  return picked.flatMap((p) => {
+    const d = docs.get(p.songId);
+    return d ? [d] : [];
+  });
+}
+
+/** 재생할 수 있는 후보 점수에 아티스트 유사도 × 가까움 + 연도 가까움을 더하고, 이유 문장용 겹치는 태그를 모은다 */
+async function enrichScores(
+  ports: RecommendPorts,
+  pre: Precomputed,
+  playable: { c: Candidate; song: SongDoc; link: PlayableLink }[],
+  L: typeof RECOMMEND_LIMITS,
+): Promise<Map<string, TagInfo>> {
+  const info = new Map<string, TagInfo>();
+  if (!pre.seedVec || !ports.precomputed) return info;
+  const missing = [
+    ...new Set(playable.flatMap((p) => (p.song.artistMbid ? [p.song.artistMbid] : []))),
+  ]
+    .filter((a) => !pre.vectors.has(a))
+    .slice(0, L.extraVectorArtists);
+  if (missing.length) {
+    try {
+      const more = await ports.precomputed.vectors(missing);
+      for (const [k, v] of more) pre.vectors.set(k, v);
+    } catch (err) {
+      // 더 읽기 실패는 보강 없이 진행한다(만들기를 막지 않는다)
+      if (err instanceof BudgetExceededError || err instanceof KillSwitchError) throw err;
+      await ports.events.record({
+        type: 'error',
+        attrs: { code: errName(err), where: 'recommend.precomputed' },
+        outcome: 'error',
+      });
+    }
+  }
+  const sim = new Map(pre.similar.map((a) => [a.artistMbid, a.score]));
+  for (const p of playable) {
+    const a = p.song.artistMbid;
+    const stored = a ? pre.vectors.get(a)?.find((s) => s.songId === p.song.mbid) : undefined;
+    if (!stored) continue;
+    const v = fromSparse(stored.w, VOCAB_VERSION, stored.decade);
+    // 기준 아티스트 자신은 0.5: 태그가 거의 같아 1이면 목록이 같은 아티스트로 채워진다(리뷰 지적). 목록 밖은 0.3
+    const artistSim = a === pre.seedArtist ? 0.5 : (sim.get(a ?? '') ?? 0.3);
+    const year = yearCloseness(pre.seedVec, v);
+    p.c.score += CLOSENESS_WEIGHT * artistSim * closeness(pre.seedVec, v) + YEAR_WEIGHT * year;
+    info.set(p.song.mbid, {
+      tags: sharedTags(pre.seedVec, v, 2),
+      decade: year === 1 ? v.decade : null,
+    });
+  }
+  return info;
+}
+
+function tagReasonFor(info: TagInfo | undefined, locale: 'en' | 'ko'): string | null {
+  return info ? tagReason(info.tags, info.decade, locale) : null;
 }
