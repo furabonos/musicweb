@@ -1,5 +1,5 @@
 {
-  "_note": "추천 시험 문제(T17). 기준 곡마다 같은 장르의 어울리는 곡 6개(fits)와 멀리 떨어진 장르의 미끼 6개를 섞은 후보(비슷한 곡 출처 순서: 미끼가 먼저). 점수 = AI가 고른 5곡 중 어울리는 곡 비율. 후보는 손으로 만든 것이고, 실제 ListenBrainz 녹화본은 나중에(T23 이후) 보강한다.",
+  "_note": "추천 시험 문제(T17). 기준 곡마다 같은 장르의 어울리는 곡 6개(fits)와 멀리 떨어진 장르의 미끼 6개를 섞은 후보(비슷한 곡 출처 순서: 미끼가 먼저). 점수 = AI가 고른 5곡 중 어울리는 곡 비율. 후보는 손으로 만든 것이고, 실제 ListenBrainz 녹화본은 나중에(T23 이후) 보강한다. T30: 문제마다 가까운 장르 미끼 2개(near: true)를 맨 앞에 더했다(D-047). 미리 계산한 방식 채점용 장르 태그는 score.ts GENRE_TAGS.",
   "cases": [
     {
       "id": "r01",
@@ -10,6 +10,18 @@
       },
       "count": 5,
       "pool": [
+        {
+          "artist": "Blur",
+          "title": "Song 2",
+          "fits": false,
+          "near": true
+        },
+        {
+          "artist": "Pearl Jam",
+          "title": "Alive",
+          "fits": false,
+          "near": true
+        },
         {
           "artist": "Don Omar",
           "title": "Danza Kuduro",
@@ -82,6 +94,18 @@
       "count": 5,
       "pool": [
         {
+          "artist": "Nas",
+          "title": "N.Y. State of Mind",
+          "fits": false,
+          "near": true
+        },
+        {
+          "artist": "Frank Ocean",
+          "title": "Thinkin Bout You",
+          "fits": false,
+          "near": true
+        },
+        {
           "artist": "Erik Satie",
           "title": "Gymnopédie No. 1",
           "fits": false
@@ -152,6 +176,18 @@
       },
       "count": 5,
       "pool": [
+        {
+          "artist": "米津玄師",
+          "title": "Lemon",
+          "fits": false,
+          "near": true
+        },
+        {
+          "artist": "Tears for Fears",
+          "title": "Everybody Wants to Rule the World",
+          "fits": false,
+          "near": true
+        },
         {
           "artist": "Slayer",
           "title": "Raining Blood",
@@ -224,6 +260,18 @@
       "count": 5,
       "pool": [
         {
+          "artist": "Swedish House Mafia",
+          "title": "Don't You Worry Child",
+          "fits": false,
+          "near": true
+        },
+        {
+          "artist": "Donna Summer",
+          "title": "I Feel Love",
+          "fits": false,
+          "near": true
+        },
+        {
           "artist": "Slayer",
           "title": "Raining Blood",
           "fits": false
@@ -294,6 +342,18 @@
       },
       "count": 5,
       "pool": [
+        {
+          "artist": "Antônio Carlos Jobim",
+          "title": "Desafinado",
+          "fits": false,
+          "near": true
+        },
+        {
+          "artist": "Otis Redding",
+          "title": "(Sittin' On) The Dock of the Bay",
+          "fits": false,
+          "near": true
+        },
         {
           "artist": "Swedish House Mafia",
           "title": "Don't You Worry Child",
@@ -366,6 +426,18 @@
       "count": 5,
       "pool": [
         {
+          "artist": "Miles Davis",
+          "title": "So What",
+          "fits": false,
+          "near": true
+        },
+        {
+          "artist": "Antônio Carlos Jobim",
+          "title": "Desafinado",
+          "fits": false,
+          "near": true
+        },
+        {
           "artist": "Dave",
           "title": "Clash",
           "fits": false
@@ -436,6 +508,18 @@
       },
       "count": 5,
       "pool": [
+        {
+          "artist": "Fleet Foxes",
+          "title": "White Winter Hymnal",
+          "fits": false,
+          "near": true
+        },
+        {
+          "artist": "Otis Redding",
+          "title": "(Sittin' On) The Dock of the Bay",
+          "fits": false,
+          "near": true
+        },
         {
           "artist": "Swedish House Mafia",
           "title": "Don't You Worry Child",
@@ -508,6 +592,18 @@
       "count": 5,
       "pool": [
         {
+          "artist": "Tears for Fears",
+          "title": "Everybody Wants to Rule the World",
+          "fits": false,
+          "near": true
+        },
+        {
+          "artist": "Donna Summer",
+          "title": "I Feel Love",
+          "fits": false,
+          "near": true
+        },
+        {
           "artist": "Miles Davis",
           "title": "So What",
           "fits": false
@@ -578,6 +674,18 @@
       },
       "count": 5,
       "pool": [
+        {
+          "artist": "The Offspring",
+          "title": "Self Esteem",
+          "fits": false,
+          "near": true
+        },
+        {
+          "artist": "Pearl Jam",
+          "title": "Alive",
+          "fits": false,
+          "near": true
+        },
         {
           "artist": "Antônio Carlos Jobim",
           "title": "Desafinado",
@@ -650,6 +758,18 @@
       "count": 5,
       "pool": [
         {
+          "artist": "Swedish House Mafia",
+          "title": "Don't You Worry Child",
+          "fits": false,
+          "near": true
+        },
+        {
+          "artist": "Frank Ocean",
+          "title": "Thinkin Bout You",
+          "fits": false,
+          "near": true
+        },
+        {
           "artist": "Erik Satie",
           "title": "Gymnopédie No. 1",
           "fits": false
@@ -720,6 +840,18 @@
       },
       "count": 5,
       "pool": [
+        {
+          "artist": "IVE",
+          "title": "Love Dive",
+          "fits": false,
+          "near": true
+        },
+        {
+          "artist": "Tears for Fears",
+          "title": "Everybody Wants to Rule the World",
+          "fits": false,
+          "near": true
+        },
         {
           "artist": "Johnny Cash",
           "title": "Ring of Fire",
@@ -792,6 +924,18 @@
       "count": 5,
       "pool": [
         {
+          "artist": "Johnny Cash",
+          "title": "Ring of Fire",
+          "fits": false,
+          "near": true
+        },
+        {
+          "artist": "Blur",
+          "title": "Song 2",
+          "fits": false,
+          "near": true
+        },
+        {
           "artist": "Swedish House Mafia",
           "title": "Don't You Worry Child",
           "fits": false
@@ -862,6 +1006,18 @@
       },
       "count": 5,
       "pool": [
+        {
+          "artist": "Otis Redding",
+          "title": "(Sittin' On) The Dock of the Bay",
+          "fits": false,
+          "near": true
+        },
+        {
+          "artist": "Dave",
+          "title": "Clash",
+          "fits": false,
+          "near": true
+        },
         {
           "artist": "Slayer",
           "title": "Raining Blood",
@@ -934,6 +1090,18 @@
       "count": 5,
       "pool": [
         {
+          "artist": "Radiohead",
+          "title": "No Surprises",
+          "fits": false,
+          "near": true
+        },
+        {
+          "artist": "Slayer",
+          "title": "Raining Blood",
+          "fits": false,
+          "near": true
+        },
+        {
           "artist": "Donna Summer",
           "title": "I Feel Love",
           "fits": false
@@ -1004,6 +1172,18 @@
       },
       "count": 5,
       "pool": [
+        {
+          "artist": "Otis Redding",
+          "title": "(Sittin' On) The Dock of the Bay",
+          "fits": false,
+          "near": true
+        },
+        {
+          "artist": "Tears for Fears",
+          "title": "Everybody Wants to Rule the World",
+          "fits": false,
+          "near": true
+        },
         {
           "artist": "Slayer",
           "title": "Raining Blood",
@@ -1076,6 +1256,18 @@
       "count": 5,
       "pool": [
         {
+          "artist": "Slayer",
+          "title": "Raining Blood",
+          "fits": false,
+          "near": true
+        },
+        {
+          "artist": "Pearl Jam",
+          "title": "Alive",
+          "fits": false,
+          "near": true
+        },
+        {
           "artist": "Erik Satie",
           "title": "Gymnopédie No. 1",
           "fits": false
@@ -1146,6 +1338,18 @@
       },
       "count": 5,
       "pool": [
+        {
+          "artist": "Dave",
+          "title": "Clash",
+          "fits": false,
+          "near": true
+        },
+        {
+          "artist": "Frank Ocean",
+          "title": "Thinkin Bout You",
+          "fits": false,
+          "near": true
+        },
         {
           "artist": "Erik Satie",
           "title": "Gymnopédie No. 1",
@@ -1218,6 +1422,18 @@
       "count": 5,
       "pool": [
         {
+          "artist": "Miles Davis",
+          "title": "So What",
+          "fits": false,
+          "near": true
+        },
+        {
+          "artist": "Otis Redding",
+          "title": "(Sittin' On) The Dock of the Bay",
+          "fits": false,
+          "near": true
+        },
+        {
           "artist": "Slayer",
           "title": "Raining Blood",
           "fits": false
@@ -1289,6 +1505,18 @@
       "count": 5,
       "pool": [
         {
+          "artist": "Radiohead",
+          "title": "No Surprises",
+          "fits": false,
+          "near": true
+        },
+        {
+          "artist": "Fleet Foxes",
+          "title": "White Winter Hymnal",
+          "fits": false,
+          "near": true
+        },
+        {
           "artist": "Don Omar",
           "title": "Danza Kuduro",
           "fits": false
@@ -1359,6 +1587,18 @@
       },
       "count": 5,
       "pool": [
+        {
+          "artist": "Frank Ocean",
+          "title": "Thinkin Bout You",
+          "fits": false,
+          "near": true
+        },
+        {
+          "artist": "Donna Summer",
+          "title": "I Feel Love",
+          "fits": false,
+          "near": true
+        },
         {
           "artist": "Slayer",
           "title": "Raining Blood",

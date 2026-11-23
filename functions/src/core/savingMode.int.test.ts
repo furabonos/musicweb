@@ -31,7 +31,10 @@ const logs = async () =>
 
 describe('절약 모드', () => {
   it('AI 상한 0에서 만들기 → 성공(AI 없는 방식), 절약 모드 켜짐, 일지 1줄, 긴급 정지는 그대로', async () => {
-    await db.doc('config/runtime').set({ limits: { service: { aiCostMicroUsd: 0 } } });
+    // AI가 고르는 방식이어야 추천에서 AI를 부른다(기본은 미리 계산한 방식, D-040)
+    await db
+      .doc('config/runtime')
+      .set({ recommendMode: 'ai', limits: { service: { aiCostMicroUsd: 0 } } });
     const { token } = await googleSignIn(ADMIN);
 
     const r = await callFunction('playlists-create', input, token);

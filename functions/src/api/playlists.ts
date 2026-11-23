@@ -14,6 +14,7 @@ import { MB_CONTACT, secrets } from '../config/secrets.js';
 import type { CallerAuth } from '../core/auth.js';
 import type { EventSink } from '../core/events.js';
 import { enqueueArtist } from '../core/ingestQueue.js';
+import { errName } from '../core/jobErrors.js';
 import { touchRequested } from '../core/precomputeOnDemand.js';
 import { parseFallback, parseWithFallback } from '../core/parseFallback.js';
 import { enterSavingMode, readSavingMode, savingModeState } from '../core/savingMode.js';
@@ -150,6 +151,18 @@ export const playlists = {
           : (await readSavingMode(db, events))
             ? ('saving' as const)
             : ('on' as const);
+        // 추천 방식(기본 미리 계산, D-040). 설정을 못 읽으면 미리 계산한 방식
+        const mode = await readRuntimeConfig(db)
+          .then((c) => c.recommendMode)
+          .catch(async (err: unknown) => {
+            // 설정이 깨졌으면 기록을 남기고 미리 계산한 방식으로(한도·긴급 정지 확인은 만들기 단계가 따로 막는다)
+            await events.record({
+              type: 'error',
+              attrs: { code: errName(err), where: 'playlists.recommend_mode' },
+              outcome: 'error',
+            });
+            return 'precomputed' as const;
+          });
         const onAiLimit = async () => void (await enterSavingMode(db, events));
         return createPlaylist(
           {
@@ -176,7 +189,7 @@ export const playlists = {
                 ports,
                 parsed,
                 { uid },
-                { spares, ai: { mode: aiMode, onLimit: onAiLimit } },
+                { spares, mode, ai: { mode: aiMode, onLimit: onAiLimit } },
               ),
             enqueueArtist: (artist) => enqueueArtist(db, artist),
             touchRequested: (ids) => touchRequested(db, ids),

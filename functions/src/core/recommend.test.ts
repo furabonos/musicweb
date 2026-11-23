@@ -6,6 +6,7 @@ import { SourceUnavailableError } from '../adapters/music-http.js';
 import { BudgetExceededError } from './budget.js';
 import { songKey, type SongDoc } from './catalog.js';
 import type { ParsedRequest } from './parseRequest.js';
+import { toSparse, toVector } from '@musicweb/shared/similarity';
 import { recommend, type RecommendPorts } from './recommend.js';
 
 const NOW = new Date('2026-11-22T00:00:00Z');
@@ -672,5 +673,221 @@ describe('recommend — AI 없는 방식 (절약 모드·키 없음·AI 오류, 
     );
     if (!r.ok) throw new Error('fail');
     expect(r.items[0]?.reason).toBe('「Karma Police」 청취자들이 함께 듣는 곡이에요.');
+  });
+});
+
+describe('recommend — 미리 계산한 방식 (T30, D-047)', () => {
+  const ART_A = '11111111-1111-4111-8111-111111111111';
+  const ART_B = '22222222-2222-4222-8222-222222222222';
+  const CLOSE = {
+    mbid: mbid(30),
+    artist: 'Muse',
+    artistMbid: ART_A,
+    title: 'Unintended',
+    releaseYear: 1999,
+  };
+  const CLOSE2 = { ...CLOSE, mbid: mbid(31), title: 'Sunburn' };
+  const FAR = {
+    mbid: mbid(32),
+    artist: 'Trap Star',
+    artistMbid: ART_B,
+    title: 'Bounce',
+    releaseYear: 2019,
+  };
+  const OTHER = { ...CLOSE, mbid: mbid(33), artist: 'Travis', artistMbid: ART_B, title: 'Writing' };
+  const vec = (tags: string[], year: number) => {
+    const v = toVector(
+      tags.map((name) => ({ name, source: 'musicbrainz' as const })),
+      year,
+    );
+    return { w: toSparse(v.tags), decade: v.decade };
+  };
+  function precomputedWorld() {
+    const w = world({
+      catalog: [SEED, CLOSE, CLOSE2, FAR, OTHER],
+      links: {
+        [SEED.mbid]: [link('seedVideo01')],
+        [CLOSE.mbid]: [link('close000001')],
+        [CLOSE2.mbid]: [link('close000002')],
+        [FAR.mbid]: [link('far00000001')],
+        [OTHER.mbid]: [link('other000001')],
+      },
+      // ListenBrainz 순서는 먼 곡이 먼저: 숫자 묶음이 순서를 바꿔야 한다
+      lbSimilar: [FAR, CLOSE, CLOSE2, OTHER],
+    });
+    const s = setup(w);
+    s.ports.precomputed = {
+      similar: async (a) =>
+        a === RH
+          ? [
+              { artistMbid: ART_A, score: 80 },
+              { artistMbid: ART_B, score: 40 },
+            ]
+          : null,
+      vectors: async (ids) =>
+        new Map(
+          ids.flatMap(
+            (
+              id,
+            ): [
+              string,
+              { songId: string; w: Record<string, number>; decade: number | null }[],
+            ][] => {
+              if (id === RH)
+                return [
+                  [id, [{ songId: SEED.mbid, ...vec(['alternative rock', 'art rock'], 1997) }]],
+                ];
+              if (id === ART_A)
+                return [
+                  [
+                    id,
+                    [
+                      { songId: CLOSE.mbid, ...vec(['alternative rock', 'art rock'], 1999) },
+                      { songId: CLOSE2.mbid, ...vec(['alternative rock'], 1999) },
+                    ],
+                  ],
+                ];
+              if (id === ART_B)
+                return [
+                  [
+                    id,
+                    [
+                      { songId: FAR.mbid, ...vec(['trap'], 2019) },
+                      { songId: OTHER.mbid, ...vec(['britpop', 'rock'], 2001) },
+                    ],
+                  ],
+                ];
+              return [];
+            },
+          ),
+        ),
+    };
+    return s;
+  }
+
+  it('기본 경로에서 AI 호출 0건, 가까운 태그 곡이 먼 곡보다 앞, 같은 아티스트 연속 없음, 태그 이유 문장', async () => {
+    const { ports, calls, events } = precomputedWorld();
+    const r = await recommend(ports, req({ count: 5 }), { uid: 'u1' }, { mode: 'precomputed' });
+    if (!r.ok) throw new Error('fail');
+    expect(calls.filter((c) => c.startsWith('llm.'))).toEqual([]);
+    const titles = r.items.map((i) => i.title);
+    expect(titles.indexOf('Unintended')).toBeLessThan(titles.indexOf('Bounce'));
+    for (let i = 1; i < r.items.length; i++) {
+      // 바로 앞과 같은 아티스트가 아닌 후보가 남아 있는 동안은 섞인다
+      if (r.items[i]?.artist === r.items[i - 1]?.artist) {
+        expect(r.items.slice(i).every((x) => x.artist === r.items[i]?.artist)).toBe(true);
+      }
+    }
+    expect(r.items.find((i) => i.title === 'Unintended')?.reason).toBe(
+      'Similar alternative rock · art rock sound, also from the 90s.',
+    );
+    // 겹치는 태그가 없는 곡은 출처 문장
+    expect(r.items.find((i) => i.title === 'Bounce')?.reason).toMatch(/also play this|similar to/);
+    expect(events.some((e) => e.type === 'ai_fallback')).toBe(false);
+  });
+
+  it('후보가 모자라면 모자란 대로 이유와 함께 돌려준다', async () => {
+    const { ports } = precomputedWorld();
+    const r = await recommend(ports, req({ count: 10 }), { uid: 'u1' }, { mode: 'precomputed' });
+    if (!r.ok) throw new Error('fail');
+    expect(r.items).toHaveLength(4);
+    expect(r.shortfall).toEqual({ requested: 10, got: 4, reason: 'not_enough_playable' });
+    // 모든 곡에 이유 문장
+    expect(r.items.every((i) => (i.reason ?? '').length > 0)).toBe(true);
+  });
+
+  it('미리 계산한 값이 없으면 요청 때 ListenBrainz 비슷한 아티스트로 대신한다', async () => {
+    const { ports } = precomputedWorld();
+    if (ports.precomputed) ports.precomputed.similar = async () => null;
+    const asked: string[] = [];
+    ports.music.similarArtists = async (m) => {
+      asked.push(m);
+      return [{ mbid: ART_A, name: 'Muse', score: 1 }];
+    };
+    ports.songs.byArtists = async (ids) => (ids.includes(ART_A) ? [CLOSE, CLOSE2] : []);
+    const r = await recommend(ports, req({ count: 3 }), { uid: 'u1' }, { mode: 'precomputed' });
+    expect(r.ok).toBe(true);
+    expect(asked).toEqual([RH]);
+  });
+
+  it('기준 곡 숫자 묶음이 없으면 MusicBrainz 녹음으로 한 번 만들고, 있으면 묻지 않는다', async () => {
+    const withStored = precomputedWorld();
+    await recommend(withStored.ports, req({ count: 3 }), { uid: 'u1' }, { mode: 'precomputed' });
+    expect(withStored.calls.filter((c) => c === `getRecording:${SEED.mbid}`)).toHaveLength(0);
+
+    const missing = precomputedWorld();
+    const pc = missing.ports.precomputed;
+    if (!pc) throw new Error('no precomputed');
+    const orig = pc.vectors;
+    pc.vectors = async (ids) => {
+      const m = await orig(ids);
+      m.delete(RH);
+      return m;
+    };
+    missing.ports.music.getRecording = async (id) => {
+      missing.calls.push(`getRecording:${id}`);
+      return {
+        mbid: id,
+        title: SEED.title,
+        artist: SEED.artist,
+        artistMbid: RH,
+        firstReleaseYear: 1997,
+        youtubeVideoIds: [],
+        workMbids: [],
+        genres: [{ name: 'alternative rock', source: 'musicbrainz', count: 5 }],
+        tags: [{ name: 'art rock', source: 'musicbrainz', count: 2 }],
+      };
+    };
+    const r = await recommend(
+      missing.ports,
+      req({ count: 5 }),
+      { uid: 'u1' },
+      { mode: 'precomputed' },
+    );
+    expect(missing.calls.filter((c) => c === `getRecording:${SEED.mbid}`)).toHaveLength(1);
+    if (!r.ok) throw new Error('fail');
+    const titles = r.items.map((i) => i.title);
+    expect(titles.indexOf('Unintended')).toBeLessThan(titles.indexOf('Bounce'));
+  });
+
+  it('미리 계산 읽기 중 한도·긴급 정지는 삼키지 않고 올린다', async () => {
+    const { ports } = precomputedWorld();
+    const pc = ports.precomputed;
+    if (!pc) throw new Error('no precomputed');
+    pc.similar = async () => {
+      throw new BudgetExceededError('service', 'musicDataCalls', 1, 1, NOW);
+    };
+    await expect(
+      recommend(ports, req({ count: 3 }), { uid: 'u1' }, { mode: 'precomputed' }),
+    ).rejects.toBeInstanceOf(BudgetExceededError);
+  });
+
+  it('기준 곡 아티스트의 다른 곡은 2곡까지만', async () => {
+    const extra = [40, 41, 42, 43].map((n) => ({
+      mbid: mbid(n),
+      artist: 'Radiohead',
+      artistMbid: RH,
+      title: `RH Song ${n}`,
+      releaseYear: 1997,
+    }));
+    const s = precomputedWorld();
+    const w = world({
+      catalog: [SEED, ...extra, CLOSE],
+      links: Object.fromEntries(
+        [SEED, ...extra, CLOSE].map((x, i) => [x.mbid, [link(`vid${String(i).padStart(8, '0')}`)]]),
+      ),
+      lbSimilar: [...extra, CLOSE],
+    });
+    const t = setup(w);
+    if (s.ports.precomputed) t.ports.precomputed = s.ports.precomputed;
+    const r = await recommend(t.ports, req({ count: 5 }), { uid: 'u1' }, { mode: 'precomputed' });
+    if (!r.ok) throw new Error('fail');
+    expect(r.items.filter((i) => i.artist === 'Radiohead')).toHaveLength(2);
+  });
+
+  it('mode ai면 예전처럼 AI가 고른다', async () => {
+    const { ports, calls } = precomputedWorld();
+    await recommend(ports, req({ count: 3 }), { uid: 'u1' }, { mode: 'ai' });
+    expect(calls).toContain('llm.pick');
   });
 });

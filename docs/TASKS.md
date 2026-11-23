@@ -410,7 +410,7 @@
     - unit `functions/src/core/precomputeOnDemand.test.ts` — 같은 아티스트 동시 요청은 한 번만 계산
     - unit — 같은 날 두 번째 조회는 `lastRequestedAt`을 쓰지 않음
 
-- [ ] **T30 미리 계산한 추천과 태그 이유 문장** — SPEC 4.3
+- [x] **T30 미리 계산한 추천과 태그 이유 문장** — SPEC 4.3
   - 의존: T22b, T29
   - 산출물:
     - `core/recommend.ts`: 기본 경로를 "비슷한 아티스트의 곡 중 가까운 곡 + ListenBrainz 비슷한 곡 + Last.fm(보조)"으로, 점수 = 출처 가중치 + 아티스트 유사도 × 가까움 + 연도 가까움, 같은 아티스트 연속 금지. AI 후보·AI 고르기는 설정(`recommendMode: 'precomputed' | 'ai'`, 기본 `precomputed`) 뒤로

@@ -129,3 +129,11 @@ export function fromSparse(
   }
   return { vocabVersion, tags, decade };
 }
+
+/** 희소 모양끼리의 가까움(코사인, 둘 다 길이 1). 배열을 만들지 않아 곡이 많아도 가볍다 */
+export function closenessSparse(a: Record<string, number>, b: Record<string, number>): number {
+  const [small, big] = Object.keys(a).length <= Object.keys(b).length ? [a, b] : [b, a];
+  let dot = 0;
+  for (const [k, x] of Object.entries(small)) dot += x * (big[k] ?? 0);
+  return Math.max(0, Math.min(1, Math.round(dot * 10_000) / 10_000));
+}
