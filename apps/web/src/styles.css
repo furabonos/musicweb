@@ -800,10 +800,10 @@ a.btn-ghost {
   color: var(--on-accent);
   border-color: var(--accent);
 }
-.picker-or {
+/* .hero p보다 강해야 위아래 간격이 같아진다(위가 0으로 붙어 보이던 문제) */
+.hero .picker-or {
   color: var(--muted);
-  margin: 22px 0 10px;
-  font-size: 14px;
+  margin: 32px auto;
 }
 
 /* 자세한 이유 (T34) */
