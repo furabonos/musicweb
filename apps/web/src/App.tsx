@@ -265,7 +265,7 @@ export function App({
       <header className="wrap topbar">
         <a className="brand" href="/" onClick={(e) => go(e, '/')}>
           <span className="brand-dot" aria-hidden="true" />
-          <span className="brand-name">musicweb</span>
+          <span className="brand-name">Tunetrail</span>
           <span className="brand-onair">{t('brand.onAir')}</span>
         </a>
         <nav className="nav">

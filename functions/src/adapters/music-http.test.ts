@@ -63,7 +63,7 @@ describe('User-Agent 연락처', () => {
     const { deps, server } = musicDeps([{ body: {} }]);
     await createSourceClient('musicbrainz', deps).get(URL1, OP);
     expect(server.requests[0]?.headers.get('User-Agent')).toBe(
-      'musicweb/0.1 ( https://github.com/furabonos/musicweb )',
+      'tunetrail/0.1 ( https://github.com/furabonos/musicweb )',
     );
   });
 

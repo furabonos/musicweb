@@ -65,7 +65,7 @@ export class MusicConfigError extends Error {
   override name = 'MusicConfigError';
 }
 
-export const APP_USER_AGENT = 'musicweb/0.1';
+export const APP_USER_AGENT = 'tunetrail/0.1';
 const MIN_INTERVAL_MS = 1_000;
 const MAX_RETRIES = 2;
 const MAX_RETRY_WAIT_MS = 30_000;
