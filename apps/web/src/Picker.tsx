@@ -179,7 +179,12 @@ export function Picker({
           </select>
         </label>
       </div>
-      <div className="picker-row" role="group" aria-label={t('picker.conditions')}>
+      <div
+        className="picker-row"
+        role="group"
+        aria-label={t('picker.conditions')}
+        aria-describedby="picker-include-note"
+      >
         {CONDITIONS.map((c) => (
           <button
             key={c}
@@ -195,6 +200,9 @@ export function Picker({
           {t('picker.submit')}
         </button>
       </div>
+      <p className="picker-note" id="picker-include-note">
+        {t('picker.includeNote')}
+      </p>
     </form>
   );
 }

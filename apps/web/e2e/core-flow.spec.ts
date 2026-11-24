@@ -8,7 +8,7 @@ test('요청 입력 → 10곡 표시 → 1곡 빼기 → 저장', async ({ page 
   await signIn(page);
   await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
 
-  await ask(page, '10 songs like Doja by Central Cee', 'Go live', 'Describe the music you want');
+  await ask(page, '10 songs like Doja by Central Cee', 'Make it', 'Describe the music you want');
   const songs = page.locator('ol.songs > li');
   await expect(songs).toHaveCount(10);
   await expect(page.getByText('Based on Doja · Central Cee')).toBeVisible();

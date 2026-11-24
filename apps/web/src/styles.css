@@ -211,6 +211,12 @@ button:disabled {
   font-size: 17px;
   font-weight: 700;
 }
+.picker .picker-note {
+  margin: 10px 0 0;
+  max-width: none;
+  font-size: 13px;
+  color: var(--muted);
+}
 .hints {
   display: flex;
   justify-content: center;

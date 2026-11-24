@@ -40,12 +40,12 @@ test('관리자가 긴급 정지(만들기)를 끄면 다른 관리자의 만들
   await expect(create).not.toBeChecked();
 
   await other.getByLabel('Describe the music you want').fill('10 songs like Doja by Central Cee');
-  await other.getByRole('button', { name: 'Go live' }).click();
+  await other.getByRole('button', { name: 'Make it' }).click();
   await expect(other.getByRole('alert')).toContainText('paused right now');
 
   await create.click();
   await expect(create).toBeChecked();
-  await ask(other, '10 songs like Doja by Central Cee', 'Go live', 'Describe the music you want');
+  await ask(other, '10 songs like Doja by Central Cee', 'Make it', 'Describe the music you want');
   await expect(other.locator('ol.songs > li')).toHaveCount(10);
   await otherContext.close();
 });

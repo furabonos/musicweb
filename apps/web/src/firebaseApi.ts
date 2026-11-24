@@ -21,6 +21,7 @@ import {
   type StatusData,
 } from './api';
 import { appCheckSiteKey, startAppCheck } from './appCheck';
+import { emulatorConfig } from './firebaseConfig';
 
 /**
  * Firebase로 서버를 부른다 (T14). 클라이언트는 Firestore에 쓰지 않는다: 모든 변경은 callable(SPEC 6.2).
@@ -31,9 +32,8 @@ const USE_EMULATORS = import.meta.env.DEV && import.meta.env.VITE_USE_EMULATORS 
 
 export function createFirebaseApi(): MusicwebApi {
   const env = import.meta.env;
-  // 에뮬레이터는 가짜 프로젝트(demo-musicweb)와 아무 키나 받는다
   const config = USE_EMULATORS
-    ? { apiKey: 'fake-api-key', projectId: env.VITE_FIREBASE_PROJECT_ID ?? 'demo-musicweb' }
+    ? emulatorConfig(env.VITE_FIREBASE_PROJECT_ID)
     : {
         apiKey: env.VITE_FIREBASE_API_KEY ?? '',
         authDomain: env.VITE_FIREBASE_AUTH_DOMAIN ?? '',

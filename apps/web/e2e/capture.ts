@@ -32,7 +32,7 @@ test('첫 화면', async ({ page }) => {
 test('재생목록 결과', async ({ page }) => {
   await page.goto('/');
   await signIn(page);
-  await ask(page, '10 songs like Doja by Central Cee', 'Go live', 'Describe the music you want');
+  await ask(page, '10 songs like Doja by Central Cee', 'Make it', 'Describe the music you want');
   await expect(page.locator('ol.songs > li')).toHaveCount(10);
   await shot(page, '02-results');
 });

@@ -105,7 +105,7 @@ async function ask(text = '10 songs like Doja by Central Cee') {
     target: { value: text },
   });
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Go live' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Make it' }));
   });
 }
 
@@ -126,9 +126,9 @@ describe('첫 화면', () => {
     const input = screen.getByLabelText('Describe the music you want');
     fireEvent.change(input, { target: { value: '🎵'.repeat(MAX_REQUEST_CHARS) } });
     expect(screen.getByText(`${MAX_REQUEST_CHARS}/${MAX_REQUEST_CHARS}`)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Go live' })).toHaveProperty('disabled', false);
+    expect(screen.getByRole('button', { name: 'Make it' })).toHaveProperty('disabled', false);
     fireEvent.change(input, { target: { value: '🎵'.repeat(MAX_REQUEST_CHARS + 1) } });
-    expect(screen.getByRole('button', { name: 'Go live' })).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: 'Make it' })).toHaveProperty('disabled', true);
     expect(screen.getByRole('alert').textContent).toContain('over 200 characters');
     expect(api.create).not.toHaveBeenCalled();
   });
@@ -149,7 +149,7 @@ describe('만들기 결과', () => {
       target: { value: 'Doja 같은 곡' },
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '틀어 줘' }));
+      fireEvent.click(screen.getByRole('button', { name: '만들어 줘' }));
     });
     expect(api.create).toHaveBeenCalledWith('Doja 같은 곡', 'ko');
     expect(screen.getAllByRole('listitem')).toHaveLength(3);
