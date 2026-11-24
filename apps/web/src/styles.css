@@ -824,3 +824,15 @@ a.btn-ghost {
   white-space: nowrap;
   border: 0;
 }
+
+/* 로그인 상태를 받기 전 버튼 자리(로그아웃 버튼과 비슷한 폭) */
+.auth-pending {
+  display: inline-block;
+  width: 94px;
+  height: 46px;
+}
+/* 로고를 첫 화면 링크로 쓴다 */
+a.brand {
+  color: inherit;
+  text-decoration: none;
+}

@@ -682,3 +682,43 @@ describe('자세한 이유 (T34)', () => {
     expect(api.explain).not.toHaveBeenCalled();
   });
 });
+
+describe('위 메뉴 이동', () => {
+  it('Status를 누르면 새로고침 없이 현황판으로 바뀌고, 뒤로 가기로 돌아온다', async () => {
+    const push = vi.spyOn(window.history, 'pushState');
+    fakeApi({ status: vi.fn(async () => new Promise<StatusData>(() => {})) });
+    expect(screen.getByLabelText('Describe the music you want')).toBeTruthy();
+    const [link] = screen.getAllByRole('link', { name: 'Status' });
+    if (!link) throw new Error('Status link missing');
+    const clicked = fireEvent.click(link);
+    // preventDefault가 불렸다 = 브라우저가 페이지를 다시 불러오지 않는다
+    expect(clicked).toBe(false);
+    expect(push).toHaveBeenCalledWith(null, '', '/status');
+    expect(screen.queryByLabelText('Describe the music you want')).toBeNull();
+    act(() => {
+      window.history.pushState(null, '', '/');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(screen.getByLabelText('Describe the music you want')).toBeTruthy();
+    push.mockRestore();
+  });
+
+  it('아직 없는 내 재생목록 메뉴는 보이지 않는다(T24)', () => {
+    fakeApi();
+    expect(screen.queryByRole('link', { name: 'My playlists' })).toBeNull();
+  });
+
+  it('로그인 상태를 받기 전에는 로그인 버튼을 잠깐 보여 주지 않는다', () => {
+    let emit: ((u: { uid: string } | null) => void) | null = null;
+    fakeApi({
+      onUser: (cb) => {
+        emit = cb;
+        return () => {};
+      },
+    });
+    expect(screen.queryByRole('button', { name: 'Sign in with Google' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Sign out' })).toBeNull();
+    act(() => emit?.({ uid: 'u1' }));
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeTruthy();
+  });
+});
