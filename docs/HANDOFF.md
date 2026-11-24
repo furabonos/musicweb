@@ -19,7 +19,7 @@
 ```sh
 git clone https://github.com/furabonos/musicweb.git
 cd musicweb
-git switch fix/local-trial-ui          # 아래 4절의 브랜치 (원격에 올려 둔 경우)
+git switch fix/local-trial-ui          # 작업 중인 브랜치 (main에는 아직 없음, 4절)
 pnpm install
 pnpm --filter web exec playwright install chromium   # e2e용 브라우저
 pnpm exec firebase login                # 배포·설정 확인용 (에뮬레이터만 쓰면 필요 없음)
@@ -27,9 +27,11 @@ pnpm exec firebase login                # 배포·설정 확인용 (에뮬레이
 
 확인: `pnpm lint && pnpm typecheck && pnpm test` (지금 unit 1065개 통과).
 
-## 3. git에 없는 파일 (다시 만들어야 함)
+## 3. git에 없는 파일 — 새 컴퓨터에서 꼭 다시 만든다
 
 비밀·개인 설정이라 저장소에 없다. 값은 이 문서에 적지 않는다.
+
+**필수**: 위 2절을 마친 뒤 아래 표의 앞 두 파일(`apps/web/.env.production.local`, `functions/.env.aimusicwebs`)을 만든다. 없으면 배포 준비 검사(`pnpm deploy:prepare prod --check`)가 실패하고 배포할 수 없다. 에뮬레이터·테스트만 쓸 때는 없어도 된다.
 
 | 파일                             | 내용                                                                     | 다시 만드는 법                                                                                                                                        |
 | -------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
