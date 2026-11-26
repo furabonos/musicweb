@@ -112,7 +112,7 @@ async function ask(text = '10 songs like Doja by Central Cee') {
 describe('첫 화면', () => {
   it('기본 영어, 언어 버튼으로 한국어', () => {
     fakeApi();
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Call in a song.');
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('Call in a song');
     fireEvent.click(screen.getByRole('button', { name: '한국어' }));
     expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('곡 하나만');
     expect(screen.getByRole('button', { name: '한국어' }).getAttribute('aria-pressed')).toBe(
@@ -149,7 +149,7 @@ describe('만들기 결과', () => {
       target: { value: 'Doja 같은 곡' },
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '만들어 줘' }));
+      fireEvent.click(screen.getByRole('button', { name: '만들기' }));
     });
     expect(api.create).toHaveBeenCalledWith('Doja 같은 곡', 'ko');
     expect(screen.getAllByRole('listitem')).toHaveLength(3);

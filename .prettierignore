@@ -4,3 +4,5 @@ dist
 lib
 coverage
 docs/PLAN.md
+# 외부 스킬(heydamir/unslop) 원본 그대로 둔다
+.claude/skills/unslop

@@ -191,7 +191,16 @@ const WEB_SERVER_IMPORT_MESSAGE =
   '화면 코드(apps/web)는 서버 코드를 import하지 않습니다. 필요한 타입·규칙은 packages/shared로 옮겨 쓰고, 서버 호출은 firebase/functions의 httpsCallable을 쓰세요.';
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/lib/**', '**/node_modules/**', 'coverage/**'] },
+  {
+    // .claude/skills/unslop: 외부 스킬(CC BY 4.0) 원본 그대로 둔다
+    ignores: [
+      '**/dist/**',
+      '**/lib/**',
+      '**/node_modules/**',
+      'coverage/**',
+      '.claude/skills/unslop/**',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.strict,
   {

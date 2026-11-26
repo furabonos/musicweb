@@ -377,7 +377,7 @@ function LimitsForm({
           })}
         </fieldset>
       ))}
-      <button type="submit" className="btn-accent" disabled={busy}>
+      <button type="submit" className="btn-light" disabled={busy}>
         {t('admin.saveLimits')}
       </button>
     </form>
@@ -426,7 +426,7 @@ function ArtistForm({
         <span>{t('admin.channelId')}</span>
         <input value={channelId} onChange={(e) => setChannelId(e.target.value)} />
       </label>
-      <button type="submit" className="btn-accent" disabled={busy}>
+      <button type="submit" className="btn-light" disabled={busy}>
         {t('admin.addArtist')}
       </button>
     </form>
@@ -484,7 +484,7 @@ function LinkForm({
           <input type="checkbox" checked={suggest} onChange={(e) => setSuggest(e.target.checked)} />
           {t('admin.suggestEvalCase')}
         </label>
-        <button type="submit" className="btn-accent" disabled={busy}>
+        <button type="submit" className="btn-light" disabled={busy}>
           {t('admin.apply')}
         </button>
       </div>
@@ -529,7 +529,7 @@ function EmailForm({
           onChange={(e) => setEmail(e.target.value)}
         />
       </label>
-      <button type="submit" className="btn-accent" disabled={busy}>
+      <button type="submit" className="btn-light" disabled={busy}>
         {onLabel}
       </button>
       <button type="button" className="btn-ghost" disabled={busy} onClick={() => send(false)}>

@@ -23,6 +23,6 @@ export async function signIn(page: Page, email = ADMIN) {
 
 export async function ask(page: Page, text: string, submitName: string, inputLabel: string) {
   await page.getByLabel(inputLabel).fill(text);
-  await page.getByRole('button', { name: submitName }).click();
+  await page.getByRole('button', { name: submitName, exact: true }).click();
   await expect(page.getByRole('heading', { level: 2 })).toBeVisible({ timeout: 30_000 });
 }
