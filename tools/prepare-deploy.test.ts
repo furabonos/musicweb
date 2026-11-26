@@ -5,6 +5,7 @@ import {
   checkWebEnv,
   DEPLOY_DIR,
   deployFirebaseJson,
+  HOSTING_SITE,
   deployPackageJson,
   externalPackages,
   parseDotenv,
@@ -116,7 +117,8 @@ describe('배포 준비 검사 (T23)', () => {
     expect(out.emulators).toBeUndefined();
     const hostingRest = { ...(fj.hosting as Record<string, unknown>) };
     delete hostingRest.predeploy;
-    expect(out.hosting).toEqual(hostingRest);
+    expect(out.hosting).toEqual({ ...hostingRest, site: HOSTING_SITE });
+    expect(HOSTING_SITE).toBe('tunetrail');
     expect((out.hosting as Record<string, unknown>).predeploy).toBeUndefined();
     expect(out.firestore).toEqual(fj.firestore);
     expect(out.storage).toEqual(fj.storage);

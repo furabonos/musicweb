@@ -17,7 +17,7 @@ test.describe('플레이어 (가짜 YouTube API)', () => {
     await useFakeYouTube(page);
     await page.goto('/');
     await signIn(page);
-    await ask(page, '10 songs like Doja by Central Cee', 'Go live', 'Describe the music you want');
+    await ask(page, '10 songs like Doja by Central Cee', 'Make it', 'Describe the music you want');
   });
 
   test('플레이어 영역 ≥480×270, nocookie 주소, 위에 겹친 요소 없음', async ({ page }) => {

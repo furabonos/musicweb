@@ -2,7 +2,7 @@
 
 ## 프로젝트
 
-말로 요청하면 비슷한 곡 재생목록을 만들어 YouTube 삽입 플레이어로 틀어 주는 PC 전용 공개 웹사이트 (Firebase + Vite/React + Cloud Functions, pnpm 모노레포).
+**Tunetrail**(https://tunetrail.web.app, 저장소 이름은 musicweb, D-054): 말로 요청하면 비슷한 곡 재생목록을 만들어 YouTube 삽입 플레이어로 틀어 주는 PC 전용 공개 웹사이트 (Firebase + Vite/React + Cloud Functions, pnpm 모노레포).
 기준 문서는 `docs/SPEC.md`이므로 기능 작업 전에 해당 장을 먼저 읽는다. 작업은 `docs/TASKS.md`, 결정은 `docs/DECISIONS.md`, 어디를 고칠지는 `docs/FEATURE_MAP.md`에서 찾는다.
 
 ## 작업 방식

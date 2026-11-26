@@ -101,7 +101,8 @@
    - Blaze 요금제, Firestore(Native, Standard, `nam5`), Storage, Authentication의 Google 로그인
    - 예산 알림·Functions 예산 정지: 위 2절
 2. **App Check (reCAPTCHA Enterprise)**
-   - Firebase 콘솔 → App Check → 앱 `musicweb` → reCAPTCHA Enterprise로 등록한다. 도메인은 `aimusicwebs.web.app`, `aimusicwebs.firebaseapp.com`.
+   - Firebase 콘솔 → App Check → 앱 `musicweb` → reCAPTCHA Enterprise로 등록한다. 도메인은 `tunetrail.web.app`(화면 사이트, D-054), `aimusicwebs.web.app`, `aimusicwebs.firebaseapp.com`.
+   - Authentication → 설정 → 승인된 도메인에 `tunetrail.web.app`을 넣는다(없으면 Google 로그인 팝업이 거절됨).
    - 받은 사이트 키(공개값)를 `apps/web/.env.production.local`의 `VITE_RECAPTCHA_SITE_KEY`에 넣는다.
    - 서버 함수는 코드에서 App Check를 강제한다(`functions/src/api/callable.ts`). 콘솔의 Firestore·Storage "적용"은 켜지 않아도 된다(화면은 Firestore·Storage를 직접 쓰지 않음).
 3. **화면 설정** `apps/web/.env.production.local`(gitignore): 배포 빌드만 읽는다. Firebase 웹 설정은 `pnpm exec firebase apps:sdkconfig WEB --project prod`로 받는다.
@@ -109,7 +110,7 @@
 
    ```
    ADMIN_EMAILS=["관리자@gmail.com"]
-   MB_CONTACT=https://aimusicwebs.web.app
+   MB_CONTACT=https://tunetrail.web.app
    ```
 
 5. **비밀값** (Secret Manager). 함수가 연결하는 5개는 모두 있어야 배포된다. 아직 안 쓰는 것은 `none`을 넣는다(코드가 없음으로 다룬다).
@@ -131,12 +132,13 @@
    - 설정을 바꿨으면 배포 전에 이 명령을 다시 돌린다(배포는 이때 만든 결과를 그대로 올린다).
    - `--check`는 그 묶음을 임시 폴더에 npm으로 설치해 불러와 본다. 배포하지 않는다.
 7. **배포** (사람이 직접): `pnpm exec firebase deploy --config firebase.deploy.json --project prod`
+   - 화면은 Hosting 사이트 `tunetrail`(https://tunetrail.web.app)에 올라간다. `deploy:prepare`가 배포 설정에 `site`를 넣는다(D-054).
    - 처음 배포는 API 사용 설정·권한 질문이 나올 수 있다. 읽고 답한다.
    - `--force`(코드에 없는 함수 지우기)는 쓰지 않는다.
 8. **배포 뒤 확인**
    - `node --experimental-strip-types tools/smoke.ts aimusicwebs`: 모든 callable이 App Check 없는 호출을 거부(401)해야 한다.
    - 손 확인:
-     - `https://aimusicwebs.web.app` 접속, `/status`
+     - `https://tunetrail.web.app` 접속, `/status`
      - 관리자로 로그인해 재생목록 만들기
      - 관리자 아닌 계정은 만들기 거부(D-015)
      - 실제 YouTube 플레이어로 재생·다음 곡·오류 건너뛰기(D-032)

@@ -26,7 +26,7 @@ test('기본 영어 → 언어 버튼으로 한국어 → 새로고침 후에도
   await ask(
     page,
     'Central Cee의 Doja 같은 곡 10개',
-    '틀어 줘',
+    '만들어 줘',
     '듣고 싶은 음악을 말로 적어 주세요',
   );
   expect((await request).postDataJSON()).toMatchObject({ data: { locale: 'ko' } });

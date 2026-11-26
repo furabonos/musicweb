@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from 'react';
 import { SUPPORTED_LOCALES, type Locale, type MusicService } from '@musicweb/shared';
 import {
   ApiError,
@@ -80,17 +80,35 @@ export function sharedId(path: string): string | null {
 export function App({
   api,
   music,
-  path = window.location.pathname,
+  path: initialPath = window.location.pathname,
 }: {
   api: MusicwebApi;
   music: MusicService<HTMLElement>;
   path?: string;
 }) {
+  // 위 메뉴는 새로고침 없이 화면만 바꾼다. 전체를 다시 불러오면 로그인 버튼이 잠깐
+  // "로그인"으로 돌아갔다 바뀌며 메뉴가 흔들려 보였다.
+  const [path, setPath] = useState(initialPath);
+  useEffect(() => {
+    const onPop = () => setPath(window.location.pathname);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  function go(e: MouseEvent<HTMLAnchorElement>, to: string) {
+    // 새 탭 열기(Cmd·Ctrl·Shift·가운데 버튼)는 브라우저에 맡긴다
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    if (to !== path) window.history.pushState(null, '', to);
+    setPath(to);
+    window.scrollTo?.(0, 0);
+  }
   const shareId = sharedId(path);
   const isStatus = /^\/status\/?$/.test(path);
   const isAdmin = /^\/admin\/?$/.test(path);
   const { locale, setLocale, t } = useI18n();
   const [user, setUser] = useState<SignedInUser | null>(null);
+  // 로그인 상태를 처음 받기 전에는 버튼 자리만 둔다("로그인"이 잠깐 보였다 바뀌지 않게)
+  const [authKnown, setAuthKnown] = useState(false);
   const [text, setText] = useState('');
   const [creating, setCreating] = useState(false);
   const [result, setResult] = useState<Success | null>(null);
@@ -126,7 +144,14 @@ export function App({
   /** AI 없이 동작 중: 절약 모드(오늘) 또는 AI 키 없음 */
   const [aiOff, setAiOff] = useState<'saving' | 'noAi' | null>(null);
 
-  useEffect(() => api.onUser(setUser), [api]);
+  useEffect(
+    () =>
+      api.onUser((u) => {
+        setUser(u);
+        setAuthKnown(true);
+      }),
+    [api],
+  );
   useEffect(() => {
     // 공유 화면은 playlists-get 응답에 방식이 같이 온다
     if (shareId || isStatus || isAdmin) return;
@@ -238,14 +263,16 @@ export function App({
   return (
     <>
       <header className="wrap topbar">
-        <div className="brand">
+        <a className="brand" href="/" onClick={(e) => go(e, '/')}>
           <span className="brand-dot" aria-hidden="true" />
-          <span className="brand-name">musicweb</span>
+          <span className="brand-name">Tunetrail</span>
           <span className="brand-onair">{t('brand.onAir')}</span>
-        </div>
+        </a>
         <nav className="nav">
-          <a href="/status">{t('nav.status')}</a>
-          <a href="/me">{t('nav.myPlaylists')}</a>
+          <a href="/status" onClick={(e) => go(e, '/status')}>
+            {t('nav.status')}
+          </a>
+          {/* 내 재생목록(/me)은 T24에서 만든다. 화면이 생기기 전에는 메뉴에 두지 않는다. */}
         </nav>
         <div className="lang" role="group" aria-label={t('lang.label')}>
           {SUPPORTED_LOCALES.map((l) => (
@@ -260,7 +287,9 @@ export function App({
             </button>
           ))}
         </div>
-        {user ? (
+        {!authKnown ? (
+          <span className="auth-pending" aria-hidden="true" />
+        ) : user ? (
           <button type="button" className="btn-ghost" onClick={() => void api.signOut()}>
             {t('auth.signOut')}
           </button>
@@ -456,7 +485,9 @@ export function App({
           <span>{t('results.sourceNote')}</span>
           <a href="/privacy">{t('footer.privacy')}</a>
           <a href="/terms">{t('footer.terms')}</a>
-          <a href="/status">{t('footer.status')}</a>
+          <a href="/status" onClick={(e) => go(e, '/status')}>
+            {t('footer.status')}
+          </a>
         </div>
       </footer>
     </>

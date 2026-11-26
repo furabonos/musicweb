@@ -105,7 +105,7 @@ async function ask(text = '10 songs like Doja by Central Cee') {
     target: { value: text },
   });
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Go live' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Make it' }));
   });
 }
 
@@ -126,9 +126,9 @@ describe('첫 화면', () => {
     const input = screen.getByLabelText('Describe the music you want');
     fireEvent.change(input, { target: { value: '🎵'.repeat(MAX_REQUEST_CHARS) } });
     expect(screen.getByText(`${MAX_REQUEST_CHARS}/${MAX_REQUEST_CHARS}`)).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Go live' })).toHaveProperty('disabled', false);
+    expect(screen.getByRole('button', { name: 'Make it' })).toHaveProperty('disabled', false);
     fireEvent.change(input, { target: { value: '🎵'.repeat(MAX_REQUEST_CHARS + 1) } });
-    expect(screen.getByRole('button', { name: 'Go live' })).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: 'Make it' })).toHaveProperty('disabled', true);
     expect(screen.getByRole('alert').textContent).toContain('over 200 characters');
     expect(api.create).not.toHaveBeenCalled();
   });
@@ -149,7 +149,7 @@ describe('만들기 결과', () => {
       target: { value: 'Doja 같은 곡' },
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '틀어 줘' }));
+      fireEvent.click(screen.getByRole('button', { name: '만들어 줘' }));
     });
     expect(api.create).toHaveBeenCalledWith('Doja 같은 곡', 'ko');
     expect(screen.getAllByRole('listitem')).toHaveLength(3);
@@ -680,5 +680,45 @@ describe('자세한 이유 (T34)', () => {
     );
     expect(screen.getByText('More detail is paused in simple mode.')).toBeTruthy();
     expect(api.explain).not.toHaveBeenCalled();
+  });
+});
+
+describe('위 메뉴 이동', () => {
+  it('Status를 누르면 새로고침 없이 현황판으로 바뀌고, 뒤로 가기로 돌아온다', async () => {
+    const push = vi.spyOn(window.history, 'pushState');
+    fakeApi({ status: vi.fn(async () => new Promise<StatusData>(() => {})) });
+    expect(screen.getByLabelText('Describe the music you want')).toBeTruthy();
+    const [link] = screen.getAllByRole('link', { name: 'Status' });
+    if (!link) throw new Error('Status link missing');
+    const clicked = fireEvent.click(link);
+    // preventDefault가 불렸다 = 브라우저가 페이지를 다시 불러오지 않는다
+    expect(clicked).toBe(false);
+    expect(push).toHaveBeenCalledWith(null, '', '/status');
+    expect(screen.queryByLabelText('Describe the music you want')).toBeNull();
+    act(() => {
+      window.history.pushState(null, '', '/');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(screen.getByLabelText('Describe the music you want')).toBeTruthy();
+    push.mockRestore();
+  });
+
+  it('아직 없는 내 재생목록 메뉴는 보이지 않는다(T24)', () => {
+    fakeApi();
+    expect(screen.queryByRole('link', { name: 'My playlists' })).toBeNull();
+  });
+
+  it('로그인 상태를 받기 전에는 로그인 버튼을 잠깐 보여 주지 않는다', () => {
+    let emit: ((u: { uid: string } | null) => void) | null = null;
+    fakeApi({
+      onUser: (cb) => {
+        emit = cb;
+        return () => {};
+      },
+    });
+    expect(screen.queryByRole('button', { name: 'Sign in with Google' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Sign out' })).toBeNull();
+    act(() => emit?.({ uid: 'u1' }));
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeTruthy();
   });
 });

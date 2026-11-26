@@ -30,6 +30,8 @@ import { pathToFileURL } from 'node:url';
 
 export const DEPLOY_DIR = '.deploy/functions';
 export const DEPLOY_CONFIG = 'firebase.deploy.json';
+/** 화면을 올릴 Hosting 사이트(https://tunetrail.web.app). 프로젝트 기본 사이트(aimusicwebs)가 아니다. */
+export const HOSTING_SITE = 'tunetrail';
 /** 배포 빌드(vite build)만 읽는 화면 설정. 개발 서버는 읽지 않으므로 에뮬레이터 개발·e2e가 실제 프로젝트에 붙지 않는다 */
 export const WEB_ENV_FILE = 'apps/web/.env.production.local';
 
@@ -175,7 +177,7 @@ export function deployFirebaseJson(fj: FirebaseJson): FirebaseJson {
   if (rest.hosting && typeof rest.hosting === 'object') {
     const hosting = { ...(rest.hosting as Record<string, unknown>) };
     delete hosting.predeploy;
-    rest.hosting = hosting;
+    rest.hosting = { ...hosting, site: HOSTING_SITE };
   }
   return {
     ...rest,

@@ -15,7 +15,7 @@ test('절약 모드면 안내가 보이고, 규칙으로 읽히는 요청은 AI 
   await signIn(page);
   await expect(page.getByTestId('saving-mode')).toContainText('Saving mode');
 
-  await ask(page, '10 songs like Doja by Central Cee', 'Go live', 'Describe the music you want');
+  await ask(page, '10 songs like Doja by Central Cee', 'Make it', 'Describe the music you want');
   const songs = page.locator('ol.songs > li');
   await expect(songs).toHaveCount(10);
   // 가짜 AI의 이유("Demo pick: …")가 아니라 AI 없는 방식의 고정 문장
@@ -27,6 +27,6 @@ test('절약 모드에서 규칙으로 못 읽는 문장은 형식 안내와 함
   await page.goto('/');
   await signIn(page);
   await page.getByLabel('Describe the music you want').fill('something chill for studying');
-  await page.getByRole('button', { name: 'Go live' }).click();
+  await page.getByRole('button', { name: 'Make it' }).click();
   await expect(page.getByRole('alert')).toContainText('Song by Artist');
 });

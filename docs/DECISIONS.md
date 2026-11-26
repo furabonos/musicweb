@@ -272,7 +272,7 @@
 - **공통 요청 `adapters/music-http.ts`**: 출처(MusicBrainz, ListenBrainz, Wikidata, Last.fm)마다 줄을 세운다. 앞 요청 시작에서 1초가 지나야 다음이 나간다(스킬 music-data-terms).
   - 줄은 함수 인스턴스 안에서만 공유된다. 여러 인스턴스가 동시에 돌면 합이 초당 1회를 넘을 수 있으므로, 수집 작업(T10)은 최대 인스턴스 1개로 둔다.
   - ListenBrainz가 `X-RateLimit-Remaining: 0`을 보내면 `X-RateLimit-Reset-In`만큼 다음 요청을 미룬다.
-  - User-Agent `musicweb/0.1 ( <MB_CONTACT> )`. 연락처가 없거나 헤더를 깨는 글자가 있으면 클라이언트를 만들지 않는다.
+  - User-Agent `musicweb/0.1 ( <MB_CONTACT> )`(D-054에서 `tunetrail/0.1`로 바뀜). 연락처가 없거나 헤더를 깨는 글자가 있으면 클라이언트를 만들지 않는다.
   - 429·503·연결 실패(본문 받는 중 끊김 포함)는 `Retry-After` 또는 2초·4초 쉬고 2번 더 한다. 다 실패하면 `source_unavailable` 이벤트와 `SourceUnavailableError`. 404 등 다른 오류는 재시도하지 않는다.
   - 실패로 끝나도 마지막 대기만큼 이 출처의 다음 요청을 미룬다(다른 호출이 바로 다시 두드리지 않게). `Retry-After`가 30초를 넘으면 기다리며 붙잡지 않고 바로 포기하되, 그 시간(최대 1시간) 동안 이 출처를 쉰다.
   - 줄은 기본으로 공유하고, 테스트만 `deps.limiter`로 따로 넣는다(시계만 바꿔도 공유가 깨지지 않게).
@@ -1172,3 +1172,12 @@
   - 배포 키는 GitHub 환경 `production`의 Secrets에만 두고 그 환경에 승인자·main 제한을 건다. 저장소 Secrets는 다른 워크플로가 읽을 수 있다.
   - 첫 배포를 사람이 확인한 뒤 main 합침 때 자동으로 바꾼다.
 - T23의 완료 기준(접속, 야간 작업 기록, 점검 스크립트, 관리자 아닌 계정 거부)은 실제 배포 뒤에만 확인할 수 있다. 그래서 T23은 열어 둔다.
+
+## D-054 서비스 이름 Tunetrail, 화면 주소 tunetrail.web.app (T23, 2026-11-24)
+
+- 사용자에게 보이는 이름을 **Tunetrail**로 정했다. 곡 하나에서 비슷한 곡을 따라 이어 가는 "노래의 길"이라는 뜻이다. 후보 morelike는 일반 단어라 검색에서 묻히고 뜻이 덜 분명했다.
+- 바꾼 곳: 화면 로고, 브라우저 탭 제목, 음악 데이터 요청의 User-Agent(`tunetrail/0.1`). 저장소·패키지 이름(`musicweb`, `@musicweb/shared`), GitHub 주소, 에뮬레이터 프로젝트(`demo-musicweb`), 내부 식별자는 그대로 둔다(바꿔도 사용자에게 보이지 않고 이력·링크만 깨진다).
+- Firebase 프로젝트 ID(`aimusicwebs`)는 바꿀 수 없어서, 같은 프로젝트에 Hosting 사이트 `tunetrail`을 따로 만들었다. 화면은 https://tunetrail.web.app 에 올린다. `tools/prepare-deploy.ts`가 배포 설정에 `site: "tunetrail"`을 넣는다(테스트로 고정).
+- 확인(2026-11-24): 같은 이름의 등록 상표는 찾지 못했다. 같은 이름의 개인 오픈소스 프로젝트(GitHub `Eppu/tunetrail`)가 하나 있다. 비상업 서비스라 충돌 위험은 낮다고 본다.
+- 함께: 로컬 Hosting 에뮬레이터 포트를 5000 → 5050으로 옮겼다. macOS의 AirPlay 수신이 5000번을 써서 `pnpm emulators`가 시작하지 못했다.
+- **이유**: 무엇을 하는 사이트인지 이름에서 드러나게 하고, 바꿀 수 없는 프로젝트 ID와 상관없이 주소를 이름에 맞추기 위함.
