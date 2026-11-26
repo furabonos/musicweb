@@ -169,3 +169,19 @@ describe('runPurge — 기간 지난 저장된 해석·결과 (T32, D-048)', () 
     expect((await db.collection('resultCache').get()).docs.map((d) => d.id)).toEqual(['new']);
   });
 });
+
+describe('runPurge — 요청 횟수 집계 (T42, D-056)', () => {
+  it('3일 된 중복 확인 표시는 0건, 30일 넘게 안 바뀐 집계 문서는 지우고 최근 것은 남김', async () => {
+    await db.doc('requestTallySeen/old').set({ expiresAt: ago(1) }); // 3일 전에 만든 표시(2일 보관)
+    await db.doc('requestTallySeen/new').set({ expiresAt: ago(-1) });
+    await db.doc('requestTally/song_old').set({ kind: 'song', days: {}, updatedAt: ago(31) });
+    await db.doc('requestTally/song_new').set({ kind: 'song', days: {}, updatedAt: ago(2) });
+    await db.doc('failedSeedTally/old').set({ days: {}, updatedAt: ago(31) });
+    await db.doc('failedSeedTally/new').set({ days: {}, updatedAt: ago(29) });
+    const summary = await purge().run;
+    expect(summary.tallies).toBe(3);
+    expect((await db.collection('requestTallySeen').get()).docs.map((d) => d.id)).toEqual(['new']);
+    expect((await db.collection('requestTally').get()).docs.map((d) => d.id)).toEqual(['song_new']);
+    expect((await db.collection('failedSeedTally').get()).docs.map((d) => d.id)).toEqual(['new']);
+  });
+});

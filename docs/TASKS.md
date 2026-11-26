@@ -611,7 +611,7 @@
 
 로그인(T24) 없이도 만들 수 있지만, 쓸모가 커지는 것은 공개 뒤다. 약관(T25)에 집계 사실을 넣는다.
 
-- [ ] **T42 요청 횟수 집계** — SPEC 4.3b, 5
+- [x] **T42 요청 횟수 집계** — SPEC 4.3b, 5
   - 의존: T07, T32
   - 산출물:
     - `functions/src/core/requestTally.ts`: 성공한 요청의 기준 곡·아티스트·언어를 `requestTally`에, `seed_not_found`의 이름 비교 키 HMAC(`ACTOR_HASH_KEY`에 용도 접두어, 새 비밀값 없음)을 `failedSeedTally`에 센다. 같은 사람·대상·날짜는 `requestTallySeen` 표시로 한 번만. 3명째에만 실패한 이름을 `label`로 저장
@@ -620,8 +620,9 @@
     - `jobs/purge.ts`: 2일 지난 `requestTallySeen`, 30일 지난 날짜 몫 지우기
     - `firestore.rules`: 새 서버 전용 컬렉션 3개 거부
   - 완료 기준:
-    - unit `functions/src/core/requestTally.test.ts` — 같은 사람이 같은 날 두 번 찾으면 1명, 다른 날이면 2명, 2명인 대상은 조회에 없음·3명부터 있음, 31일 지난 날짜는 합계에서 빠짐, 실패한 이름은 3명 전에는 저장 문서에 이름 없음
-    - integration `functions/src/core/requestTally.int.test.ts` — 만들기 요청 후 저장 문서에 uid·문장 원문 없음, 집계 저장 실패여도 재생목록은 만들어짐
+    - unit `functions/src/core/requestTally.test.ts` — 30일 창(서머타임 주 포함), 2명인 대상은 순위에 없음·3명부터 있음, 실패한 이름 키에 이름이 드러나지 않음
+    - integration `functions/src/core/requestTally.int.test.ts` — 같은 사람이 같은 날 두 번 찾으면 1명·다른 날이면 2명, 31일 지난 요청은 합계에서 빠짐, 실패한 이름은 서로 다른 3명 전에는 저장 문서에 이름 없음(한 사람이 사흘 쳐도 1명), 만들기 요청 후 저장 문서에 uid·문장 원문 없음, 집계 저장 실패여도 만들기 결과는 그대로
+    - `firestore.indexes.json`: `requestTally`(kind, updatedAt 내림차순)
     - integration `purge.int.test.ts`(확장) — 3일 된 중복 확인 표시 0건
     - rules `tests/rules/server-only.test.ts`(확장) — 새 컬렉션 3개 누구도 읽기 불가
 

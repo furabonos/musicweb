@@ -16,6 +16,7 @@ import type { CallerAuth } from '../core/auth.js';
 import type { EventSink } from '../core/events.js';
 import { enqueueArtist } from '../core/ingestQueue.js';
 import { firestoreParseCache } from '../core/parseCache.js';
+import { firestoreRequestTally } from '../core/requestTally.js';
 import { withResultCache } from '../core/resultCache.js';
 import { errName } from '../core/jobErrors.js';
 import { touchRequested } from '../core/precomputeOnDemand.js';
@@ -281,6 +282,7 @@ export const playlists = {
             recommend: cachedRecommend,
             enqueueArtist: (artist) => enqueueArtist(db, artist),
             touchRequested: (ids) => touchRequested(db, ids),
+            tally: firestoreRequestTally(db, serverHashKey()),
           },
           uid,
           input,
