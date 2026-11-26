@@ -47,15 +47,12 @@ pnpm exec firebase login                # 배포·설정 확인용 (에뮬레이
 - **T23(배포 준비)**: 설정은 끝났고 **아직 배포하지 않았다**. 배포는 사람이 직접 한다(`docs/OPERATIONS.md` 7절).
   - 끝난 것: App Check(reCAPTCHA) 등록, 비밀값 5개, 관리자 이메일, 예산 알림과 Functions 지출 상한(월 ₩14,000), 이름 Tunetrail과 주소 `tunetrail.web.app`(D-054), 로그인 허용 도메인 추가
   - T23 체크박스는 배포 후 확인(`node --experimental-strip-types tools/smoke.ts aimusicwebs`와 수동 확인)까지 끝나야 `[x]`로 바꾼다
-- **브랜치 `fix/local-trial-ui`**: 로컬 체험에서 찾은 문제를 고친 커밋들(Google 로그인, 버튼 문구, 메뉴 깜빡임, 이름 변경)과 이 메모. 아직 PR을 올리지 않았다.
+- **로컬 체험 수정**: Google 로그인, 버튼 문구, 메뉴 깜빡임, 이름 변경은 PR #33, 화면 다듬기(unslop)는 PR #34, 로그인 안내가 화면 밖에 뜨던 문제는 `fix/notice-into-view`로 main에 합쳤다(2026-11-26).
 
 ## 5. 다음에 할 차례
 
-1. **"로그인하세요" 안내가 화면 밖에 뜨는 문제 고치기**: 로그아웃 상태에서 "Make the set" 등을 누르면 안내 문구가 화면 아래에 나와 아무 반응이 없는 것처럼 보인다. 버튼 근처에 보이게 하거나 그 위치로 스크롤한다.
-2. **PR 올리고 합치기** (D-025 순서): 깨끗한 새 사본에서 lint·format·typecheck·unit·rules·int·e2e·eval·번들 검사 → `gh pr checks --watch` → `gh pr merge --merge --match-head-commit <sha>` → main 받기. e2e·int는 이 브랜치에서 아직 안 돌렸다(e2e 버튼 이름을 'Make it'·'만들어 줘'로 바꿈).
-3. **정할 것**: 지금 배포해서 `tunetrail.web.app`에서 써 볼지(배포하면 누구나 들어올 수 있음, 만들기는 관리자만 — D-015), 아니면 배포 없이 T24부터 할지. 배포한다면 검색 노출을 막는 noindex를 넣을지도.
-4. 그다음 **T24 Google 로그인과 사용자별 한도** (`docs/TASKS.md`). 위 메뉴의 "My playlists"는 T24에서 다시 넣는다.
-5. `docs/OPERATIONS.md` 2절 "마지막 확인" 날짜를 2026-11-24(예산·상한 설정한 날)로 고친다.
+1. **정할 것**: 지금 배포해서 `tunetrail.web.app`에서 써 볼지(배포하면 누구나 들어올 수 있음, 만들기는 관리자만 — D-015), 아니면 배포 없이 T24부터 할지. 배포한다면 검색 노출을 막는 noindex를 넣을지도.
+2. 그다음 **T24 Google 로그인과 사용자별 한도** (`docs/TASKS.md`). 위 메뉴의 "My playlists"는 T24에서 다시 넣는다.
 
 ## 6. 참고
 
