@@ -607,6 +607,45 @@
     - unit `metrics.test.ts`(확장) — 네 지표가 손 계산과 일치, 분모 0
     - e2e `status.spec.ts`(확장) — 지표 표시
 
+## L. 추가 기능 — 요청 횟수 집계 (SPEC 3.3, 4.3b, 6.3, D-056)
+
+로그인(T24) 없이도 만들 수 있지만, 쓸모가 커지는 것은 공개 뒤다. 약관(T25)에 집계 사실을 넣는다.
+
+- [x] **T42 요청 횟수 집계** — SPEC 4.3b, 5
+  - 의존: T07, T32
+  - 산출물:
+    - `functions/src/core/requestTally.ts`: 성공한 요청의 기준 곡·아티스트·언어를 `requestTally`에, `seed_not_found`의 이름 비교 키 HMAC(`ACTOR_HASH_KEY`에 용도 접두어, 새 비밀값 없음)을 `failedSeedTally`에 센다. 같은 사람·대상·날짜는 `requestTallySeen` 표시로 한 번만. 3명째에만 실패한 이름을 `label`로 저장
+    - 조회: `topSongs`·`topArtists`·`failedLabels`(최근 30일 합계, 3명 이상만, 사람 수 순)
+    - `core/playlists.ts`에서 호출(검색창·고르기 화면). 실패해도 만들기는 계속, 오류 이벤트만
+    - `jobs/purge.ts`: 2일 지난 `requestTallySeen`, 30일 지난 날짜 몫 지우기
+    - `firestore.rules`: 새 서버 전용 컬렉션 3개 거부
+  - 완료 기준:
+    - unit `functions/src/core/requestTally.test.ts` — 30일 창(서머타임 주 포함), 2명인 대상은 순위에 없음·3명부터 있음, 실패한 이름 키에 이름이 드러나지 않음
+    - integration `functions/src/core/requestTally.int.test.ts` — 같은 사람이 같은 날 두 번 찾으면 1명·다른 날이면 2명, 31일 지난 요청은 합계에서 빠짐, 실패한 이름은 서로 다른 3명 전에는 저장 문서에 이름 없음(한 사람이 사흘 쳐도 1명), 만들기 요청 후 저장 문서에 uid·문장 원문 없음, 집계 저장 실패여도 만들기 결과는 그대로
+    - `firestore.indexes.json`: `requestTally`(kind, updatedAt 내림차순)
+    - integration `purge.int.test.ts`(확장) — 3일 된 중복 확인 표시 0건
+    - rules `tests/rules/server-only.test.ts`(확장) — 새 컬렉션 3개 누구도 읽기 불가
+
+- [ ] **T43 밤 수집을 많이 찾은 순으로, 실패한 이름 다시 찾기** — SPEC 3.3, 4.3b, 6.3
+  - 의존: T10, T42
+  - 산출물:
+    - `jobs/ingest.ts`: 대기열을 찾은 사람 수 순(같으면 먼저 들어온 순)으로 수집 대상에 옮김
+    - `jobs/retryFailedSeeds.ts`: 3명 이상 실패한 이름을 하룻밤 50개까지 MusicBrainz에서 다시 찾기 → 아티스트를 찾으면 `enqueueArtist`, 30일 못 찾으면 `gaveUp`. 긴급 정지 `ingest`·음악 데이터 호출 한도를 따름, 운영 일지에 처리량(이름 없이 개수만)
+    - 관리자 한도 스키마에 다시 찾기 개수
+  - 완료 기준:
+    - integration `functions/src/jobs/ingest.int.test.ts`(확장) — 3명이 찾은 아티스트가 1명이 찾은 먼저 온 아티스트보다 먼저 옮겨짐
+    - integration `functions/src/jobs/retryFailedSeeds.int.test.ts` — 녹화 응답으로 찾으면 대기열에 들어감, 상한 지킴, 30일 지나면 더 조회 안 함, 긴급 정지면 호출 0건, 운영 일지에 이름 없음
+
+- [ ] **T44 미리 계산 순서와 재생목록 미리 만들기** — SPEC 4.3, 4.3b, 6.3
+  - 의존: T29, T32, T42
+  - 산출물:
+    - `jobs/precompute.ts`: 찾은 사람 수가 많은 아티스트 → 최근 조회 → 오래 계산 안 된 순
+    - `jobs/prewarmResults.ts`: 3명 이상 찾은 기준 곡을 하룻밤 50곡까지, 기본 조합(10곡·조건 없음·요청된 언어마다)으로 `resultCache`가 없거나 하루 안에 만료될 때만 추천을 돌려 채움. 지금 `recommendMode`를 따르고 AI는 밤 AI 몫($0.30, `budget.reserve()`)을 넘으면 멈춤. 긴급 정지 `ingest`
+    - `config/runtime` limits에 `prewarmSeeds`·`prewarmAiMicroUsd`, 관리자 한도 입력, `jobs/schedules.ts`에 등록, 운영 일지에 처리량
+  - 완료 기준:
+    - integration `functions/src/jobs/precompute.int.test.ts`(확장) — 많이 찾은 아티스트가 최근 조회 아티스트보다 먼저
+    - integration `functions/src/jobs/prewarmResults.int.test.ts` — 미리 만든 뒤 같은 조합 요청은 추천 계산 없이 같은 곡, 만료가 먼 결과는 다시 만들지 않음, 상한 50 지킴, AI 몫을 넘으면 멈춤(가짜 LLM), 긴급 정지면 호출 0건, 저장된 결과에 영상 ID 없음
+
 ---
 
 ## 의존 관계 요약
@@ -636,6 +675,8 @@ T24,T28 ─ T36 ─┬─ T37(+T04)
                └─ T39(+T11)
 T24,T30 ─ T40
 T35,T37,T38 ─ T41
+T07,T32 ─ T42 ─┬─ T43(+T10)
+               └─ T44(+T29)
 ```
 
 ## 범위 밖

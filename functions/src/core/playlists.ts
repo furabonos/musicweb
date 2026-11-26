@@ -12,6 +12,7 @@ import {
   type SeedFailReason,
 } from './parseRequest.js';
 import type { RecommendResult } from './recommend.js';
+import type { RequestTally } from './requestTally.js';
 import { KillSwitchError, type ServiceCounter, type UserCounter } from './runtimeConfig.js';
 
 /**
@@ -87,6 +88,8 @@ export interface CreateDeps {
   touchRequested?(ids: { songIds: string[]; artistMbids: string[] }): Promise<unknown>;
   /** 기준 곡 아티스트를 수집 대기열에 (SPEC 3.3). 실패해도 만들기는 계속한다. */
   enqueueArtist(artist: { mbid: string; name: string }): Promise<unknown>;
+  /** 요청 횟수 집계(SPEC 4.3b, T42). 실패해도 만들기는 계속한다 */
+  tally?: RequestTally;
   now?: () => Date;
 }
 
@@ -151,7 +154,14 @@ export async function createPlaylist(
       rec = await deps.recommend(req, SPARES);
     }
   }
-  if (!rec.ok) return { ok: false, reason: rec.reason };
+  if (!rec.ok) {
+    // 곡 목록·음악 데이터 어디에도 없는 이름(검색창만). 곡 고르기는 이름이 아니라 곡 ID라 세지 않는다
+    if (rec.reason === 'seed_not_found' && req.seed && parsed.via !== 'pick') {
+      const seed = req.seed;
+      await softTally(events, () => deps.tally?.failure({ uid, ...seed }));
+    }
+    return { ok: false, reason: rec.reason };
+  }
   // 이번 요청에서 AI를 불렀나: 해석(저장된 해석 제외)·다시 읽기·추천 후보·고르기 (T35)
   const usedAi = parsed.via === 'ai' || reparsed || (!rec.fromCache && rec.usedAi === true);
   const toItem = (i: (typeof rec.items)[number]): PlaylistItem => ({
@@ -207,6 +217,14 @@ export async function createPlaylist(
       outcome: 'error',
     });
   }
+  await softTally(events, () =>
+    deps.tally?.success({
+      uid,
+      songId: rec.seed.songId,
+      artistMbid: rec.seed.artistMbid,
+      locale: req.locale,
+    }),
+  );
   await events.record({
     type: 'playlist_created',
     attrs: { songs: chosen.length, usedAi, ...(rec.fromCache ? { fromCache: true } : {}) },
@@ -223,6 +241,19 @@ export async function createPlaylist(
     unsupported: req.unsupported,
     locale: req.locale,
   };
+}
+
+/** 집계는 보조 기능: 실패해도 만들기를 막지 않고 오류 이벤트만 남긴다 */
+async function softTally(events: EventSink, fn: () => Promise<unknown> | undefined) {
+  try {
+    await fn();
+  } catch (err) {
+    await events.record({
+      type: 'error',
+      attrs: { code: errName(err), where: 'playlists.tally' },
+      outcome: 'error',
+    });
+  }
 }
 
 /** 곡마다 지금 재생할 수 있는 영상을 곡 목록에서 고른다(25일 안 확인된 active 연결, 요청 조건의 종류). */

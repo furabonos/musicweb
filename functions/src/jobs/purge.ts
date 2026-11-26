@@ -3,6 +3,7 @@ import { purgeExpiredCache, type LastfmCacheStore } from '../adapters/lastfm.js'
 import type { EventSink } from '../core/events.js';
 import { addOpsLog } from '../core/opsLog.js';
 import { errName } from '../core/jobErrors.js';
+import { WINDOW_DAYS as TALLY_WINDOW_DAYS } from '../core/requestTally.js';
 import { ARTIST_YT_FIELDS, daysBefore, DELETE_AFTER_DAYS } from '../core/retention.js';
 
 /**
@@ -13,6 +14,8 @@ import { ARTIST_YT_FIELDS, daysBefore, DELETE_AFTER_DAYS } from '../core/retenti
  * - 내보낸 재생목록 기록(ytExports): 만든 지 30일이 지나면 지운다. 사용자 토큰 없이는 재확인할 수 없기 때문이다.
  *   지운 뒤에는 그 재생목록에 곡을 더 넣을 수 없다(addItems가 찾지 못함). YouTube의 재생목록 자체는 사용자 것이라 그대로 있다.
  * - Last.fm 캐시: HTTP 캐시 기간이 지난 것을 지운다(D-024).
+ * - 요청 횟수 집계(T42, D-056): 2일 지난 중복 확인 표시, 30일 동안 안 바뀐 집계 문서를 지운다.
+ *   바뀌는 문서의 30일 지난 날짜 몫은 쓸 때 지우고, 그 사이에 남은 몫도 합계(30일 창)에는 들어가지 않는다.
  * - 외부 호출이 없고 지우기만 하므로 긴급 정지와 관계없이 돈다.
  */
 
@@ -33,6 +36,8 @@ export interface PurgeSummary {
   lastfmCache: number;
   /** 기간 지난 저장된 해석·결과(T32) */
   caches: number;
+  /** 요청 횟수 집계(T42): 2일 지난 중복 확인 표시, 30일 동안 아무도 찾지 않은 집계 문서 */
+  tallies: number;
 }
 
 export async function runPurge(deps: PurgeDeps): Promise<PurgeSummary> {
@@ -94,19 +99,35 @@ export async function runPurge(deps: PurgeDeps): Promise<PurgeSummary> {
     );
   }
 
-  const summary = { links, artists, ytExports, lastfmCache, caches };
+  // 요청 횟수 집계 (T42, D-056). 활발한 문서의 창 밖 날짜는 쓸 때 지우므로, 여기서는 30일 동안 안 바뀐 문서만 지운다
+  let tallies = await step('tally_seen', () =>
+    drain(
+      db.collection('requestTallySeen').where('expiresAt', '<=', nowTs).orderBy('expiresAt'),
+      (b, d) => b.delete(d.ref),
+    ),
+  );
+  const tallyCutoff = Timestamp.fromMillis(now.getTime() - TALLY_WINDOW_DAYS * 24 * 3600 * 1000);
+  for (const col of ['requestTally', 'failedSeedTally']) {
+    tallies += await step(`tally_${col}`, () =>
+      drain(db.collection(col).where('updatedAt', '<=', tallyCutoff).orderBy('updatedAt'), (b, d) =>
+        b.delete(d.ref),
+      ),
+    );
+  }
+
+  const summary = { links, artists, ytExports, lastfmCache, caches, tallies };
   await deps.events.record({
     type: 'job_finished',
     attrs: {
       job: 'purge',
-      processed: links + artists + ytExports + lastfmCache + caches,
+      processed: links + artists + ytExports + lastfmCache + caches + tallies,
       failed: failures.length,
     },
     outcome: failures.length ? 'error' : 'ok',
   });
   await addOpsLog(db, {
     kind: failures.length ? 'job_failed' : 'job',
-    message: `Purge finished: removed ${links} links, ${artists} artist channels, ${ytExports} export records, ${lastfmCache} Last.fm cache entries, ${caches} expired request caches${failures.length ? ` (${failures.length} steps failed)` : ''}.`,
+    message: `Purge finished: removed ${links} links, ${artists} artist channels, ${ytExports} export records, ${lastfmCache} Last.fm cache entries, ${caches} expired request caches, ${tallies} request tally records${failures.length ? ` (${failures.length} steps failed)` : ''}.`,
   });
   if (failures.length) throw failures[0];
   return summary;

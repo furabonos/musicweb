@@ -25,6 +25,10 @@ const SERVER_ONLY = [
   'cooccur/p1',
   'channelSongs/c1',
   'songs/s1/private/label',
+  // T42 요청 횟수 집계 (D-056)
+  'requestTally/song_s1',
+  'failedSeedTally/h1',
+  'requestTallySeen/h1',
 ];
 const collectionOf = (path: string) => path.split('/').slice(0, -1).join('/');
 const WHO = { alice: as.alice, admin: as.admin, anon: as.anon };
