@@ -120,6 +120,7 @@ export function App({
   const [playing, setPlaying] = useState(-1);
   const player = useRef<PlayerHandle>(null);
   const resultsRef = useRef<HTMLElement>(null);
+  const noticeRef = useRef<HTMLDivElement>(null);
   // 자세한 이유(T34): 지금 결과의 곡 ID → AI 이유
   const [details, setDetails] = useState<{ id: string; reasons: Record<string, string> } | null>(
     null,
@@ -139,6 +140,13 @@ export function App({
       ?.querySelector<HTMLElement>('#results-title')
       ?.focus({ preventScroll: true });
   }, [resultId]);
+
+  // 오류 안내(로그인하세요 등)는 검색창 아래에 나온다. 위쪽 곡 고르기에서 누르면 화면 밖에 있을 수 있어
+  // 안내가 화면 가운데쯤 보이도록 옮긴다(가장자리에 붙으면 잘 안 보임). 같은 안내가 다시 떠도 새 객체라 다시 옮긴다.
+  useEffect(() => {
+    if (!error && !fail) return;
+    noticeRef.current?.scrollIntoView?.({ block: 'center' });
+  }, [error, fail]);
 
   const [openLink, setOpenLink] = useState<OpenLinkMode>('direct');
   /** AI 없이 동작 중: 절약 모드(오늘) 또는 AI 키 없음 */
@@ -365,12 +373,12 @@ export function App({
                 </div>
               )}
               {error && (
-                <div className="notice notice-error" role="alert">
+                <div className="notice notice-error" role="alert" ref={noticeRef}>
                   {t(error.key, error.vars)}
                 </div>
               )}
               {fail && (
-                <div className="notice notice-error" role="alert">
+                <div className="notice notice-error" role="alert" ref={noticeRef}>
                   {t(FAIL_MESSAGE[fail])}
                   <ul>
                     <li>{t('errors.example1')}</li>

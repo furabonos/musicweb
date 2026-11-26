@@ -29,6 +29,16 @@ test('첫 화면', async ({ page }) => {
   await shot(page, '01-home');
 });
 
+test('로그인 안 하고 곡 고르기에서 만들기', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('combobox', { name: 'Song or artist' }).fill('Doj');
+  await page.getByRole('option', { name: /Doja/ }).click();
+  await page.getByRole('button', { name: 'Make the set' }).click();
+  await expect(page.getByRole('alert')).toBeVisible();
+  // 화면 밖에 뜨는지 보려는 것이라 전체 페이지가 아니라 보이는 부분만 찍는다
+  await page.screenshot({ path: join(dir, '01b-signin-notice.png') });
+});
+
 test('재생목록 결과', async ({ page }) => {
   await page.goto('/');
   await signIn(page);

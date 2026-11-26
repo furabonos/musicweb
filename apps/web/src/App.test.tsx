@@ -597,6 +597,39 @@ describe('곡 고르기 (T33)', () => {
     expect(await screen.findByRole('heading', { name: 'Your set' })).toBeTruthy();
   });
 
+  it('로그인 안 했으면 곡 고르기에서 눌러도 로그인 안내가 보이도록 화면을 옮긴다', async () => {
+    // jsdom에는 scrollIntoView가 없어서 테스트 동안만 기록용으로 넣는다
+    const scrolled: Element[] = [];
+    const had = 'scrollIntoView' in Element.prototype;
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this);
+    };
+    try {
+      const api = fakeApi({}, false);
+      fireEvent.change(screen.getByRole('combobox', { name: 'Song or artist' }), {
+        target: { value: 'Doj' },
+      });
+      fireEvent.mouseDown(await screen.findByRole('option', { name: /Doja/ }));
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Make the set' }));
+      });
+      expect(api.createFromSong).not.toHaveBeenCalled();
+      const alert = screen.getByRole('alert');
+      expect(alert.textContent).toBe('Sign in to build a playlist.');
+      expect(scrolled).toContain(alert);
+      // 한 번 더 눌러도 다시 옮긴다(이미 지나쳐 내려간 경우)
+      scrolled.length = 0;
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: 'Make the set' }));
+      });
+      expect(scrolled).toContain(screen.getByRole('alert'));
+    } finally {
+      if (had) Element.prototype.scrollIntoView = original;
+      else delete (Element.prototype as Partial<Element>).scrollIntoView;
+    }
+  });
+
   it('곡을 고르기 전에는 만들기 버튼이 꺼져 있고, 한 글자로는 제안을 부르지 않는다', async () => {
     const api = fakeApi();
     expect(screen.getByRole('button', { name: 'Make the set' })).toHaveProperty('disabled', true);
