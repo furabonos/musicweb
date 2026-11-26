@@ -19,4 +19,5 @@ export {
   precomputeNightly,
   purgeNightly,
   refreshNightly,
+  retryFailedSeedsNightly,
 } from './jobs/schedules.js';

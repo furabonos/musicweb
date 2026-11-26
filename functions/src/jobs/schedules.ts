@@ -26,6 +26,7 @@ import { runAutoIssue } from './autoIssue.js';
 import { runGithubStats } from './githubStats.js';
 import { runMetrics } from './metrics.js';
 import { runPrecompute } from './precompute.js';
+import { runRetryFailedSeeds } from './retryFailedSeeds.js';
 import { createListenBrainz } from '../adapters/listenbrainz.js';
 import { readSavingMode } from '../core/savingMode.js';
 
@@ -298,3 +299,29 @@ async function ingestJudge(
     return {};
   }
 }
+
+/**
+ * 실패한 이름 다시 찾기 (T43, D-056). 02:45, 수집(03:00) 앞: 찾은 아티스트가 그날 밤 대기열에서 옮겨진다.
+ * 인스턴스 1개: 음악 데이터 초당 1회 줄(D-024).
+ */
+export const retryFailedSeedsNightly = onSchedule(
+  {
+    schedule: 'every day 02:45',
+    timeZone: 'America/Los_Angeles',
+    maxInstances: 1,
+    timeoutSeconds: 300,
+    retryCount: 0,
+    secrets: [secrets.ACTOR_HASH_KEY],
+  },
+  async () => {
+    const deadlineMs = Date.now() + 240_000;
+    const db = getFirestore();
+    const events = firestoreEventSink(db, secrets.ACTOR_HASH_KEY.value());
+    const mb = createMusicBrainz({
+      events,
+      budget: firestoreCallBudget(db),
+      contact: MB_CONTACT.value(),
+    });
+    await runRetryFailedSeeds({ db, events, deadlineMs, mb });
+  },
+);

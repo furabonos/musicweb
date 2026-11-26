@@ -74,6 +74,7 @@ export const JOBS = [
   'githubStats',
   'autoIssue',
   'precompute',
+  'retryFailedSeeds',
 ] as const;
 
 /** 이벤트 종류 → attrs 스키마. 새 종류는 여기에 추가한다(스키마 없는 종류는 기록되지 않음). */

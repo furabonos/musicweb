@@ -16,7 +16,7 @@ import {
   NO_SURPRISES_MBID,
   RADIOHEAD,
 } from '../testing/youtube.js';
-import { runIngest } from './ingest.js';
+import { promoteQueue, runIngest } from './ingest.js';
 
 const projectId = process.env.GCLOUD_PROJECT ?? 'demo-musicweb';
 if (!getApps().length) initializeApp({ projectId });
@@ -353,5 +353,33 @@ describe('아티스트 대기열 (enqueueArtist)', () => {
   it('MBID 형식이 틀리거나 이름이 비면 거부', async () => {
     await expect(enqueueArtist(db, { mbid: 'not-a-uuid', name: 'x' })).rejects.toThrow();
     await expect(enqueueArtist(db, { mbid: mbid(1), name: '  ' })).rejects.toThrow();
+  });
+});
+
+describe('대기열 옮기기 순서 (T43, D-056)', () => {
+  const mbid = (i: number) => `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`;
+
+  it('찾은 사람 수 많은 아티스트부터 옮기고, 같으면 먼저 들어온 순', async () => {
+    const at = new Date();
+    const day = pacificDay(at);
+    // 먼저 들어온 순: 1명 → 아무도 없음 → 3명 → 3명
+    for (const i of [1, 2, 3, 4]) {
+      expect(
+        await enqueueArtist(db, { mbid: mbid(i), name: `A${i}` }, new Date(at.getTime() + i)),
+      ).toBe('queued');
+    }
+    const people = { [mbid(1)]: 1, [mbid(3)]: 3, [mbid(4)]: 3 };
+    for (const [id, n] of Object.entries(people)) {
+      await db
+        .doc(`requestTally/artist_${id}`)
+        .set({ kind: 'artist', id, days: { [day]: n }, updatedAt: at });
+    }
+    await promoteQueue(db, 2, at);
+    const tracked = (await db.collection('artists').get()).docs.map((d) => d.id).sort();
+    expect(tracked).toEqual([mbid(3), mbid(4)]);
+    // 나머지는 다음 실행에: 1명 → 0명 순
+    await promoteQueue(db, 1, at);
+    expect((await db.doc(`artists/${mbid(1)}`).get()).exists).toBe(true);
+    expect((await db.doc(`artists/${mbid(2)}`).get()).exists).toBe(false);
   });
 });
