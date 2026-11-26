@@ -65,6 +65,44 @@ describe('runPrecompute', () => {
     });
   });
 
+  it('많이 찾은 아티스트(3명 이상, T44)가 최근 조회 아티스트보다 먼저', async () => {
+    await seedArtists([1, 2, 3]); // 최근 조회 순: 3 → 2 → 1
+    await db.doc(`requestTally/artist_${A(1)}`).set({
+      kind: 'artist',
+      id: A(1),
+      days: { '2026-11-23': 3 },
+      updatedAt: Timestamp.fromDate(NOW),
+    });
+    const m = music();
+    await runPrecompute({
+      db,
+      music: m.ports,
+      events: memoryEvents().sink,
+      now: () => NOW,
+      limits: { maxArtists: 1, recentFirst: 2 },
+    });
+    expect(m.calls.filter((c) => c.startsWith('similar:'))).toEqual([`similar:${A(1)}`]);
+  });
+
+  it('2명만 찾은 아티스트는 앞으로 오지 않는다(3명 기준)', async () => {
+    await seedArtists([1, 2, 3]);
+    await db.doc(`requestTally/artist_${A(1)}`).set({
+      kind: 'artist',
+      id: A(1),
+      days: { '2026-11-23': 2 },
+      updatedAt: Timestamp.fromDate(NOW),
+    });
+    const m = music();
+    await runPrecompute({
+      db,
+      music: m.ports,
+      events: memoryEvents().sink,
+      now: () => NOW,
+      limits: { maxArtists: 1, recentFirst: 2 },
+    });
+    expect(m.calls.filter((c) => c.startsWith('similar:'))).toEqual([`similar:${A(3)}`]);
+  });
+
   it('상한이 2명이면 최근 조회 순 2명만, 30일 안에 계산한 아티스트는 건너뜀', async () => {
     await seedArtists([1, 2, 3]);
     const first = music();

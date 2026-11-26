@@ -8,7 +8,13 @@ import { MB_CONTACT, optionalSecret, secrets } from '../config/secrets.js';
 import { firestoreEventSink } from '../core/events.js';
 import { errName } from '../core/jobErrors.js';
 import { firestoreLastfmCache } from '../adapters/lastfm.js';
-import { createJudge, createLlm, firestoreLlmBudget, LlmConfigError } from '../adapters/llm.js';
+import {
+  createJudge,
+  createLlm,
+  firestoreLlmBudget,
+  firestorePrewarmLlmBudget,
+  LlmConfigError,
+} from '../adapters/llm.js';
 import { runIngest } from './ingest.js';
 import { runPurge } from './purge.js';
 import { runRefresh } from './refresh.js';
@@ -27,8 +33,13 @@ import { runGithubStats } from './githubStats.js';
 import { runMetrics } from './metrics.js';
 import { runPrecompute } from './precompute.js';
 import { runRetryFailedSeeds } from './retryFailedSeeds.js';
+import { nightAiBudget, runPrewarmResults } from './prewarmResults.js';
+import { recommend } from '../core/recommend.js';
+import { firestoreRecommendPorts } from '../core/recommendPorts.js';
+import { effectiveRecommendMode, readRuntimeConfig } from '../core/runtimeConfig.js';
+import { createLastfm } from '../adapters/lastfm.js';
 import { createListenBrainz } from '../adapters/listenbrainz.js';
-import { readSavingMode } from '../core/savingMode.js';
+import { enterSavingMode, readSavingMode } from '../core/savingMode.js';
 
 /**
  * 예약 작업 (SPEC 4.4). 태평양 시간 기준, YouTube 할당 초기화(자정) 뒤에 차례로 돈다:
@@ -323,5 +334,96 @@ export const retryFailedSeedsNightly = onSchedule(
       contact: MB_CONTACT.value(),
     });
     await runRetryFailedSeeds({ db, events, deadlineMs, mb });
+  },
+);
+
+/**
+ * 재생목록 미리 만들기 (T44, D-056). 03:45, 미리 계산(03:30) 뒤. 인스턴스 1개: 음악 데이터 초당 1회 줄(D-024).
+ * 추천은 만들기 함수와 같은 부품으로 조립하되, YouTube 검색은 끄고(밤 작업이 사용자 검색 몫을 쓰지 않게)
+ * AI는 밤 AI 몫($0.30) 안에서만 쓴다. 설정을 못 읽으면 미리 계산한 방식으로.
+ */
+export const prewarmResultsNightly = onSchedule(
+  {
+    schedule: 'every day 03:45',
+    timeZone: 'America/Los_Angeles',
+    maxInstances: 1,
+    timeoutSeconds: 540,
+    retryCount: 0,
+    secrets: [
+      secrets.ANTHROPIC_API_KEY,
+      secrets.YOUTUBE_API_KEY,
+      secrets.LASTFM_API_KEY,
+      secrets.ACTOR_HASH_KEY,
+    ],
+  },
+  async () => {
+    // 추천 한 번이 길 수 있어(조회 여러 번, 초당 1회) 제한 시간보다 2분 앞에서 멈춘다
+    const deadlineMs = Date.now() + 420_000;
+    const db = getFirestore();
+    const events = firestoreEventSink(db, secrets.ACTOR_HASH_KEY.value());
+    const music = { events, budget: firestoreCallBudget(db), contact: MB_CONTACT.value() };
+    const night = nightAiBudget(firestorePrewarmLlmBudget(db));
+    let llm: ReturnType<typeof createLlm> | null = null;
+    try {
+      llm = createLlm({
+        apiKey: optionalSecret('ANTHROPIC_API_KEY'),
+        events,
+        budget: night.budget,
+      });
+    } catch (err) {
+      if (!(err instanceof LlmConfigError)) throw err;
+    }
+    const aiMode = !llm ? 'no_key' : (await readSavingMode(db, events)) ? 'saving' : 'on';
+    const configured = await readRuntimeConfig(db)
+      .then((c) => c.recommendMode)
+      .catch(async (err: unknown) => {
+        // 설정이 깨졌으면 기록하고 미리 계산한 방식으로(긴급 정지 확인은 작업 안에서 따로 막는다)
+        await events.record({
+          type: 'error',
+          attrs: { code: errName(err), where: 'prewarmResults.recommend_mode' },
+          outcome: 'error',
+        });
+        return 'precomputed' as const;
+      });
+    const mode = effectiveRecommendMode(configured, aiMode);
+    const yt = createYouTubeRead({
+      apiKey: secrets.YOUTUBE_API_KEY.value(),
+      events,
+      budget: firestoreYtBudget(db, 'ingest'),
+    });
+    const lastfmKey = optionalSecret('LASTFM_API_KEY');
+    const ports = firestoreRecommendPorts({
+      db,
+      mb: createMusicBrainz(music),
+      lb: createListenBrainz(music),
+      wd: createWikidata(music),
+      ...(lastfmKey
+        ? { lastfm: createLastfm({ ...music, apiKey: lastfmKey, cache: firestoreLastfmCache(db) }) }
+        : {}),
+      yt,
+      llm: llm ?? { structured: async () => null },
+      events,
+    });
+    await runPrewarmResults({
+      db,
+      events,
+      mode,
+      deadlineMs,
+      aiExhausted: night.exhausted,
+      recommend: (req, spares) =>
+        recommend(
+          ports,
+          req,
+          { uid: 'job:prewarm' },
+          {
+            spares,
+            mode,
+            // 검색은 끈다: 영상 확인(videos)만 쓰고, 검색이 필요한 곡은 미리 만들지 않는다
+            search: false,
+            // 서비스 하루 AI 상한에 닿으면 만들기와 같이 절약 모드를 켠다
+            ai: { mode: aiMode, onLimit: async () => void (await enterSavingMode(db, events)) },
+          },
+        ),
+    });
   },
 );

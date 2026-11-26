@@ -157,6 +157,7 @@
   "admin.counterName.musicDataCalls": "Music data requests",
   "admin.counterName.linkChecks": "Open-link checks",
   "admin.counterName.githubCalls": "GitHub requests",
+  "admin.counterName.prewarmAiMicroUsd": "AI cost for nightly prewarm (millionths of a dollar)",
   "admin.userCounter.playlists": "Sets per person per day",
   "admin.userCounter.searches": "YouTube searches per person per day",
   "admin.userCounter.exports": "Exports per person per day",

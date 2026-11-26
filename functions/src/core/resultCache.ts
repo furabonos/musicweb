@@ -43,6 +43,8 @@ export function withResultCache(
     alsoRead?: string | undefined;
     now?: () => Date;
     events?: EventSink;
+    /** 저장된 결과를 읽지 않고 새로 계산해 덮어쓴다(밤 미리 만들기가 만료 전에 다시 만들 때, T44) */
+    skipRead?: boolean;
   },
   recommend: (req: ParsedRequest, spares: number) => Promise<RecommendResult>,
 ): (req: ParsedRequest, spares: number) => Promise<RecommendResult> {
@@ -52,7 +54,7 @@ export function withResultCache(
     if (!key) return recommend(req, spares);
     const ref = deps.db.doc(`resultCache/${key}`);
     const extra = deps.alsoRead ? resultCacheKey(req, deps.alsoRead) : null;
-    for (const k of extra ? [extra, key] : [key]) {
+    for (const k of deps.skipRead ? [] : extra ? [extra, key] : [key]) {
       const snap = await deps.db.doc(`resultCache/${k}`).get();
       const exp = snap.get('expiresAt') as unknown;
       if (snap.exists && exp instanceof Timestamp && exp.toMillis() > now().getTime()) {

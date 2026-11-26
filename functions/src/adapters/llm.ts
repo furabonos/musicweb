@@ -44,6 +44,25 @@ export interface LlmBudget {
   run<T>(maxMicroUsd: number, fn: () => Promise<{ result: T; costMicroUsd: number }>): Promise<T>;
 }
 
+/** 밤 미리 만들기(T44)용: 서비스 하루 AI 비용과 밤 AI 몫(prewarmAiMicroUsd)을 같이 예약·정산한다 */
+export function firestorePrewarmLlmBudget(db: Firestore): LlmBudget {
+  return {
+    run: (maxMicroUsd, fn) =>
+      withBudget(
+        db,
+        { service: { aiCostMicroUsd: maxMicroUsd, prewarmAiMicroUsd: maxMicroUsd } },
+        async () => {
+          const r = await fn();
+          const cost = r.costMicroUsd;
+          return {
+            result: r.result,
+            actual: { service: { aiCostMicroUsd: cost, prewarmAiMicroUsd: cost } },
+          };
+        },
+      ),
+  };
+}
+
 export function firestoreLlmBudget(db: Firestore): LlmBudget {
   return {
     run: (maxMicroUsd, fn) =>

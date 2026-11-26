@@ -176,6 +176,8 @@ export async function recommend(
     spares?: number;
     mode?: 'ai' | 'precomputed';
     ai?: { mode: 'on' | 'saving' | 'no_key'; onLimit?: () => Promise<void> };
+    /** false면 YouTube 검색을 하지 않는다(밤 미리 만들기가 사용자 검색 몫을 쓰지 않게, T44) */
+    search?: boolean;
   } = {},
 ): Promise<RecommendResult> {
   const now = (ports.now ?? (() => new Date()))();
@@ -307,6 +309,7 @@ export async function recommend(
       include,
       now,
       user,
+      opts.search !== false,
     );
     for (const f of found) {
       if (seen.has(f.song.mbid)) continue;
@@ -509,11 +512,12 @@ async function lookup(
   include: Include,
   now: Date,
   user: { uid: string },
+  searchEnabled = true,
 ): Promise<{ c: Candidate; song: SongDoc; link: PlayableLink }[]> {
   const L = RECOMMEND_LIMITS;
   const found: { c: Candidate; song: SongDoc; link: PlayableLink }[] = [];
   let searches = 0;
-  let searchAllowed = true;
+  let searchAllowed = searchEnabled;
   let tried = 0;
   for (const { c, song: known } of pending) {
     if (found.length >= needed || tried >= L.maxLookups) break;
