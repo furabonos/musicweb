@@ -7,6 +7,7 @@ import type { EventSink } from '../core/events.js';
 import { errName, isOutage } from '../core/jobErrors.js';
 import { addOpsLog } from '../core/opsLog.js';
 import { assertEnabled, KillSwitchError, type ServiceCounter } from '../core/runtimeConfig.js';
+import { firestoreTallyReader } from '../core/requestTally.js';
 import { computeArtistVectors, type VectorPorts } from '../core/vectors.js';
 
 /**
@@ -36,7 +37,9 @@ export interface PrecomputeDeps {
 export const PRECOMPUTE_LIMITS = {
   /** 한 밤에 볼 아티스트 수 위쪽(실제로는 시간이 먼저 닿는다) */
   maxArtists: 500,
-  /** 최근 조회 순으로 먼저 볼 아티스트 수 (나머지는 오래 계산 안 된 순) */
+  /** 많이 찾은 순(최근 30일 서로 다른 3명 이상, SPEC 4.3b)으로 맨 먼저 볼 아티스트 수 (T44) */
+  popularFirst: 50,
+  /** 그다음 최근 조회 순으로 볼 아티스트 수 (나머지는 오래 계산 안 된 순) */
   recentFirst: 20,
   similarArtists: 30,
   /** 밤 작업에서 아티스트 하나에 새로 물을 곡 수 (MusicBrainz 초당 1회라 시간이 곡 수에 비례) */
@@ -57,14 +60,24 @@ export interface PrecomputeSummary {
   failed: number;
 }
 
-/** 계산할 아티스트 순서: 최근 조회 몇 명, 그다음 가장 오래 계산 안 된 순. 중복 제거 */
-async function targets(db: Firestore, recentFirst: number, max: number): Promise<string[]> {
-  const [requested, oldest] = await Promise.all([
+/** 계산할 아티스트 순서: 많이 찾은 순(3명 이상) → 최근 조회 몇 명 → 가장 오래 계산 안 된 순. 중복 제거 */
+async function targets(
+  db: Firestore,
+  L: { popularFirst: number; recentFirst: number; maxArtists: number },
+  now: Date,
+): Promise<string[]> {
+  const { recentFirst, maxArtists: max } = L;
+  const [popular, requested, oldest] = await Promise.all([
+    firestoreTallyReader(db, () => now).topArtists(L.popularFirst),
     db.collection('artistVectors').orderBy('lastRequestedAt', 'desc').limit(recentFirst).get(),
     db.collection('artistVectors').orderBy('computedAt', 'asc').limit(max).get(),
   ]);
   const out: string[] = [];
-  for (const id of [...requested.docs.map((d) => d.id), ...oldest.docs.map((d) => d.id)]) {
+  for (const id of [
+    ...popular.map((a) => a.id),
+    ...requested.docs.map((d) => d.id),
+    ...oldest.docs.map((d) => d.id),
+  ]) {
     if (MBID.test(id) && !out.includes(id)) out.push(id);
   }
   return out;
@@ -138,7 +151,7 @@ export async function runPrecompute(deps: PrecomputeDeps): Promise<PrecomputeSum
   await events.record({ type: 'job_started', attrs: { job: 'precompute' }, outcome: 'ok' });
 
   const pastDeadline = () => deps.deadlineMs !== undefined && clock() >= deps.deadlineMs;
-  for (const mbid of await targets(db, L.recentFirst, L.maxArtists)) {
+  for (const mbid of await targets(db, L, now)) {
     if (summary.artists >= L.maxArtists) break;
     if (pastDeadline()) {
       summary.stoppedBy = 'deadline';

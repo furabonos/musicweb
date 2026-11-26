@@ -18,6 +18,7 @@ export const SERVICE_COUNTERS = [
   'musicDataCalls',
   'linkChecks',
   'githubCalls',
+  'prewarmAiMicroUsd',
 ] as const;
 export const USER_COUNTERS = ['playlists', 'searches', 'exports', 'explains'] as const;
 export const FEATURES = ['create', 'ingest', 'autoIssue'] as const;
@@ -62,6 +63,7 @@ export const DEFAULT_RUNTIME: RuntimeConfig = {
       musicDataCalls: 20_000, // 음악 데이터 요청(무료). 도는 코드가 폭주하지 않게 막는 상한 (D-024)
       linkChecks: 5, // "YouTube에서 열기" 링크 동작 확인(헤더만, D-006). 하루 1회 + 수동 재실행 여유 (T16)
       githubCalls: 50, // GitHub API 요청(자동 이슈 생성·조회·댓글, T19. 이후 GitHub 수치 T21). 도는 코드가 폭주하지 않게
+      prewarmAiMicroUsd: 300_000, // $0.30. 밤 재생목록 미리 만들기의 AI 몫(aiCostMicroUsd 안에서 같이 예약, T44, D-056)
     },
     // explains: "자세한 이유" 버튼(AI 설명, T34)
     user: { playlists: 10, searches: 3, exports: 1, explains: 10 },

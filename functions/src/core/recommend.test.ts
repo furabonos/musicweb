@@ -436,6 +436,17 @@ describe('recommend — 조회 순서: 곡 목록 → 음악 데이터 링크 �
     );
   });
 
+  it('검색을 끄면(밤 미리 만들기, T44) 음악 데이터 링크까지만 쓰고 검색하지 않으며 검색 사용으로 기록하지 않음', async () => {
+    const { ports, calls, events } = setup(w());
+    const r = await recommend(ports, req(), { uid: 'u1' }, { search: false });
+    if (!r.ok) throw new Error('fail');
+    expect(calls.filter((c) => c.startsWith('search:'))).toEqual([]);
+    expect(r.items.map((i) => i.videoId)).toContain('luckyMB0001');
+    expect(r.items.map((i) => i.title)).not.toContain('Airbag');
+    const lookup = events.find((e) => e.type === 'recommend_step' && e.attrs['step'] === 'lookup');
+    expect(lookup?.attrs['usedSearch']).not.toBe(true);
+  });
+
   it('사용자 검색 한도가 소진되면 검색하지 않음(더 시도하지도 않음)', async () => {
     const base = w();
     const { ports, calls } = setup({

@@ -636,12 +636,12 @@
     - integration `functions/src/jobs/ingest.int.test.ts`(확장) — 3명이 찾은 아티스트가 1명이 찾은 먼저 온 아티스트보다 먼저 옮겨짐
     - integration `functions/src/jobs/retryFailedSeeds.int.test.ts` — 녹화 응답으로 찾으면 대기열에 들어감, 상한 지킴, 30일 지나면 더 조회 안 함, 긴급 정지면 호출 0건, 운영 일지에 이름 없음
 
-- [ ] **T44 미리 계산 순서와 재생목록 미리 만들기** — SPEC 4.3, 4.3b, 6.3
+- [x] **T44 미리 계산 순서와 재생목록 미리 만들기** — SPEC 4.3, 4.3b, 6.3
   - 의존: T29, T32, T42
   - 산출물:
     - `jobs/precompute.ts`: 찾은 사람 수가 많은 아티스트 → 최근 조회 → 오래 계산 안 된 순
     - `jobs/prewarmResults.ts`: 3명 이상 찾은 기준 곡을 하룻밤 50곡까지, 기본 조합(10곡·조건 없음·요청된 언어마다)으로 `resultCache`가 없거나 하루 안에 만료될 때만 추천을 돌려 채움. 지금 `recommendMode`를 따르고 AI는 밤 AI 몫($0.30, `budget.reserve()`)을 넘으면 멈춤. 긴급 정지 `ingest`
-    - `config/runtime` limits에 `prewarmSeeds`·`prewarmAiMicroUsd`, 관리자 한도 입력, `jobs/schedules.ts`에 등록, 운영 일지에 처리량
+    - 밤 AI 몫은 서비스 한도 `prewarmAiMicroUsd`(관리자 한도 표에 자동으로 나옴, 두 언어 이름), AI 예약은 `firestorePrewarmLlmBudget`(서비스 AI 비용과 같이). 곡 수 50은 작업 안의 상수(D-056). 추천에 검색 끄기 옵션(`search: false`). `prewarmResultsNightly` 03:45, 운영 일지에 처리량
   - 완료 기준:
     - integration `functions/src/jobs/precompute.int.test.ts`(확장) — 많이 찾은 아티스트가 최근 조회 아티스트보다 먼저
     - integration `functions/src/jobs/prewarmResults.int.test.ts` — 미리 만든 뒤 같은 조합 요청은 추천 계산 없이 같은 곡, 만료가 먼 결과는 다시 만들지 않음, 상한 50 지킴, AI 몫을 넘으면 멈춤(가짜 LLM), 긴급 정지면 호출 0건, 저장된 결과에 영상 ID 없음

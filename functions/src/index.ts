@@ -17,6 +17,7 @@ export {
   linkHealthNightly,
   metricsNightly,
   precomputeNightly,
+  prewarmResultsNightly,
   purgeNightly,
   refreshNightly,
   retryFailedSeedsNightly,
