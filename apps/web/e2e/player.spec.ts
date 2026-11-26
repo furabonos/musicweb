@@ -42,6 +42,28 @@ test.describe('플레이어 (가짜 YouTube API)', () => {
     expect(covered).toBe(0);
   });
 
+  test('목록을 내려도 플레이어가 화면 안에 남고 아무것도 겹치지 않음', async ({ page }) => {
+    const frame = page.locator('.player-frame iframe');
+    await expect(frame).toBeVisible();
+    // 목록 맨 위가 화면 위로 300px 지나가게 내린다(고정이 없으면 플레이어 윗부분이 화면 밖으로 나감)
+    await page.locator('.card-body').evaluate((el) => {
+      window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY + 300);
+    });
+    const box = await frame.boundingBox();
+    const height = page.viewportSize()?.height ?? 0;
+    expect(box?.y ?? -1).toBeGreaterThanOrEqual(0);
+    expect((box?.y ?? 0) + (box?.height ?? Infinity)).toBeLessThanOrEqual(height);
+    const covered = await frame.evaluate((f) => {
+      const r = f.getBoundingClientRect();
+      const pts: [number, number][] = [];
+      for (const fx of [0.02, 0.5, 0.98])
+        for (const fy of [0.02, 0.5, 0.98])
+          pts.push([r.left + r.width * fx, r.top + r.height * fy]);
+      return pts.filter(([x, y]) => document.elementFromPoint(x, y) !== f).length;
+    });
+    expect(covered).toBe(0);
+  });
+
   test('첫 재생은 클릭 전 시작하지 않음, 곡을 누르면 재생, 끝나면 다음 곡', async ({ page }) => {
     await expect.poll(() => fakeCalls(page)).toEqual(['cue:demoVid0002']);
     await page.waitForTimeout(500);
