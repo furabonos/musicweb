@@ -20,6 +20,7 @@ import { errName, isOutage } from '../core/jobErrors.js';
 import { songKey } from '../core/catalog.js';
 import { addOpsLog } from '../core/opsLog.js';
 import { assertEnabled, KillSwitchError, type ServiceCounter } from '../core/runtimeConfig.js';
+import { readArtistPeople } from '../core/requestTally.js';
 
 /**
  * 야간 곡 목록 수집 (SPEC 4.4, T10, D-027).
@@ -134,7 +135,7 @@ export async function runIngest(deps: IngestDeps): Promise<IngestSummary> {
   const clock = deps.clock ?? Date.now;
   const pastDeadline = () => deps.deadlineMs !== undefined && clock() >= deps.deadlineMs;
   try {
-    await promoteQueue(db, limits.maxQueuePerRun);
+    await promoteQueue(db, limits.maxQueuePerRun, (deps.now ?? (() => new Date()))());
   } catch (err) {
     // 대기열 옮기기가 실패해도 기존 대상 수집은 계속한다.
     await deps.events.record({
@@ -513,9 +514,26 @@ export function pickRecording(
   return ok[0] ?? null;
 }
 
-/** 대기열(사용자가 찾은 아티스트)을 수집 대상으로 옮긴다. 이미 있으면 건너뛴다. */
-async function promoteQueue(db: Firestore, max: number) {
-  const queued = await db.collection('ingestQueue').orderBy('queuedAt').limit(max).get();
+/** 대기열을 한 번에 살펴보는 최대 수. 사람 수 순서는 이 안에서 정한다 */
+const QUEUE_SCAN = 500;
+
+/**
+ * 대기열(사용자가 찾은 아티스트)을 수집 대상으로 옮긴다. 이미 있으면 건너뛴다.
+ * 최근 30일 찾은 사람 수(SPEC 4.3b, T43) 많은 순, 같으면 먼저 들어온 순.
+ */
+export async function promoteQueue(db: Firestore, max: number, now: Date = new Date()) {
+  const scanned = await db.collection('ingestQueue').orderBy('queuedAt').limit(QUEUE_SCAN).get();
+  const people = await readArtistPeople(
+    db,
+    scanned.docs.map((d) => d.id),
+    now,
+  );
+  // 정렬은 안정적이라 사람 수가 같으면 먼저 들어온 순(queuedAt 오름차순)이 유지된다
+  const queued = {
+    docs: [...scanned.docs]
+      .sort((a, b) => (people.get(b.id) ?? 0) - (people.get(a.id) ?? 0))
+      .slice(0, max),
+  };
   for (const q of queued.docs) {
     const { mbid, name } = q.data() as { mbid: string; name: string };
     const ref = db.doc(`artists/${mbid}`);

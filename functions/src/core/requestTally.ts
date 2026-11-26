@@ -93,9 +93,16 @@ export interface RequestTallyReader {
   ): Promise<{ id: string; people: number; locales: Locale[] }[]>;
   topArtists(limit: number, minPeople?: number): Promise<{ id: string; people: number }[]>;
   /** 3명 이상 실패했고 이름이 저장됐으며 다시 찾기를 그만두지 않은 것 */
-  failedLabels(
-    limit: number,
-  ): Promise<{ id: string; people: number; label: { artist: string; title: string } }[]>;
+  failedLabels(limit: number): Promise<
+    {
+      id: string;
+      people: number;
+      label: { artist: string; title: string };
+      /** 이름이 저장된 시각(30일 못 찾으면 그만, T43) */
+      labeledAt: Date | null;
+      lastTryAt: Date | null;
+    }[]
+  >;
 }
 
 const SAFE_ID = /^[^/]{1,200}$/;
@@ -141,18 +148,6 @@ export function firestoreRequestTally(
     days[day] = count(days[day]) + 1;
     return prunedDays(days, t);
   };
-
-  /** 30일 안에 바뀐 문서(최근 순). requestTally는 kind로 나눠 읽는다(firestore.indexes.json의 kind+updatedAt 색인) */
-  async function recent(col: string, kind?: 'song' | 'artist'): Promise<Record<string, unknown>[]> {
-    const cutoff = Timestamp.fromMillis(now().getTime() - WINDOW_DAYS * DAY_MS);
-    const base = kind ? db.collection(col).where('kind', '==', kind) : db.collection(col);
-    const snap = await base
-      .where('updatedAt', '>=', cutoff)
-      .orderBy('updatedAt', 'desc')
-      .limit(SCAN_LIMIT)
-      .get();
-    return snap.docs.map((d) => ({ ...d.data(), docId: d.id }));
-  }
 
   return {
     async success(hit) {
@@ -220,12 +215,18 @@ export function firestoreRequestTally(
               ).filter(([, day]) => typeof day === 'string' && day >= start),
             );
             people[person] = pacificDay(t);
-            const old = prev.get('label') as typeof label | undefined;
+            const old = prev.get('label') as typeof label | null | undefined;
+            const gaveUp = prev.get('gaveUp') === true;
+            // 서로 다른 3명이 된 그때에만 이름을 남긴다. 그 전에는 이름이 어디에도 없다.
+            // 다시 찾기를 그만둔 이름(T43)은 다시 저장하지 않는다
+            const labelNow = !old && !gaveUp && Object.keys(people).length >= MIN_PEOPLE;
             return {
               days,
               people,
-              // 서로 다른 3명이 된 그때에만 이름을 남긴다. 그 전에는 이름이 어디에도 없다
-              label: old ?? (Object.keys(people).length >= MIN_PEOPLE ? label : null),
+              label: gaveUp ? null : (old ?? (labelNow ? label : null)),
+              labeledAt:
+                (prev.get('labeledAt') as Timestamp | null | undefined) ??
+                (labelNow ? Timestamp.fromDate(t) : null),
               firstSeenAt:
                 (prev.get('firstSeenAt') as Timestamp | undefined) ?? Timestamp.fromDate(t),
               lastTryAt: (prev.get('lastTryAt') as Timestamp | undefined) ?? null,
@@ -236,7 +237,30 @@ export function firestoreRequestTally(
         },
       ]);
     },
+    ...firestoreTallyReader(db, now),
+  };
+}
 
+const toDate = (v: unknown): Date | null => (v instanceof Timestamp ? v.toDate() : null);
+
+/** 집계 읽기(서버 비밀 없이). 밤 작업(T43·T44)이 쓴다 */
+export function firestoreTallyReader(
+  db: Firestore,
+  now: () => Date = () => new Date(),
+): RequestTallyReader {
+  /** 30일 안에 바뀐 문서(최근 순). requestTally는 kind로 나눠 읽는다(firestore.indexes.json의 kind+updatedAt 색인) */
+  async function recent(col: string, kind?: 'song' | 'artist'): Promise<Record<string, unknown>[]> {
+    const cutoff = Timestamp.fromMillis(now().getTime() - WINDOW_DAYS * DAY_MS);
+    const base = kind ? db.collection(col).where('kind', '==', kind) : db.collection(col);
+    const snap = await base
+      .where('updatedAt', '>=', cutoff)
+      .orderBy('updatedAt', 'desc')
+      .limit(SCAN_LIMIT)
+      .get();
+    return snap.docs.map((d) => ({ ...d.data(), docId: d.id }));
+  }
+
+  return {
     async topSongs(limit, minPeople = MIN_PEOPLE) {
       const t = now();
       const docs = (await recent('requestTally', 'song')).map((d) => ({
@@ -270,10 +294,36 @@ export function firestoreRequestTally(
           id: String(d['docId']),
           days: d['days'] as Days,
           label: d['label'] as { artist: string; title: string },
+          // 이름 저장 시각이 없는 옛 문서는 처음 센 시각으로 본다(그만 찾기 판단이 끝없이 밀리지 않게)
+          labeledAt: toDate(d['labeledAt']) ?? toDate(d['firstSeenAt']),
+          lastTryAt: toDate(d['lastTryAt']),
         }));
       return rankTally(docs, now())
         .slice(0, limit)
-        .map(({ id, people, label }) => ({ id, people, label }));
+        .map(({ id, people, label, labeledAt, lastTryAt }) => ({
+          id,
+          people,
+          label,
+          labeledAt,
+          lastTryAt,
+        }));
     },
   };
+}
+
+/** 아티스트마다 최근 30일 찾은 사람 수(3명 기준 없이, 순서용). 기록이 없으면 0 */
+export async function readArtistPeople(
+  db: Firestore,
+  mbids: string[],
+  now: Date,
+): Promise<Map<string, number>> {
+  const ids = [...new Set(mbids)].filter((id) => SAFE_ID.test(id));
+  const out = new Map<string, number>(ids.map((id) => [id, 0]));
+  if (!ids.length) return out;
+  const snaps = await db.getAll(...ids.map((id) => db.doc(`requestTally/artist_${id}`)));
+  snaps.forEach((snap, i) => {
+    const id = ids[i];
+    if (id && snap.exists) out.set(id, peopleInWindow(snap.get('days') as Days | undefined, now));
+  });
+  return out;
 }

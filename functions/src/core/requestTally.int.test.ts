@@ -108,6 +108,32 @@ describe('실패한 이름 — 한 사람이 여러 날', () => {
   });
 });
 
+describe('실패한 이름 — 저장 시각과 그만 찾기', () => {
+  const ref = () => db.collection('failedSeedTally').limit(1).get();
+  const labeledAt = async () =>
+    ((await ref()).docs[0]?.get('labeledAt') as { toMillis(): number } | null)?.toMillis() ?? null;
+
+  it('3명 전에는 저장 시각이 없고, 3번째 사람 때 기록되며, 그 뒤 요청에도 바뀌지 않는다', async () => {
+    await tallyAt(T0).failure({ uid: 'alice', ...MISSING });
+    await tallyAt(T0).failure({ uid: 'bob', ...MISSING });
+    expect(await labeledAt()).toBeNull();
+    await tallyAt(at(1)).failure({ uid: 'carol', ...MISSING });
+    expect(await labeledAt()).toBe(at(1).getTime());
+    await tallyAt(at(2)).failure({ uid: 'dave', ...MISSING });
+    expect(await labeledAt()).toBe(at(1).getTime());
+  });
+
+  it('그만 찾기로 한 이름은 새 요청이 와도 다시 저장되지 않는다', async () => {
+    for (const uid of ['alice', 'bob', 'carol']) await tallyAt(T0).failure({ uid, ...MISSING });
+    const doc = (await ref()).docs[0];
+    await doc?.ref.update({ gaveUp: true, label: null });
+    await tallyAt(at(1)).failure({ uid: 'dave', ...MISSING });
+    expect((await ref()).docs[0]?.get('label')).toBeNull();
+    expect(await dump('failedSeedTally')).not.toMatch(/nobody|secret/i);
+    expect(await tallyAt(at(1)).failedLabels(10)).toEqual([]);
+  });
+});
+
 describe('만들기 흐름에서', () => {
   const events: EventInput[] = [];
   const sink: EventSink = { record: async (e) => void events.push(e) };

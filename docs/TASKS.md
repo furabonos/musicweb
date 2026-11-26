@@ -626,12 +626,12 @@
     - integration `purge.int.test.ts`(확장) — 3일 된 중복 확인 표시 0건
     - rules `tests/rules/server-only.test.ts`(확장) — 새 컬렉션 3개 누구도 읽기 불가
 
-- [ ] **T43 밤 수집을 많이 찾은 순으로, 실패한 이름 다시 찾기** — SPEC 3.3, 4.3b, 6.3
+- [x] **T43 밤 수집을 많이 찾은 순으로, 실패한 이름 다시 찾기** — SPEC 3.3, 4.3b, 6.3
   - 의존: T10, T42
   - 산출물:
     - `jobs/ingest.ts`: 대기열을 찾은 사람 수 순(같으면 먼저 들어온 순)으로 수집 대상에 옮김
     - `jobs/retryFailedSeeds.ts`: 3명 이상 실패한 이름을 하룻밤 50개까지 MusicBrainz에서 다시 찾기 → 아티스트를 찾으면 `enqueueArtist`, 30일 못 찾으면 `gaveUp`. 긴급 정지 `ingest`·음악 데이터 호출 한도를 따름, 운영 일지에 처리량(이름 없이 개수만)
-    - 관리자 한도 스키마에 다시 찾기 개수
+    - 하룻밤 다시 찾기 개수는 작업 안의 상수(`RETRY_LIMITS`, 미리 계산과 같은 방식, D-056). 예약 `retryFailedSeedsNightly` 02:45(수집 앞)
   - 완료 기준:
     - integration `functions/src/jobs/ingest.int.test.ts`(확장) — 3명이 찾은 아티스트가 1명이 찾은 먼저 온 아티스트보다 먼저 옮겨짐
     - integration `functions/src/jobs/retryFailedSeeds.int.test.ts` — 녹화 응답으로 찾으면 대기열에 들어감, 상한 지킴, 30일 지나면 더 조회 안 함, 긴급 정지면 호출 0건, 운영 일지에 이름 없음
