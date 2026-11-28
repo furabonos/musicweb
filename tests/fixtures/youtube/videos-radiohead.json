@@ -1,5 +1,5 @@
 {
-  "_note": "손으로 만든 응답 (YouTube API 키 없음, D-027). 형식: https://developers.google.com/youtube/v3/docs — 실제 키로 녹화본으로 바꾼다(T23 전).",
+  "_note": "손으로 만든 응답(값은 가짜, D-027·D-057). 키 구조는 2026-11-28 실제 응답과 대조했다. 실제 응답은 저장하지 않는다(YouTube 데이터 30일 규칙, 공개 저장소).",
   "kind": "youtube#videoListResponse",
   "etag": "e4",
   "pageInfo": {
@@ -16,9 +16,20 @@
         "channelId": "UCq19-LqvG35A-30oyAiPiqA",
         "title": "Radiohead - Karma Police (Official Music Video)",
         "description": "The official video for Karma Police.",
+        "thumbnails": {
+          "default": {
+            "url": "https://i.ytimg.com/vi/rhKarmaMV01/default.jpg",
+            "width": 120,
+            "height": 90
+          }
+        },
         "channelTitle": "Radiohead",
         "categoryId": "10",
-        "liveBroadcastContent": "none"
+        "liveBroadcastContent": "none",
+        "localized": {
+          "title": "Radiohead - Karma Police (Official Music Video)",
+          "description": "The official video for Karma Police."
+        }
       },
       "contentDetails": {
         "duration": "PT4M24S",
@@ -47,9 +58,20 @@
         "channelId": "UCq19-LqvG35A-30oyAiPiqA",
         "title": "Radiohead - No Surprises (Official Audio)",
         "description": "",
+        "thumbnails": {
+          "default": {
+            "url": "https://i.ytimg.com/vi/rhNoSurp001/default.jpg",
+            "width": 120,
+            "height": 90
+          }
+        },
         "channelTitle": "Radiohead",
         "categoryId": "10",
-        "liveBroadcastContent": "none"
+        "liveBroadcastContent": "none",
+        "localized": {
+          "title": "Radiohead - No Surprises (Official Audio)",
+          "description": ""
+        }
       },
       "contentDetails": {
         "duration": "PT3M49S",
@@ -78,9 +100,20 @@
         "channelId": "UCq19-LqvG35A-30oyAiPiqA",
         "title": "Radiohead - Karma Police (Live at Glastonbury 1997)",
         "description": "",
+        "thumbnails": {
+          "default": {
+            "url": "https://i.ytimg.com/vi/rhKarmaLive/default.jpg",
+            "width": 120,
+            "height": 90
+          }
+        },
         "channelTitle": "Radiohead",
         "categoryId": "10",
-        "liveBroadcastContent": "none"
+        "liveBroadcastContent": "none",
+        "localized": {
+          "title": "Radiohead - Karma Police (Live at Glastonbury 1997)",
+          "description": ""
+        }
       },
       "contentDetails": {
         "duration": "PT4M40S",
@@ -109,9 +142,20 @@
         "channelId": "UCq19-LqvG35A-30oyAiPiqA",
         "title": "OK Computer OKNOTOK teaser",
         "description": "",
+        "thumbnails": {
+          "default": {
+            "url": "https://i.ytimg.com/vi/rhTeaser001/default.jpg",
+            "width": 120,
+            "height": 90
+          }
+        },
         "channelTitle": "Radiohead",
         "categoryId": "10",
-        "liveBroadcastContent": "none"
+        "liveBroadcastContent": "none",
+        "localized": {
+          "title": "OK Computer OKNOTOK teaser",
+          "description": ""
+        }
       },
       "contentDetails": {
         "duration": "PT0M45S",
@@ -140,9 +184,20 @@
         "channelId": "UCq19-LqvG35A-30oyAiPiqA",
         "title": "Radiohead - Lucky (Official Audio)",
         "description": "",
+        "thumbnails": {
+          "default": {
+            "url": "https://i.ytimg.com/vi/rhPrivate01/default.jpg",
+            "width": 120,
+            "height": 90
+          }
+        },
         "channelTitle": "Radiohead",
         "categoryId": "10",
-        "liveBroadcastContent": "none"
+        "liveBroadcastContent": "none",
+        "localized": {
+          "title": "Radiohead - Lucky (Official Audio)",
+          "description": ""
+        }
       },
       "contentDetails": {
         "duration": "PT4M19S",

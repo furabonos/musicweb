@@ -1,5 +1,5 @@
 {
-  "_note": "손으로 만든 응답 (YouTube API 키 없음, D-027). 형식: https://developers.google.com/youtube/v3/docs — 실제 키로 녹화본으로 바꾼다(T23 전).",
+  "_note": "손으로 만든 응답(값은 가짜, D-027·D-057). 키 구조는 2026-11-28 실제 응답과 대조했다. 실제 응답은 저장하지 않는다(YouTube 데이터 30일 규칙, 공개 저장소).",
   "kind": "youtube#videoListResponse",
   "etag": "e4",
   "pageInfo": {
@@ -16,9 +16,21 @@
         "channelId": "UC3SyT4_WLHzN7JmHQwKQZww",
         "title": "[MV] IU(아이유) _ Through the Night(밤편지)",
         "description": "",
+        "thumbnails": {
+          "default": {
+            "url": "https://i.ytimg.com/vi/iuNightMV01/default.jpg",
+            "width": 120,
+            "height": 90
+          }
+        },
         "channelTitle": "이지금 [IU Official]",
         "categoryId": "10",
-        "liveBroadcastContent": "none"
+        "liveBroadcastContent": "none",
+        "localized": {
+          "title": "[MV] IU(아이유) _ Through the Night(밤편지)",
+          "description": ""
+        },
+        "defaultAudioLanguage": "ko"
       },
       "contentDetails": {
         "duration": "PT4M13S",
@@ -47,9 +59,21 @@
         "channelId": "UC3SyT4_WLHzN7JmHQwKQZww",
         "title": "IU - Palette (Official Audio)",
         "description": "",
+        "thumbnails": {
+          "default": {
+            "url": "https://i.ytimg.com/vi/iuNoEmbed01/default.jpg",
+            "width": 120,
+            "height": 90
+          }
+        },
         "channelTitle": "이지금 [IU Official]",
         "categoryId": "10",
-        "liveBroadcastContent": "none"
+        "liveBroadcastContent": "none",
+        "localized": {
+          "title": "IU - Palette (Official Audio)",
+          "description": ""
+        },
+        "defaultAudioLanguage": "ko"
       },
       "contentDetails": {
         "duration": "PT3M37S",

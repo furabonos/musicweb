@@ -177,7 +177,7 @@
     - `adapters/youtube-read.ts`: channels/playlistItems/videos(50개씩)/search, 호출마다 budget
     - `jobs/ingest.ts`: 공식 채널 찾기 → 새 업로드만 → 연결 → 곡 목록 저장. 긴급 정지 `ingest` 확인
     - 사용자가 찾은 아티스트 대기열(하루 최대 50명) `core/ingestQueue.ts`, 예약 함수 `jobs/schedules.ts`(`ingestNightly`, 태평양 03:00, 인스턴스 1개)
-    - YouTube 응답은 손으로 만든 것(`tests/fixtures/youtube/`, D-027). **T23 배포 전에 실제 키로 녹화본으로 바꾼다**
+    - YouTube 응답은 손으로 만든 것(`tests/fixtures/youtube/`, D-027). 2026-11-28 실제 응답과 형식을 대조했고 녹화본으로는 바꾸지 않는다(D-057)
   - 완료 기준:
     - integration `functions/src/jobs/ingest.int.test.ts`
       - 녹화 응답으로 아티스트 2명 수집 시 곡·연결이 생기고 이미 본 영상은 다시 처리 안 함
@@ -478,7 +478,7 @@
 - [ ] **T23 배포** — SPEC 6.2, 6.3
   - 의존: T18, T21, T22, T22b, T31, T33, T34, T35
   - 산출물:
-    - functions 배포 묶음 확인: esbuild가 `@musicweb/shared`를 묶고, `workspace:` 개발 의존성이 Cloud Build 설치를 깨지 않게 한다(D-027). 손으로 만든 YouTube 응답을 실제 녹화본으로 바꾼다(T10)
+    - functions 배포 묶음 확인: esbuild가 `@musicweb/shared`를 묶고, `workspace:` 개발 의존성이 Cloud Build 설치를 깨지 않게 한다(D-027). 손으로 만든 YouTube 응답을 실제 응답과 대조한다(T10, D-057: 녹화본은 저장하지 않음)
     - Firebase 프로젝트(Blaze), 월 예산 알림 $10, Functions 예산 정지, App Check(reCAPTCHA Enterprise) 강제
     - Secret Manager 등록, 예약 작업 등록(`precomputeNightly` 포함). 첫 배포 전에 인기 아티스트 미리 계산을 한 번 돌린다(T29). `playlists-create`는 `ANTHROPIC_API_KEY`·`YOUTUBE_API_KEY`·`LASTFM_API_KEY`·`ACTOR_HASH_KEY`를 연결하므로(D-031) Last.fm 키를 안 쓰더라도 비밀값은 만들어 둬야 배포된다(코드는 값이 비면 Last.fm 없이 동작하지만, Secret Manager가 빈 값을 받는지는 배포 때 확인)
     - 실제 YouTube 플레이어로 재생·다음 곡·오류 건너뛰기를 손으로 한 번 확인(e2e는 가짜 플레이어, D-032)
@@ -488,6 +488,7 @@
     - 화면 설정 `apps/web/.env.production.local`(`.env.example` 참고, `VITE_USE_EMULATORS`는 비움, D-053)
     - `.github/workflows/deploy.yml`(main 합침 시), `docs/OPERATIONS.md`(복구·키 교체·긴급 정지 절차)
   - 진행(D-053, 2026-11-24): 배포 전 코드는 끝났다. callable App Check 강제(`api/callable.ts`, ESLint), 화면 App Check, `tools/prepare-deploy.ts`(`pnpm deploy:prepare`), `tools/smoke.ts`, 손으로만 도는 `deploy.yml`, `docs/OPERATIONS.md` 7절. **남은 것**(사람): reCAPTCHA 키, 서버 매개변수·비밀값 넣기, YouTube 녹화본 교체, 예산 설정, 실제 배포와 확인
+  - 진행(2026-11-28): reCAPTCHA 키·서버 매개변수·비밀값 5개·예산(₩14,000 지출 한도) 확인 완료, `pnpm deploy:prepare prod --check` 통과. YouTube 응답은 실제 응답과 형식 대조(D-057). **남은 것**: 실제 배포와 확인
   - 완료 기준:
     - `*.web.app` 주소 접속, `/status`에 실제 데이터 표시
     - 야간 작업 1회 실행 결과가 운영 일지에 기록

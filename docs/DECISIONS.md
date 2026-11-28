@@ -339,7 +339,7 @@
 - **YouTube 읽기 `adapters/youtube-read.ts`**:
   - channels.list(1단위), playlistItems.list(1단위, 50개씩), videos.list(1단위, 50개씩). search.list는 단위를 쓰지 않고 하루 100회 별도 한도(작업 20·사용자 80)만 쓴다(D-007, RESEARCH 1 원문 "100 search.list calls … and 10,000 units per day combined for all other endpoints"). 처음 구현에서 검색에 100단위를 매긴 것은 리뷰에서 D-007과 충돌로 지적돼 고쳤다.
   - 보내기 전에 한도를 쓴다(`consume`). 실패한 요청에도 할당량이 들기 때문에 정산하지 않는다. 수집 작업은 `firestoreYtBudget(db, 'ingest')`로 호출마다 긴급 정지도 확인한다.
-  - 응답은 **손으로 만든 것**이다(사용자 결정, 키 없음). `tests/fixtures/youtube/`에 `_note`로 표시했고, T23 전에 실제 키로 녹화본으로 바꾼다.
+  - 응답은 **손으로 만든 것**이다(사용자 결정, 키 없음). `tests/fixtures/youtube/`에 `_note`로 표시했고, T23 전에 실제 키로 녹화본으로 바꾼다. → D-057: 녹화본으로 바꾸지 않고 실제 응답과 형식만 대조한다.
 - **야간 수집 `jobs/ingest.ts`**(`ingestNightly`, 태평양 03:00, 인스턴스 1개, 재시도 없음):
   - 공식 채널: MusicBrainz 아티스트 URL 관계 → 없으면 Wikidata P2397.
   - 새 업로드만: 업로드 목록은 최신 것부터 오므로, 지난번에 본 가장 새 게시 시각(`lastSeenPublishedAt`)에 닿으면 쪽 넘기기를 멈춘다. 시각은 `Date.parse`로 비교한다.
@@ -1220,3 +1220,14 @@
   - 몫이나 서비스 하루 AI 상한에 닿으면 그 자리에서 멈춘다. 추천은 이 오류를 잡아 AI 없이 고르는데, AI 방식이면 저장하지 않으므로 계속 돌면 음악 데이터·YouTube 호출만 헛되이 쓴다(리뷰에서 발견). 서비스 상한이면 만들기처럼 절약 모드를 켠다.
   - YouTube 검색은 추천의 검색 끄기 옵션으로 막는다. 검색 함수만 빈 결과로 바꾸면 "검색을 썼다"로 기록돼 현황판 지표가 비틀린다(리뷰에서 발견).
   - 검색창(글) 요청은 해석된 이름이 곡 목록 이름과 같아야 미리 만든 결과를 쓴다. 곡 고르기 요청은 곡 문서 이름을 그대로 써서 항상 맞는다.
+
+## D-057 YouTube 테스트 응답은 녹화본으로 바꾸지 않고, 실제 응답과 형식만 대조한다 (T23, 2026-11-28)
+
+- D-027·T10은 "T23 전에 손으로 만든 YouTube 응답을 실제 녹화본으로 바꾼다"였다. 바꾸지 않기로 한다.
+  - YouTube 데이터(영상 ID·제목·채널 ID 포함)는 30일 안에 재확인하거나 지워야 한다(D-004, 스킬 `youtube-policy`). 저장소는 공개이고 git 기록은 지울 수 없어 녹화본을 넣으면 이 규칙을 어긴다.
+  - 테스트는 가짜 영상 ID(`rhNoSurp001` 등)로 상황(같은 시각, 라이브, 퍼가기 불가 등)을 만든다. 실제 채널의 최근 업로드는 매번 바뀌고(2026-11-28 Radiohead 최근 5개는 모두 30초 안팎 홍보 영상) 이런 상황을 담지 않는다.
+- 대신 2026-11-28 실제 키로 channels·playlistItems·videos를 불러(약 7단위) `adapters/youtube-read.ts`의 해석 함수로 읽어 보고, 응답의 키 구조를 예시 파일과 비교했다. 실제 응답은 임시 폴더에만 두고 확인 후 지웠다.
+  - 해석: 채널 2개·업로드 100개·영상 8개 모두 문제없이 읽었다(길이·게시 시각·공개 상태·퍼가기·아동용).
+  - 실제에만 있던 칸: `snippet.thumbnails`·`localized`·`defaultLanguage`·`defaultAudioLanguage`(쓰지 않음), IU 업로드의 `nextPageToken`(예시는 한 쪽짜리 상황), 요청 오류의 `errors[].location`·`locationType`(매개변수 오류에만 붙음).
+  - 예시 `videos-*.json`에 썸네일·`localized`·언어 칸을 가짜 값으로 넣어 실제 모양과 맞췄다. 할당량 초과 오류는 일부러 만들 수 없어 공식 문서 형식 그대로 둔다.
+- 배포 뒤에는 실제 야간 수집(`ingestNightly`)과 운영 일지가 실제 응답 처리를 확인한다(T23 완료 기준).

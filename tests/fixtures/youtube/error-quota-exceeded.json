@@ -1,5 +1,5 @@
 {
-  "_note": "손으로 만든 응답 (YouTube API 키 없음, D-027). 형식: https://developers.google.com/youtube/v3/docs — 실제 키로 녹화본으로 바꾼다(T23 전).",
+  "_note": "손으로 만든 응답(값은 가짜, D-027·D-057). 키 구조는 2026-11-28 실제 응답과 대조했다. 실제 응답은 저장하지 않는다(YouTube 데이터 30일 규칙, 공개 저장소). 할당량 초과는 일부러 만들 수 없어 공식 문서 형식이다.",
   "error": {
     "code": 403,
     "message": "The request cannot be completed because you have exceeded your quota.",
